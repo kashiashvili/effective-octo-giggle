@@ -1,48 +1,57 @@
-# effective-octo-giggle – Privacy-Preserving User Profiler
+# effective-octo-giggle – Privacy-Preserving Social Profiler
 
-Gather interest signals from multiple data sources, combine them into a
-**privacy-preserving fingerprint**, and find people with similar tastes —
-without ever exposing your raw personal data.
+A web social-network application that gathers interest signals from multiple
+data sources, generates a **privacy-preserving fingerprint**, and connects you
+with like-minded people — without ever exposing your raw personal data.
 
 ---
 
-## How it works
+## Screenshots
 
-```
-Data sources          Aggregation          Fingerprint         Matching
-─────────────         ───────────          ───────────         ────────
-GitHub   ──┐
-Goodreads──┼──► ProfileAggregator ──► FingerprintGenerator ──► UserMatcher
-Netflix  ──┤                               (MinHash)
-Google   ──┤
-Facebook ──┘
-```
+### Landing page
+![Landing page](https://github.com/user-attachments/assets/9b9a610a-da26-4c78-919b-2b20adec0658)
 
-### Privacy model
+### Connect your data sources
+![Connect sources](https://github.com/user-attachments/assets/ff4383e8-d77a-4215-b04b-be66c547253e)
 
-Raw feature strings (e.g. `language:python`, `genre:sci-fi`) are fed into a
-**MinHash** algorithm:
+### Your matches
+![Matches](https://github.com/user-attachments/assets/ce1926a9-b792-4df9-bb96-47948a164d44)
 
-1. Each feature is hashed to an integer via SHA-256.
-2. *k* independent universal hash functions each produce a minimum value over
-   all features.
-3. The resulting *k*-dimensional signature is the **profile fingerprint**.
+---
 
-The probability that two users share a value at position *i* equals the
-*Jaccard similarity* of their underlying feature sets.  This lets you compare
-profiles without ever transmitting (or storing) the original feature strings.
+## Features
+
+- **User accounts** – register and sign in securely (passwords hashed with scrypt)
+- **Multi-source data collection** – connect GitHub, upload Goodreads/Netflix CSV exports, or paste Google/Facebook OAuth tokens
+- **Privacy-preserving fingerprinting** – MinHash algorithm turns your interests into a comparable signature; raw data is never stored
+- **Similarity matching** – ranked list of users with compatible profiles (Jaccard similarity)
+- **Responsive UI** – Bootstrap 5 web interface
 
 ---
 
 ## Supported data sources
 
-| Source      | Method                                    |
-|-------------|-------------------------------------------|
-| **GitHub**  | REST API (public; optional token for rate-limit) |
-| **Goodreads** | Export CSV (downloaded from your account) |
-| **Netflix** | Viewing-history CSV (downloaded from your account) |
-| **Google**  | People API (OAuth 2.0 access token)       |
-| **Facebook**| Graph API (OAuth 2.0 access token)        |
+| Source      | Method                                         |
+|-------------|------------------------------------------------|
+| **GitHub**  | REST API – enter your username (public, no account required) |
+| **Goodreads** | Export CSV from [goodreads.com/review/import](https://www.goodreads.com/review/import) |
+| **Netflix** | Export CSV from [netflix.com/viewingactivity](https://www.netflix.com/viewingactivity) |
+| **Google**  | OAuth 2.0 access token (People API)            |
+| **Facebook**| OAuth 2.0 access token (Graph API)             |
+
+---
+
+## Privacy model
+
+Raw feature strings (e.g. `language:python`, `genre:sci-fi`) are processed by
+a **MinHash** algorithm and never stored:
+
+1. Each feature is hashed to an integer via SHA-256
+2. *k* independent universal hash functions each produce a minimum value over all features
+3. Only the resulting *k*-dimensional integer signature is saved
+
+Two signatures can be compared to estimate *Jaccard similarity* without
+revealing any underlying data.
 
 ---
 
@@ -56,58 +65,21 @@ Requires Python ≥ 3.8.
 
 ---
 
-## Quick start
-
-### 1 – Generate a fingerprint
+## Running the web application
 
 ```bash
-# GitHub only (no auth needed for public profiles)
-profiler generate --github-user octocat --output my_fingerprint.json
-
-# Multiple sources
-profiler generate \
-  --github-user octocat \
-  --goodreads-csv ~/goodreads_library_export.csv \
-  --netflix-csv  ~/NetflixViewingHistory.csv \
-  --output my_fingerprint.json
+profiler-web
+# → http://127.0.0.1:5000
 ```
 
-### 2 – Compare two fingerprints
+Optional environment variables:
 
-```bash
-profiler compare alice_fingerprint.json bob_fingerprint.json
-# Similarity: 0.4531 (45.3%)
-```
-
-### 3 – Programmatic usage
-
-```python
-from profiler.connectors.github import GitHubConnector
-from profiler.connectors.goodreads import GoodreadsConnector
-from profiler.profile.aggregator import ProfileAggregator
-from profiler.profile.fingerprint import FingerprintGenerator
-from profiler.matching.matcher import UserMatcher
-
-# Build profile for alice
-connectors = [
-    GitHubConnector("alice"),
-    GoodreadsConnector("/path/to/alice_goodreads.csv"),
-]
-profile = ProfileAggregator(connectors).aggregate()
-alice_fp = FingerprintGenerator().generate(profile.features)
-
-# Build profile for bob
-bob_fp = FingerprintGenerator().generate(["language:python", "genre:sci-fi"])
-
-# Register and match
-matcher = UserMatcher()
-matcher.add("alice", alice_fp)
-matcher.add("bob",   bob_fp)
-
-results = matcher.find_matches("alice", top_k=5)
-for r in results:
-    print(r)  # MatchResult(user_id='bob', similarity=0.453)
-```
+| Variable      | Default                          | Description              |
+|---------------|----------------------------------|--------------------------|
+| `SECRET_KEY`  | `dev-secret-change-in-production`| Flask session secret      |
+| `HOST`        | `127.0.0.1`                      | Bind address              |
+| `PORT`        | `5000`                           | Port                      |
+| `DATABASE`    | `profiler_data.db`               | SQLite database file path |
 
 ---
 
@@ -136,10 +108,19 @@ profiler/
 │   └── fingerprint.py   MinHash-based privacy-preserving fingerprint
 ├── matching/
 │   └── matcher.py       Similarity-based user matcher
-└── cli.py               Click-based command-line interface
+└── web/
+    ├── app.py           Flask application factory
+    ├── db.py            SQLite database helpers
+    ├── routes/
+    │   ├── auth.py      Register / login / logout
+    │   ├── sources.py   Connect data sources (dashboard)
+    │   └── matches.py   Show similar users
+    ├── templates/       Jinja2 HTML templates
+    └── static/css/      Custom styles (Bootstrap 5 base)
 tests/
 ├── test_connectors.py
 ├── test_aggregator.py
 ├── test_fingerprint.py
-└── test_matcher.py
+├── test_matcher.py
+└── test_web.py
 ```

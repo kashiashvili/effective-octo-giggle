@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Connect Sources{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <h1 class="fw-bold mb-2">
+      <i class="bi bi-plug-fill text-primary me-2"></i>Connect data sources
+    </h1>
+    <p class="text-muted mb-4">
+      Connect as many sources as you like. The more you connect, the more accurate
+      your matches will be. Your raw data is never stored — only a privacy-preserving
+      fingerprint is saved.
+    </p>
+
+    <form method="post" enctype="multipart/form-data">
+
+      <!-- GitHub -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-dark text-white d-flex align-items-center gap-2">
+          <i class="bi bi-github fs-5"></i>
+          <span class="fw-semibold">GitHub</span>
+          <span class="badge bg-success ms-auto">Public API – no account needed</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="github_user" class="form-label">GitHub username</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                <input type="text" class="form-control" id="github_user"
+                       name="github_user" placeholder="octocat">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="github_token" class="form-label">
+                Personal access token
+                <span class="text-muted small">(optional – increases rate limit)</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-key"></i></span>
+                <input type="password" class="form-control" id="github_token"
+                       name="github_token" placeholder="ghp_…">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Goodreads -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white d-flex align-items-center gap-2">
+          <i class="bi bi-book-half fs-5"></i>
+          <span class="fw-semibold">Goodreads</span>
+          <span class="badge bg-light text-dark ms-auto">CSV export</span>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-2">
+            Export your library from
+            <a href="https://www.goodreads.com/review/import" target="_blank" rel="noopener">
+              goodreads.com/review/import
+            </a>
+            and upload the CSV here.
+          </p>
+          <input type="file" class="form-control" id="goodreads_csv"
+                 name="goodreads_csv" accept=".csv">
+        </div>
+      </div>
+
+      <!-- Netflix -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-danger text-white d-flex align-items-center gap-2">
+          <i class="bi bi-play-btn-fill fs-5"></i>
+          <span class="fw-semibold">Netflix</span>
+          <span class="badge bg-light text-dark ms-auto">CSV export</span>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-2">
+            Download your viewing history from
+            <a href="https://www.netflix.com/viewingactivity" target="_blank" rel="noopener">
+              netflix.com/viewingactivity
+            </a>
+            and upload the CSV here.
+          </p>
+          <input type="file" class="form-control" id="netflix_csv"
+                 name="netflix_csv" accept=".csv">
+        </div>
+      </div>
+
+      <!-- Google -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white d-flex align-items-center gap-2">
+          <i class="bi bi-google fs-5"></i>
+          <span class="fw-semibold">Google</span>
+          <span class="badge bg-light text-dark ms-auto">OAuth token</span>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-2">
+            Paste an OAuth 2.0 access token scoped to
+            <code>people.readonly</code> / <code>userinfo.profile</code>.
+          </p>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-key"></i></span>
+            <input type="password" class="form-control" id="google_token"
+                   name="google_token" placeholder="ya29.…">
+          </div>
+        </div>
+      </div>
+
+      <!-- Facebook -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white d-flex align-items-center gap-2">
+          <i class="bi bi-facebook fs-5"></i>
+          <span class="fw-semibold">Facebook</span>
+          <span class="badge bg-light text-dark ms-auto">OAuth token</span>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-2">
+            Paste a Facebook Graph API user access token with
+            <code>user_likes</code> / <code>user_interests</code> permissions.
+          </p>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-key"></i></span>
+            <input type="password" class="form-control" id="facebook_token"
+                   name="facebook_token" placeholder="EAAx…">
+          </div>
+        </div>
+      </div>
+
+      <div class="d-grid">
+        <button type="submit" class="btn btn-primary btn-lg">
+          <i class="bi bi-fingerprint me-2"></i>Generate my fingerprint &amp; find matches
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}

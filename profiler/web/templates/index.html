@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Welcome{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<div class="hero-section text-center py-5 mb-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <h1 class="display-4 fw-bold mb-3">
+        Find people who <span class="text-primary">think like you</span>
+      </h1>
+      <p class="lead text-muted mb-4">
+        Connect your favourite apps — GitHub, Netflix, Goodreads, Google, Facebook —
+        and discover like-minded people. Your raw data stays on your device;
+        only a privacy-preserving fingerprint is shared.
+      </p>
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg me-2">
+        <i class="bi bi-rocket-takeoff me-1"></i>Get started free
+      </a>
+      <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary btn-lg">
+        Sign in
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- How it works -->
+<section class="mb-5">
+  <h2 class="text-center fw-bold mb-4">How it works</h2>
+  <div class="row g-4">
+    <div class="col-md-4 text-center">
+      <div class="feature-icon bg-primary bg-opacity-10 rounded-circle mx-auto mb-3">
+        <i class="bi bi-plug-fill text-primary fs-1"></i>
+      </div>
+      <h5 class="fw-semibold">1. Connect your sources</h5>
+      <p class="text-muted">
+        Link GitHub, upload your Goodreads or Netflix export, or supply an
+        API token for Google / Facebook.
+      </p>
+    </div>
+    <div class="col-md-4 text-center">
+      <div class="feature-icon bg-success bg-opacity-10 rounded-circle mx-auto mb-3">
+        <i class="bi bi-fingerprint text-success fs-1"></i>
+      </div>
+      <h5 class="fw-semibold">2. Generate your fingerprint</h5>
+      <p class="text-muted">
+        We extract interest signals and compute a <em>MinHash fingerprint</em>.
+        Your raw data is never stored or transmitted.
+      </p>
+    </div>
+    <div class="col-md-4 text-center">
+      <div class="feature-icon bg-warning bg-opacity-10 rounded-circle mx-auto mb-3">
+        <i class="bi bi-heart-fill text-warning fs-1"></i>
+      </div>
+      <h5 class="fw-semibold">3. Meet your matches</h5>
+      <p class="text-muted">
+        We compare fingerprints to surface the users most similar to you —
+        ranked by shared interests.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Supported sources -->
+<section class="mb-5">
+  <h2 class="text-center fw-bold mb-4">Supported data sources</h2>
+  <div class="row row-cols-2 row-cols-md-5 g-3 justify-content-center">
+    {% for icon, name, color in [
+        ('bi-github', 'GitHub', 'dark'),
+        ('bi-book-half', 'Goodreads', 'success'),
+        ('bi-play-btn-fill', 'Netflix', 'danger'),
+        ('bi-google', 'Google', 'primary'),
+        ('bi-facebook', 'Facebook', 'info'),
+    ] %}
+    <div class="col text-center">
+      <div class="p-3 border rounded-3 h-100 source-card">
+        <i class="bi {{ icon }} text-{{ color }} fs-2 mb-2 d-block"></i>
+        <span class="fw-semibold">{{ name }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

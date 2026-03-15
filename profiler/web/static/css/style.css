@@ -1,0 +1,50 @@
+/* ============================================================
+   Profiler – custom styles (Bootstrap 5 base)
+   ============================================================ */
+
+body {
+  background-color: #f8f9fa;
+}
+
+/* Hero section */
+.hero-section {
+  padding: 3rem 0;
+}
+
+/* Feature icons on landing page */
+.feature-icon {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Source cards on landing page */
+.source-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.source-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Match cards */
+.match-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.match-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Avatar circle */
+.avatar-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
