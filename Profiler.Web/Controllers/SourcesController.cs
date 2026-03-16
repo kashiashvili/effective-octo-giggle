@@ -84,6 +84,24 @@ public class SourcesController : Controller
         if (!string.IsNullOrWhiteSpace(vm.PinterestToken))
             connectors.Add(new PinterestConnector(http, vm.PinterestToken));
 
+        if (!string.IsNullOrWhiteSpace(vm.SpotifyToken))
+            connectors.Add(new SpotifyConnector(http, vm.SpotifyToken));
+
+        if (!string.IsNullOrWhiteSpace(vm.TwitterToken))
+            connectors.Add(new TwitterConnector(http, vm.TwitterToken));
+
+        if (!string.IsNullOrWhiteSpace(vm.LinkedInToken))
+            connectors.Add(new LinkedInConnector(http, vm.LinkedInToken));
+
+        if (!string.IsNullOrWhiteSpace(vm.RedditToken))
+            connectors.Add(new RedditConnector(http, vm.RedditToken));
+
+        if (!string.IsNullOrWhiteSpace(vm.LastFmApiKey) && !string.IsNullOrWhiteSpace(vm.LastFmUsername))
+            connectors.Add(new LastFmConnector(http, vm.LastFmApiKey, vm.LastFmUsername));
+
+        if (!string.IsNullOrWhiteSpace(vm.SteamApiKey) && !string.IsNullOrWhiteSpace(vm.SteamId))
+            connectors.Add(new SteamConnector(http, vm.SteamApiKey, vm.SteamId));
+
         if (connectors.Count == 0)
         {
             ModelState.AddModelError("", "Please connect at least one source.");

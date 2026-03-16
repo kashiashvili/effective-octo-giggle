@@ -631,6 +631,73 @@ footer {
 .divider { border: none; border-top: 1px solid var(--gray-200); margin: 1.5rem 0; }
 
 /* ============================================================
+   SOURCE FORM CARDS (Connect Sources page)
+   ============================================================ */
+.sources-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.source-form-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1.5px solid var(--gray-200);
+  overflow: hidden;
+  transition: box-shadow var(--transition), border-color var(--transition);
+}
+.source-form-card:hover { box-shadow: var(--shadow); border-color: var(--primary-light); }
+
+.source-form-header {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark, #4338ca));
+  color: var(--white);
+}
+.source-form-header .source-icon { font-size: 1.5rem; }
+.source-form-header h3 { margin: 0; font-size: 1.0625rem; font-weight: 700; color: var(--white); }
+
+.source-form-card .form-group { padding: .85rem 1.25rem 0; }
+.source-form-card .form-group:last-child { padding-bottom: 1.25rem; }
+.source-form-card .form-group label { font-size: .8125rem; font-weight: 600; color: var(--gray-600); display: block; margin-bottom: .35rem; }
+.source-form-card .form-group small  { display: block; font-size: .75rem; color: var(--gray-400); margin-top: .3rem; }
+
+/* Source form card header colours — existing sources */
+.github-card    .source-form-header { background: linear-gradient(135deg, #24292e, #1a1e22); }
+.goodreads-card .source-form-header { background: linear-gradient(135deg, #553B08, #3d2a06); }
+.netflix-card   .source-form-header { background: linear-gradient(135deg, #E50914, #b3070f); }
+.google-card    .source-form-header { background: linear-gradient(135deg, #4285F4, #2a6dd9); }
+.facebook-card  .source-form-header { background: linear-gradient(135deg, #1877F2, #0f5bc1); }
+.pinterest-card .source-form-header { background: linear-gradient(135deg, #E60023, #b8001c); }
+
+/* New source card header colours */
+.spotify-card  .source-form-header { background: linear-gradient(135deg, #1DB954, #158a3e); }
+.twitter-card  .source-form-header { background: linear-gradient(135deg, #1DA1F2, #0d8ecf); }
+.linkedin-card .source-form-header { background: linear-gradient(135deg, #0077B5, #005e8e); }
+.reddit-card   .source-form-header { background: linear-gradient(135deg, #FF4500, #d03a00); }
+.lastfm-card   .source-form-header { background: linear-gradient(135deg, #D51007, #a50c05); }
+.steam-card    .source-form-header { background: linear-gradient(135deg, #1B2838, #0d1520); }
+
+/* Coming-soon section */
+.coming-soon-section {
+  background: var(--gray-50);
+  border: 1.5px dashed var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.coming-soon-section h3 { font-size: 1rem; font-weight: 700; margin-bottom: .75rem; color: var(--gray-600); }
+.coming-soon-list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; }
+.coming-soon-list li { font-size: .9rem; color: var(--gray-500); }
+
+/* Form submit area */
+.form-submit { padding-top: .5rem; }
+
+/* ============================================================
    Responsive
    ============================================================ */
 @media (max-width: 900px) {

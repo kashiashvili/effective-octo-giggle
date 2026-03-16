@@ -94,17 +94,103 @@
                     <small>Requires boards:read permission</small>
                 </div>
             </div>
+
+            <!-- Spotify -->
+            <div class="source-form-card spotify-card">
+                <div class="source-form-header">
+                    <span class="source-icon">🎵</span>
+                    <h3>Spotify</h3>
+                </div>
+                <div class="form-group">
+                    <label>OAuth Access Token</label>
+                    <input asp-for="SpotifyToken" class="form-control" placeholder="BQA..." type="password" />
+                    <small>Requires user-top-read, playlist-read-private scopes</small>
+                </div>
+            </div>
+
+            <!-- Twitter/X -->
+            <div class="source-form-card twitter-card">
+                <div class="source-form-header">
+                    <span class="source-icon">🐦</span>
+                    <h3>Twitter / X</h3>
+                </div>
+                <div class="form-group">
+                    <label>Bearer Token</label>
+                    <input asp-for="TwitterToken" class="form-control" placeholder="AAAA..." type="password" />
+                    <small>Twitter API v2 user Bearer token</small>
+                </div>
+            </div>
+
+            <!-- LinkedIn -->
+            <div class="source-form-card linkedin-card">
+                <div class="source-form-header">
+                    <span class="source-icon">💼</span>
+                    <h3>LinkedIn</h3>
+                </div>
+                <div class="form-group">
+                    <label>OAuth Access Token</label>
+                    <input asp-for="LinkedInToken" class="form-control" placeholder="AQV..." type="password" />
+                    <small>Requires r_liteprofile, r_emailaddress permissions</small>
+                </div>
+            </div>
+
+            <!-- Reddit -->
+            <div class="source-form-card reddit-card">
+                <div class="source-form-header">
+                    <span class="source-icon">🤖</span>
+                    <h3>Reddit</h3>
+                </div>
+                <div class="form-group">
+                    <label>OAuth Access Token</label>
+                    <input asp-for="RedditToken" class="form-control" placeholder="eyJ..." type="password" />
+                    <small>Reddit OAuth Bearer token with mysubreddits scope</small>
+                </div>
+            </div>
+
+            <!-- Last.fm -->
+            <div class="source-form-card lastfm-card">
+                <div class="source-form-header">
+                    <span class="source-icon">🎸</span>
+                    <h3>Last.fm</h3>
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input asp-for="LastFmApiKey" class="form-control" placeholder="Last.fm API key" type="password" />
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input asp-for="LastFmUsername" class="form-control" placeholder="your_lastfm_username" />
+                    <small>Get API key at last.fm/api/account/create</small>
+                </div>
+            </div>
+
+            <!-- Steam -->
+            <div class="source-form-card steam-card">
+                <div class="source-form-header">
+                    <span class="source-icon">🎮</span>
+                    <h3>Steam</h3>
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input asp-for="SteamApiKey" class="form-control" placeholder="Steam Web API key" type="password" />
+                </div>
+                <div class="form-group">
+                    <label>Steam ID</label>
+                    <input asp-for="SteamId" class="form-control" placeholder="76561198..." />
+                    <small>Get API key at steamcommunity.com/dev/apikey</small>
+                </div>
+            </div>
         </div>
 
         <div class="coming-soon-section">
-            <h3>💡 More sources coming soon</h3>
+            <h3>💡 More sources to come</h3>
             <ul class="coming-soon-list">
-                <li>🎵 <strong>Spotify</strong> — listening history &amp; genres</li>
-                <li>🐦 <strong>Twitter/X</strong> — liked tweets topics</li>
-                <li>💼 <strong>LinkedIn</strong> — skills, job titles</li>
-                <li>🤖 <strong>Reddit</strong> — subscribed subreddits</li>
-                <li>🎸 <strong>Last.fm</strong> — artist &amp; genre scrobbles</li>
-                <li>🎮 <strong>Steam</strong> — game genres &amp; tags</li>
+                <li>🎬 <strong>TikTok</strong> — followed creators &amp; hashtags</li>
+                <li>📸 <strong>Instagram</strong> — followed hashtags &amp; interests</li>
+                <li>🎮 <strong>Twitch</strong> — followed streamers &amp; game categories</li>
+                <li>📰 <strong>RSS/Blogs</strong> — topics from subscribed feeds</li>
+                <li>🎵 <strong>SoundCloud</strong> — liked tracks &amp; genres</li>
+                <li>📺 <strong>YouTube</strong> — subscribed channel topics</li>
             </ul>
         </div>
 

@@ -72,5 +72,47 @@ public class ConnectorTests
         // Should have both series and movie types
         Assert.Contains("netflix-type:series", data.Features);
         Assert.Contains("netflix-type:movie", data.Features);
+        Assert.Contains("netflix-type:series", data.Features);
+    }
+
+    [Fact]
+    public async Task LastFmConnector_ParsesArtistsAndTags()
+    {
+        var http = new HttpClient();
+        var connector = new LastFmConnector(http, "test-key", "testuser");
+        var data = await connector.FetchAsync();
+        Assert.Equal("Last.fm", data.Source);
+        Assert.NotNull(data.Features);
+    }
+
+    [Fact]
+    public async Task SteamConnector_HandlesApiErrorGracefully()
+    {
+        var http = new HttpClient();
+        var connector = new SteamConnector(http, "fake-key", "76561198000000000");
+        var data = await connector.FetchAsync();
+        Assert.Equal("Steam", data.Source);
+        Assert.NotNull(data.Features);
+    }
+
+    [Fact]
+    public async Task SpotifyConnector_HandlesApiErrorGracefully()
+    {
+        var http = new HttpClient();
+        var connector = new SpotifyConnector(http, "fake-token");
+        var data = await connector.FetchAsync();
+        Assert.Equal("Spotify", data.Source);
+        Assert.NotNull(data.Features);
+    }
+
+    [Fact]
+    public async Task RedditConnector_HandlesApiErrorGracefully()
+    {
+        var http = new HttpClient();
+        var connector = new RedditConnector(http, "fake-token");
+        var data = await connector.FetchAsync();
+        Assert.Equal("Reddit", data.Source);
+        Assert.NotNull(data.Features);
     }
 }
+
