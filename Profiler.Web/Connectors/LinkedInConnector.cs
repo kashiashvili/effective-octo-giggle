@@ -70,8 +70,14 @@ public class LinkedInConnector : IConnector
                     var title = titleProp.GetString();
                     if (!string.IsNullOrEmpty(title))
                     {
-                        var firstWord = title.Split(' ')[0];
-                        features.Add($"linkedin-title:{Slugify(firstWord)}");
+                        // Skip common seniority modifiers so the core role is captured
+                        var modifiers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                            { "senior", "junior", "lead", "principal", "staff", "associate",
+                              "head", "chief", "vp", "director", "executive", "sr", "jr" };
+                        var words = title.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        var coreWords = words.Where(w => !modifiers.Contains(w)).Take(2).ToArray();
+                        var coreTitle = coreWords.Length > 0 ? string.Join(" ", coreWords) : title;
+                        features.Add($"linkedin-title:{Slugify(coreTitle)}");
                     }
                 }
 

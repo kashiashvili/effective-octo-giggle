@@ -97,11 +97,9 @@ public class LastFmConnector : IConnector
         {
             foreach (var track in trackArr.EnumerateArray())
             {
-                var trackName = "";
-                var artistName = "";
-                if (track.TryGetProperty("name", out var tName)) trackName = tName.GetString() ?? "";
-                if (track.TryGetProperty("artist", out var artist) &&
-                    artist.TryGetProperty("name", out var aName)) artistName = aName.GetString() ?? "";
+                var trackName = track.TryGetProperty("name", out var tName) ? tName.GetString() ?? "" : "";
+                var artistName = (track.TryGetProperty("artist", out var artist) &&
+                    artist.TryGetProperty("name", out var aName)) ? aName.GetString() ?? "" : "";
 
                 if (!string.IsNullOrEmpty(trackName))
                     features.Add($"lastfm-track:{HashTrack(artistName, trackName)}");
