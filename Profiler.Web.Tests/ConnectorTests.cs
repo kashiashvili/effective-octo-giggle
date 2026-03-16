@@ -72,7 +72,6 @@ public class ConnectorTests
         // Should have both series and movie types
         Assert.Contains("netflix-type:series", data.Features);
         Assert.Contains("netflix-type:movie", data.Features);
-        Assert.Contains("netflix-type:series", data.Features);
     }
 
     [Fact]
