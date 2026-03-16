@@ -212,3 +212,4 @@
 /home/runner/work/effective-octo-giggle/effective-octo-giggle/Profiler.Web/obj/Debug/net10.0/Profiler.Web.pdb
 /home/runner/work/effective-octo-giggle/effective-octo-giggle/Profiler.Web/obj/Debug/net10.0/Profiler.Web.genruntimeconfig.cache
 /home/runner/work/effective-octo-giggle/effective-octo-giggle/Profiler.Web/obj/Debug/net10.0/ref/Profiler.Web.dll
+/home/runner/work/effective-octo-giggle/effective-octo-giggle/Profiler.Web/obj/Debug/net10.0/compressed/4h2wnbo63j-{0}-k2an7tn6fw-k2an7tn6fw.gz
