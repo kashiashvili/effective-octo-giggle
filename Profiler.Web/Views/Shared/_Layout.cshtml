@@ -1,0 +1,54 @@
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@(ViewBag.Title ?? "Profiler") – Privacy-First Social Matching</title>
+    <link rel="stylesheet" href="~/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">🔐 Profiler</a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Home</a>
+                @{
+                    var username = HttpContextAccessor.HttpContext?.Session.GetString("Username");
+                }
+                @if (username != null)
+                {
+                    <a href="/sources/dashboard" class="nav-link">Dashboard</a>
+                    <a href="/sources/connect" class="nav-link">Connect</a>
+                    <a href="/matches" class="nav-link">Matches</a>
+                    <span class="nav-user">👤 @username</span>
+                    <a href="/account/logout" class="nav-link">Sign out</a>
+                }
+                else
+                {
+                    <a href="/account/login" class="nav-link">Login</a>
+                    <a href="/account/register" class="nav-link btn-primary-sm">Register</a>
+                }
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success">@TempData["Success"]</div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-error">@TempData["Error"]</div>
+        }
+        @RenderBody()
+    </main>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <p>🔐 Profiler — Privacy-preserving social matching. Your raw data is never stored.</p>
+        </div>
+    </footer>
+</body>
+</html>

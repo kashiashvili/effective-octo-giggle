@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Profiler.Web.Tests/Profiler.Web.Tests.csproj" />
+  <Project Path="Profiler.Web/Profiler.Web.csproj" />
+</Solution>

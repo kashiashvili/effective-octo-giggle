@@ -1,0 +1,57 @@
+@model List<Profiler.Web.ViewModels.MatchViewModel>
+@{
+    ViewBag.Title = "Your Matches";
+    bool noFingerprint = ViewBag.NoFingerprint ?? false;
+}
+
+<div class="matches-container">
+    <div class="matches-header">
+        <h1>🤝 Your Top Matches</h1>
+        <p>Ranked by Jaccard similarity of your MinHash fingerprints</p>
+    </div>
+
+    @if (noFingerprint)
+    {
+        <div class="empty-state">
+            <div class="empty-icon">🔌</div>
+            <h2>No fingerprint yet</h2>
+            <p>Connect your data sources to generate your fingerprint and find matches.</p>
+            <a href="/sources/connect" class="btn btn-primary">Connect Sources</a>
+        </div>
+    }
+    else if (!Model.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            <h2>No matches yet</h2>
+            <p>You're the first user with a fingerprint! Invite friends to discover matches.</p>
+            <a href="/sources/connect" class="btn btn-secondary">Update Sources</a>
+        </div>
+    }
+    else
+    {
+        <div class="matches-grid">
+            @foreach (var match in Model)
+            {
+                <div class="match-card">
+                    <div class="match-avatar">
+                        @match.Username.Substring(0, 1).ToUpper()
+                    </div>
+                    <div class="match-info">
+                        <h3 class="match-username">@match.Username</h3>
+                        <div class="similarity-bar-container">
+                            <div class="similarity-bar" style="width: @match.SimilarityPercent%"></div>
+                        </div>
+                        <span class="similarity-label">@match.SimilarityPercent% similarity</span>
+                        @if (match.SharedSources.Any())
+                        {
+                            <div class="shared-sources">
+                                Shared: @string.Join(", ", match.SharedSources)
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
