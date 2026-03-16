@@ -24,6 +24,8 @@ htmlcov/
 
 # SQLite databases (runtime data)
 *.db
+*.db-shm
+*.db-wal
 
 # .NET
 bin/
