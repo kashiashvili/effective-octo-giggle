@@ -21,3 +21,6 @@ env/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# SQLite databases (runtime data)
+*.db
