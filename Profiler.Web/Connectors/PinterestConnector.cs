@@ -63,7 +63,8 @@ public class PinterestConnector : IConnector
             }
         }
 
-        using var followed = await TryGetJson("https://api.pinterest.com/v5/user_account/followers/boards");
+        // Boards the user is following (Pinterest API v5: /user_account/following/boards)
+        using var followed = await TryGetJson("https://api.pinterest.com/v5/user_account/following/boards");
         if (followed != null && followed.RootElement.TryGetProperty("items", out var fItems))
         {
             foreach (var board in fItems.EnumerateArray())
@@ -71,7 +72,7 @@ public class PinterestConnector : IConnector
                 var name = "";
                 if (board.TryGetProperty("name", out var n)) name = n.GetString() ?? "";
                 if (!string.IsNullOrEmpty(name))
-                    features.Add($"pinterest-followed-board:{Slugify(name)}");
+                    features.Add($"pinterest-following-board:{Slugify(name)}");
             }
         }
 
