@@ -24,3 +24,11 @@ htmlcov/
 
 # SQLite databases (runtime data)
 *.db
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.db
