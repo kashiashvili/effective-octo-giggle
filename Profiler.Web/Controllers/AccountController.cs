@@ -17,6 +17,7 @@ public class AccountController : Controller
     public IActionResult Register() => View();
 
     [HttpPost("register")]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(RegisterViewModel vm)
     {
         if (!ModelState.IsValid) return View(vm);
@@ -42,6 +43,7 @@ public class AccountController : Controller
     public IActionResult Login() => View();
 
     [HttpPost("login")]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginViewModel vm)
     {
         if (!ModelState.IsValid) return View(vm);

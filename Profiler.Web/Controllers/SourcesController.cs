@@ -49,6 +49,7 @@ public class SourcesController : Controller
     }
 
     [HttpPost("connect")]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Connect(ConnectSourcesViewModel vm)
     {
         if (RequireLogin() is { } r) return r;
