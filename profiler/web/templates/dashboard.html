@@ -2,71 +2,71 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<h1 class="fw-bold mb-4">
-  <i class="bi bi-grid-fill text-primary me-2"></i>Dashboard
-</h1>
+<div class="page-header">
+  <h1>&#9783; Dashboard</h1>
+  <p>Welcome back, <strong>{{ session['username'] }}</strong></p>
+</div>
 
-<div class="row g-4">
-  <!-- Status card -->
-  <div class="col-md-5">
-    <div class="card h-100 shadow-sm">
-      <div class="card-body">
-        <h5 class="card-title fw-semibold">
-          <i class="bi bi-fingerprint me-2 text-primary"></i>Your Profile
-        </h5>
-        {% if fp_data %}
-          <p class="text-success mb-1">
-            <i class="bi bi-check-circle-fill me-1"></i>
-            Fingerprint generated
-          </p>
-          <p class="text-muted small mb-1">
-            Connected sources:
-            {% for s in fp_data['sources'] %}
-              <span class="badge bg-secondary">{{ s }}</span>
-            {% endfor %}
-          </p>
-          <a href="{{ url_for('sources.connect') }}" class="btn btn-sm btn-outline-primary mt-2">
-            <i class="bi bi-arrow-repeat me-1"></i>Update sources
+<div class="dashboard-grid">
+
+  <!-- Profile status -->
+  <div class="card">
+    <div class="card-body">
+      <h4 style="font-size:1.0625rem;margin-bottom:1.25rem;">&#128373; Your Profile</h4>
+      {% if fp_data %}
+        <div class="alert alert-success" style="margin-bottom:1rem;">
+          <span class="alert-icon">&#10003;</span>
+          <span>Fingerprint generated</span>
+        </div>
+        <p style="font-size:.875rem;color:#475569;margin-bottom:.6rem;">Connected sources:</p>
+        <div>
+          {% for s in fp_data['sources'] %}
+            <span class="source-badge">{{ s }}</span>
+          {% endfor %}
+        </div>
+        <div class="mt-4">
+          <a href="{{ url_for('sources.connect') }}" class="btn btn-outline btn-sm">
+            &#8635; Update sources
           </a>
-        {% else %}
-          <p class="text-muted">
-            No fingerprint yet. Connect at least one data source to get started.
-          </p>
-          <a href="{{ url_for('sources.connect') }}" class="btn btn-primary mt-1">
-            <i class="bi bi-plug-fill me-1"></i>Connect sources
-          </a>
-        {% endif %}
-      </div>
+        </div>
+      {% else %}
+        <p style="color:#94a3b8;font-size:.9375rem;margin-bottom:1.25rem;">
+          No fingerprint yet. Connect at least one data source to get started.
+        </p>
+        <a href="{{ url_for('sources.connect') }}" class="btn btn-primary">
+          &#128268; Connect sources
+        </a>
+      {% endif %}
     </div>
   </div>
 
   <!-- Quick actions -->
-  <div class="col-md-7">
-    <div class="card h-100 shadow-sm">
-      <div class="card-body">
-        <h5 class="card-title fw-semibold">
-          <i class="bi bi-lightning-fill me-2 text-warning"></i>Quick actions
-        </h5>
-        <div class="list-group list-group-flush mt-2">
-          <a href="{{ url_for('sources.connect') }}"
-             class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
-            <i class="bi bi-plug-fill text-primary fs-4"></i>
-            <div>
-              <div class="fw-semibold">Connect data sources</div>
-              <div class="small text-muted">GitHub, Goodreads, Netflix, Google, Facebook</div>
+  <div class="card">
+    <div class="card-body" style="padding-bottom:.75rem;">
+      <h4 style="font-size:1.0625rem;margin-bottom:1rem;">&#9889; Quick actions</h4>
+      <ul class="action-list">
+        <li>
+          <a href="{{ url_for('sources.connect') }}" class="action-item">
+            <div class="action-icon purple">&#128268;</div>
+            <div class="action-item-text">
+              <strong>Connect data sources</strong>
+              <small>GitHub, Goodreads, Netflix, Google, Facebook</small>
             </div>
           </a>
+        </li>
+        <li>
           <a href="{{ url_for('matches.matches') }}"
-             class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 {% if not fp_data %}disabled{% endif %}">
-            <i class="bi bi-heart-fill text-danger fs-4"></i>
-            <div>
-              <div class="fw-semibold">View my matches</div>
-              <div class="small text-muted">See users most similar to you</div>
+             class="action-item {% if not fp_data %}disabled{% endif %}">
+            <div class="action-icon red">&#10084;</div>
+            <div class="action-item-text">
+              <strong>View my matches</strong>
+              <small>See users most similar to you</small>
             </div>
           </a>
-        </div>
-      </div>
+        </li>
+      </ul>
     </div>
   </div>
+
 </div>
 {% endblock %}
