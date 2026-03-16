@@ -60,7 +60,8 @@ public class AccountController : Controller
         return RedirectToAction("Dashboard", "Sources");
     }
 
-    [HttpGet("logout")]
+    [HttpPost("logout")]
+    [ValidateAntiForgeryToken]
     public IActionResult Logout()
     {
         HttpContext.Session.Clear();

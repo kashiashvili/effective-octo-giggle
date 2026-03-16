@@ -22,7 +22,9 @@
                     <a href="/sources/connect" class="nav-link">Connect</a>
                     <a href="/matches" class="nav-link">Matches</a>
                     <span class="nav-user">👤 @username</span>
-                    <a href="/account/logout" class="nav-link">Sign out</a>
+                    <form asp-action="Logout" asp-controller="Account" method="post" style="display:inline">
+                        <button type="submit" class="nav-link" style="background:none;border:none;cursor:pointer;padding:0">Sign out</button>
+                    </form>
                 }
                 else
                 {
