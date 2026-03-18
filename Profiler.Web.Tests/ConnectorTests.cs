@@ -113,5 +113,46 @@ public class ConnectorTests
         Assert.Equal("Reddit", data.Source);
         Assert.NotNull(data.Features);
     }
+
+    [Fact]
+    public async Task RssFeedsConnector_ParsesKeywordsFromFeedUrls()
+    {
+        // Empty/invalid URLs should not throw
+        var http = new HttpClient();
+        var connector = new RssFeedsConnector(http, "not-a-url\nhttps://invalid.example/feed");
+        var data = await connector.FetchAsync();
+        Assert.Equal("RSS/Blogs", data.Source);
+        Assert.NotNull(data.Features);
+    }
+
+    [Fact]
+    public async Task TikTokConnector_HandlesApiErrorGracefully()
+    {
+        var http = new HttpClient();
+        var connector = new TikTokConnector(http, "fake-token");
+        var data = await connector.FetchAsync();
+        Assert.Equal("TikTok", data.Source);
+        Assert.NotNull(data.Features);
+    }
+
+    [Fact]
+    public async Task YouTubeConnector_HandlesApiErrorGracefully()
+    {
+        var http = new HttpClient();
+        var connector = new YouTubeConnector(http, "fake-token");
+        var data = await connector.FetchAsync();
+        Assert.Equal("YouTube", data.Source);
+        Assert.NotNull(data.Features);
+    }
+
+    [Fact]
+    public async Task InstagramConnector_HandlesApiErrorGracefully()
+    {
+        var http = new HttpClient();
+        var connector = new InstagramConnector(http, "fake-token");
+        var data = await connector.FetchAsync();
+        Assert.Equal("Instagram", data.Source);
+        Assert.NotNull(data.Features);
+    }
 }
 

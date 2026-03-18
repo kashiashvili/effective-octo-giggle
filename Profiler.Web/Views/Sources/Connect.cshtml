@@ -180,17 +180,100 @@
                     <small>Get API key at steamcommunity.com/dev/apikey</small>
                 </div>
             </div>
+
+            <!-- TikTok -->
+            <div class="source-form-card tiktok-card">
+                <div class="source-form-header">
+                    <span class="source-icon">🎬</span>
+                    <h3>TikTok</h3>
+                </div>
+                <div class="form-group">
+                    <label>OAuth Access Token</label>
+                    <input asp-for="TikTokToken" class="form-control" placeholder="act.xxx..." type="password" />
+                    <small>TikTok Display API v2 — requires user.info.basic, video.list scopes</small>
+                </div>
+            </div>
+
+            <!-- Instagram -->
+            <div class="source-form-card instagram-card">
+                <div class="source-form-header">
+                    <span class="source-icon">📸</span>
+                    <h3>Instagram</h3>
+                </div>
+                <div class="form-group">
+                    <label>OAuth Access Token</label>
+                    <input asp-for="InstagramToken" class="form-control" placeholder="IGQV..." type="password" />
+                    <small>Instagram Basic Display API — requires user_media scope</small>
+                </div>
+            </div>
+
+            <!-- Twitch -->
+            <div class="source-form-card twitch-card">
+                <div class="source-form-header">
+                    <span class="source-icon">🎮</span>
+                    <h3>Twitch</h3>
+                </div>
+                <div class="form-group">
+                    <label>OAuth Access Token</label>
+                    <input asp-for="TwitchToken" class="form-control" placeholder="oauth:..." type="password" />
+                    <small>Requires follows:read scope</small>
+                </div>
+                <div class="form-group">
+                    <label>Client ID</label>
+                    <input asp-for="TwitchClientId" class="form-control" placeholder="Your Twitch app Client ID" />
+                    <small>From dev.twitch.tv — required alongside the access token</small>
+                </div>
+            </div>
+
+            <!-- RSS/Blogs -->
+            <div class="source-form-card rss-card">
+                <div class="source-form-header">
+                    <span class="source-icon">📰</span>
+                    <h3>RSS / Blogs</h3>
+                </div>
+                <div class="form-group">
+                    <label>Feed URLs</label>
+                    <textarea asp-for="RssFeedUrls" class="form-control" rows="4" placeholder="https://example.com/feed&#10;https://blog.example.org/rss"></textarea>
+                    <small>Enter one URL per line (up to 10 feeds). No account needed.</small>
+                </div>
+            </div>
+
+            <!-- SoundCloud -->
+            <div class="source-form-card soundcloud-card">
+                <div class="source-form-header">
+                    <span class="source-icon">🎵</span>
+                    <h3>SoundCloud</h3>
+                </div>
+                <div class="form-group">
+                    <label>OAuth Access Token</label>
+                    <input asp-for="SoundCloudToken" class="form-control" placeholder="2-xxx..." type="password" />
+                    <small>SoundCloud API — get from soundcloud.com/you/apps</small>
+                </div>
+            </div>
+
+            <!-- YouTube -->
+            <div class="source-form-card youtube-card">
+                <div class="source-form-header">
+                    <span class="source-icon">📺</span>
+                    <h3>YouTube</h3>
+                </div>
+                <div class="form-group">
+                    <label>OAuth Access Token</label>
+                    <input asp-for="YouTubeToken" class="form-control" placeholder="ya29..." type="password" />
+                    <small>Google OAuth — requires youtube.readonly scope</small>
+                </div>
+            </div>
         </div>
 
         <div class="coming-soon-section">
             <h3>💡 More sources to come</h3>
             <ul class="coming-soon-list">
-                <li>🎬 <strong>TikTok</strong> — followed creators &amp; hashtags</li>
-                <li>📸 <strong>Instagram</strong> — followed hashtags &amp; interests</li>
-                <li>🎮 <strong>Twitch</strong> — followed streamers &amp; game categories</li>
-                <li>📰 <strong>RSS/Blogs</strong> — topics from subscribed feeds</li>
-                <li>🎵 <strong>SoundCloud</strong> — liked tracks &amp; genres</li>
-                <li>📺 <strong>YouTube</strong> — subscribed channel topics</li>
+                <li>🎯 <strong>BeReal</strong> — shared moments &amp; location interests</li>
+                <li>🎲 <strong>BoardGameGeek</strong> — owned &amp; rated board games</li>
+                <li>📱 <strong>Mastodon</strong> — followed accounts &amp; hashtags</li>
+                <li>🎬 <strong>Letterboxd</strong> — film ratings &amp; watchlists</li>
+                <li>🎵 <strong>Apple Music</strong> — top played songs &amp; artists</li>
+                <li>📖 <strong>Medium</strong> — clapped stories &amp; tags followed</li>
             </ul>
         </div>
 

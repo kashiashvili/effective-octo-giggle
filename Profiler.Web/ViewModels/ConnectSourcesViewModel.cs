@@ -19,4 +19,11 @@ public class ConnectSourcesViewModel
     public string? LastFmUsername { get; set; }
     public string? SteamApiKey { get; set; }
     public string? SteamId { get; set; }
+    public string? TikTokToken { get; set; }
+    public string? InstagramToken { get; set; }
+    public string? TwitchToken { get; set; }
+    public string? TwitchClientId { get; set; }
+    public string? RssFeedUrls { get; set; }
+    public string? SoundCloudToken { get; set; }
+    public string? YouTubeToken { get; set; }
 }

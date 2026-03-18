@@ -681,6 +681,12 @@ footer {
 .reddit-card   .source-form-header { background: linear-gradient(135deg, #FF4500, #d03a00); }
 .lastfm-card   .source-form-header { background: linear-gradient(135deg, #D51007, #a50c05); }
 .steam-card    .source-form-header { background: linear-gradient(135deg, #1B2838, #0d1520); }
+.tiktok-card    .source-form-header { background: linear-gradient(135deg, #010101, #2c2c2c); }
+.instagram-card .source-form-header { background: linear-gradient(135deg, #833ab4, #fd1d1d); }
+.twitch-card    .source-form-header { background: linear-gradient(135deg, #9146ff, #6441a5); }
+.rss-card       .source-form-header { background: linear-gradient(135deg, #f26522, #c9510c); }
+.soundcloud-card .source-form-header { background: linear-gradient(135deg, #ff5500, #cc3300); }
+.youtube-card   .source-form-header { background: linear-gradient(135deg, #ff0000, #cc0000); }
 
 /* Coming-soon section */
 .coming-soon-section {
