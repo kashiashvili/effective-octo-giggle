@@ -89,7 +89,12 @@ public class RssFeedsConnector : IConnector
                     var categories = item.Elements("category")
                         .Concat(item.Elements(atom + "category"))
                         .Concat(item.Elements("tags"))
-                        .Select(e => (e.Value?.Trim() ?? "") + (e.Attribute("term")?.Value ?? ""))
+                        .Select(e =>
+                        {
+                            var term = e.Attribute("term")?.Value?.Trim();
+                            var val = e.Value?.Trim();
+                            return !string.IsNullOrEmpty(term) ? term : val ?? "";
+                        })
                         .Where(c => !string.IsNullOrWhiteSpace(c));
 
                     foreach (var cat in categories)

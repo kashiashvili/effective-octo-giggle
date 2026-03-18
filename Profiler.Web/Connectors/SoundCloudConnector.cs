@@ -27,10 +27,12 @@ public class SoundCloudConnector : IConnector
         return slug;
     }
 
+    private const int HashPrefixLength = 12;
+
     private static string Sha256Prefix(string input)
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
-        return Convert.ToHexString(bytes)[..12].ToLowerInvariant();
+        return Convert.ToHexString(bytes)[..HashPrefixLength].ToLowerInvariant();
     }
 
     private async Task<JsonDocument?> TryGetJson(string url)
