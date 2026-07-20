@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>&#9783; Dashboard</h1>
+  <p>Welcome back, <strong>{{ session['username'] }}</strong></p>
+</div>
+
+<div class="dashboard-grid">
+
+  <!-- Profile status -->
+  <div class="card">
+    <div class="card-body">
+      <h4 style="font-size:1.0625rem;margin-bottom:1.25rem;">&#128373; Your Profile</h4>
+      {% if fp_data %}
+        <div class="alert alert-success" style="margin-bottom:1rem;">
+          <span class="alert-icon">&#10003;</span>
+          <span>Fingerprint generated</span>
+        </div>
+        <p style="font-size:.875rem;color:#475569;margin-bottom:.6rem;">Connected sources:</p>
+        <div>
+          {% for s in fp_data['sources'] %}
+            <span class="source-badge">{{ s }}</span>
+          {% endfor %}
+        </div>
+        <div class="mt-4">
+          <a href="{{ url_for('sources.connect') }}" class="btn btn-outline btn-sm">
+            &#8635; Update sources
+          </a>
+        </div>
+      {% else %}
+        <p style="color:#94a3b8;font-size:.9375rem;margin-bottom:1.25rem;">
+          No fingerprint yet. Connect at least one data source to get started.
+        </p>
+        <a href="{{ url_for('sources.connect') }}" class="btn btn-primary">
+          &#128268; Connect sources
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="card">
+    <div class="card-body" style="padding-bottom:.75rem;">
+      <h4 style="font-size:1.0625rem;margin-bottom:1rem;">&#9889; Quick actions</h4>
+      <ul class="action-list">
+        <li>
+          <a href="{{ url_for('sources.connect') }}" class="action-item">
+            <div class="action-icon purple">&#128268;</div>
+            <div class="action-item-text">
+              <strong>Connect data sources</strong>
+              <small>GitHub, Goodreads, Netflix, Google, Facebook</small>
+            </div>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('matches.matches') }}"
+             class="action-item {% if not fp_data %}disabled{% endif %}">
+            <div class="action-icon red">&#10084;</div>
+            <div class="action-item-text">
+              <strong>View my matches</strong>
+              <small>See users most similar to you</small>
+            </div>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
