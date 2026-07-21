@@ -6,6 +6,12 @@
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "Profiler.Web", "--no-launch-profile", "--urls", "http://127.0.0.1:5240"],
       "port": 5240
+    },
+    {
+      "name": "profiler-web-qa",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "Profiler.Web", "--no-launch-profile", "--urls", "http://127.0.0.1:5241"],
+      "port": 5241
     }
   ]
 }

@@ -21,6 +21,85 @@ public class AggregatorAndMatcherTests
             _error != null ? Task.FromException<ProfileData>(_error) : Task.FromResult(_data!);
     }
 
+    /// <summary>A connector that takes a fixed time before answering, for the fan-out timing tests.</summary>
+    private sealed class SlowConnector : IConnector
+    {
+        private readonly TimeSpan _delay;
+        private readonly ProfileData? _data;
+
+        public SlowConnector(string name, TimeSpan delay, ProfileData? data = null)
+        {
+            Name = name;
+            _delay = delay;
+            _data = data;
+        }
+
+        public string Name { get; }
+
+        public async Task<ProfileData> FetchAsync()
+        {
+            await Task.Delay(_delay);
+            return _data ?? new ProfileData(Name, new[] { "slow:1" });
+        }
+    }
+
+    [Fact]
+    public async Task Aggregate_RunsConnectorsConcurrently_NotOneAfterAnother()
+    {
+        var delay = TimeSpan.FromMilliseconds(300);
+        var aggregator = new ProfileAggregator(new IConnector[]
+        {
+            new SlowConnector("A", delay),
+            new SlowConnector("B", delay),
+            new SlowConnector("C", delay),
+            new SlowConnector("D", delay)
+        });
+
+        var started = System.Diagnostics.Stopwatch.StartNew();
+        var result = await aggregator.AggregateAsync();
+        started.Stop();
+
+        Assert.Equal(new[] { "A", "B", "C", "D" }, result.Sources);
+        // Sequentially this is 1200ms. The bound is loose enough to survive a slow machine while
+        // still failing outright if the connectors are awaited one at a time.
+        Assert.True(started.Elapsed < TimeSpan.FromMilliseconds(900),
+            $"fan-out took {started.ElapsedMilliseconds}ms, which suggests the connectors ran sequentially");
+    }
+
+    [Fact]
+    public async Task Aggregate_ConnectorExceedingTheBudget_IsReportedButDoesNotLoseTheOthers()
+    {
+        var aggregator = new ProfileAggregator(
+            new IConnector[]
+            {
+                new StubConnector(new ProfileData("Fast", new[] { "x:1" })),
+                new SlowConnector("Hung", TimeSpan.FromSeconds(30))
+            },
+            TimeSpan.FromMilliseconds(200));
+
+        var result = await aggregator.AggregateAsync();
+
+        Assert.Equal(new[] { "Fast" }, result.Sources);
+        var failure = Assert.Single(result.Failures);
+        Assert.Equal("Hung", failure.Source);
+        Assert.Contains("too long", failure.Message);
+    }
+
+    [Fact]
+    public async Task Aggregate_OrdersResultsByConnector_NotByWhoAnsweredFirst()
+    {
+        var aggregator = new ProfileAggregator(new IConnector[]
+        {
+            new SlowConnector("Slowest", TimeSpan.FromMilliseconds(250)),
+            new SlowConnector("Middle", TimeSpan.FromMilliseconds(120)),
+            new SlowConnector("Fastest", TimeSpan.Zero)
+        });
+
+        var result = await aggregator.AggregateAsync();
+
+        Assert.Equal(new[] { "Slowest", "Middle", "Fastest" }, result.Sources);
+    }
+
     [Fact]
     public async Task Aggregate_CollectsFeaturesFromAllSuccessfulConnectors()
     {

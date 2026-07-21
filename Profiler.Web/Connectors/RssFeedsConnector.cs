@@ -80,16 +80,30 @@ public class RssFeedsConnector : IConnector
         return null;
     }
 
+    /// <summary>
+    /// Fetches one feed, treating every failure as "this feed contributed nothing". A single dead or
+    /// hostile URL must not cost the user the other nine.
+    /// </summary>
+    private async Task<string?> TryFetchAsync(string url)
+    {
+        try { return await FetchWithGuardedRedirectsAsync(new Uri(url)); }
+        catch { return null; }
+    }
+
     public async Task<ProfileData> FetchAsync()
     {
         var features = new List<string>();
         var urls = ParseUrls(_feedUrls).ToList();
 
-        foreach (var url in urls)
+        // Ten feeds fetched one after another cost ten timeouts in the worst case, inside a POST the
+        // user is waiting on. They are independent, so they go out together; parsing then happens in
+        // the order the URLs were given, so the resulting features do not depend on network timing.
+        var documents = await Task.WhenAll(urls.Select(TryFetchAsync));
+
+        foreach (var xml in documents)
         {
             try
             {
-                var xml = await FetchWithGuardedRedirectsAsync(new Uri(url));
                 if (xml == null) continue;
                 XDocument doc;
                 try { doc = XDocument.Parse(xml); }

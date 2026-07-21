@@ -17,42 +17,83 @@ public class AggregationResult
 
 public class ProfileAggregator
 {
-    private readonly IEnumerable<IConnector> _connectors;
+    /// <summary>
+    /// How long the whole fan-out may take. Each connector's HTTP client already gives up after 15s,
+    /// but a connector that makes several calls can outlast that, and the user is staring at a
+    /// blocking POST the entire time. Past this point the sources that did answer are kept and the
+    /// rest are reported as timed out, rather than the gateway cutting the request and losing
+    /// everything — including uploaded CSVs, which a browser cannot repopulate.
+    /// </summary>
+    public static readonly TimeSpan Budget = TimeSpan.FromSeconds(30);
 
-    public ProfileAggregator(IEnumerable<IConnector> connectors)
+    private readonly IEnumerable<IConnector> _connectors;
+    private readonly TimeSpan _budget;
+
+    public ProfileAggregator(IEnumerable<IConnector> connectors) : this(connectors, Budget) { }
+
+    public ProfileAggregator(IEnumerable<IConnector> connectors, TimeSpan budget)
     {
         _connectors = connectors;
+        _budget = budget;
     }
 
     public async Task<AggregationResult> AggregateAsync()
     {
         var result = new AggregationResult();
+        var connectors = _connectors.ToList();
 
-        foreach (var connector in _connectors)
+        // Connectors are independent, so they run together: connecting five sources used to cost the
+        // sum of five timeouts. Results are collected in the caller's order afterwards, so what the
+        // user sees does not depend on which network call happened to answer first.
+        var attempts = connectors.Select(FetchAsync).ToList();
+
+        using var expiry = new CancellationTokenSource();
+        var budget = Task.Delay(_budget, expiry.Token);
+        var completed = Task.WhenAll(attempts);
+        if (await Task.WhenAny(completed, budget) == completed) expiry.Cancel();
+
+        for (var i = 0; i < connectors.Count; i++)
         {
-            try
+            var attempt = attempts[i];
+            if (!attempt.IsCompleted)
             {
-                var data = await connector.FetchAsync();
-                if (data.Features.Count == 0)
-                {
-                    // Connectors that swallow HTTP errors surface here as "success with no data";
-                    // either way the source contributed nothing and must not be listed as connected.
-                    result.Failures.Add(new ConnectorFailure(connector.Name,
-                        "returned no interest data — check the credentials or account name"));
-                    continue;
-                }
-                result.Results.Add(new SourceResult(data.Source, data.Features.ToList()));
+                // Abandoned rather than aborted: the connector's own client timeout ends it shortly.
+                result.Failures.Add(new ConnectorFailure(connectors[i].Name, "took too long to respond"));
+                continue;
             }
-            catch (ConnectorException ex)
-            {
-                result.Failures.Add(new ConnectorFailure(connector.Name, ex.Message));
-            }
-            catch (Exception ex)
-            {
-                result.Failures.Add(new ConnectorFailure(connector.Name, $"Unexpected error: {ex.Message}"));
-            }
+
+            var outcome = attempt.Result;
+            if (outcome.Data != null)
+                result.Results.Add(new SourceResult(outcome.Data.Source, outcome.Data.Features.ToList()));
+            else
+                result.Failures.Add(new ConnectorFailure(connectors[i].Name, outcome.Error!));
         }
 
         return result;
     }
+
+    private static async Task<Attempt> FetchAsync(IConnector connector)
+    {
+        try
+        {
+            var data = await connector.FetchAsync();
+            if (data.Features.Count == 0)
+            {
+                // Connectors that swallow HTTP errors surface here as "success with no data";
+                // either way the source contributed nothing and must not be listed as connected.
+                return new Attempt(null, "returned no interest data — check the credentials or account name");
+            }
+            return new Attempt(data, null);
+        }
+        catch (ConnectorException ex)
+        {
+            return new Attempt(null, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return new Attempt(null, $"Unexpected error: {ex.Message}");
+        }
+    }
+
+    private record Attempt(ProfileData? Data, string? Error);
 }
