@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Profiler.Web.Data;
+using Profiler.Web.Profile;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -189,6 +190,11 @@ builder.Services.AddHttpClient("rss-connector", client =>
 // them without naming trusted proxies is refused outright.
 var forwardedHeaders = Profiler.Web.Security.ProxyTrust.Build(builder.Configuration);
 
+// The secret that keeps a stolen database from being tested against guessed interests. Resolving it
+// here means a deployment missing it fails to start instead of running with the promise untrue.
+var pepper = FingerprintPepper.Resolve(builder.Configuration, builder.Environment.IsDevelopment());
+builder.Services.AddSingleton(new FingerprintGenerator(128, pepper));
+
 var app = builder.Build();
 
 // Must run before anything reads the client address or scheme — the rate limiters partition on the
@@ -199,6 +205,40 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+
+    // Signatures built under a different pepper belong to a different hash family and can no longer
+    // be compared with anything. Left in place they would not error, they would simply match nobody
+    // against anybody, forever and silently. Clearing them puts everyone back to "connect a source",
+    // which is recoverable; the raw interests needed to rebuild them are deliberately gone.
+    var verifier = app.Services.GetRequiredService<FingerprintGenerator>().SchemeVerifier;
+    var scheme = db.FingerprintSchemes.FirstOrDefault();
+    if (scheme == null)
+    {
+        // No record of a scheme, but signatures present, means they predate the pepper and were
+        // built by the old public hash family. Recording the new verifier over them would assert a
+        // match that isn't there, so they go the same way as a rotated pepper.
+        if (db.Fingerprints.Any() || db.SourceFingerprints.Any())
+        {
+            app.Logger.LogWarning(
+                "Stored signatures predate the fingerprint pepper and cannot be compared under it. " +
+                "Clearing them; users will be asked to reconnect their sources.");
+            db.SourceFingerprints.ExecuteDelete();
+            db.Fingerprints.ExecuteDelete();
+        }
+        db.FingerprintSchemes.Add(new Profiler.Web.Data.Models.FingerprintScheme { Verifier = verifier });
+        db.SaveChanges();
+    }
+    else if (scheme.Verifier != verifier)
+    {
+        app.Logger.LogWarning(
+            "The fingerprint pepper has changed, so every stored signature is unusable. Clearing them; " +
+            "users will be asked to reconnect their sources.");
+        db.SourceFingerprints.ExecuteDelete();
+        db.Fingerprints.ExecuteDelete();
+        scheme.Verifier = verifier;
+        scheme.UpdatedAt = DateTime.UtcNow;
+        db.SaveChanges();
+    }
 }
 
 if (!app.Environment.IsDevelopment())

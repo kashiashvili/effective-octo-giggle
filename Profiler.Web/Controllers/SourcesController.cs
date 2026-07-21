@@ -20,11 +20,15 @@ public class SourcesController : Controller
 
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _httpFactory;
+    // Injected rather than constructed here: it carries the deployment's pepper, and a generator
+    // built without it would write signatures nothing else could compare.
+    private readonly FingerprintGenerator _generator;
 
-    public SourcesController(AppDbContext db, IHttpClientFactory httpFactory)
+    public SourcesController(AppDbContext db, IHttpClientFactory httpFactory, FingerprintGenerator generator)
     {
         _db = db;
         _httpFactory = httpFactory;
+        _generator = generator;
     }
 
     private int CurrentUserId => User.GetUserId();
@@ -165,8 +169,14 @@ public class SourcesController : Controller
             return View(vm);
         }
 
-        var generator = new FingerprintGenerator();
+        var generator = _generator;
         var now = DateTime.UtcNow;
+
+        // The per-source rows and the combined fingerprint are two saves. Committed separately, a
+        // failure between them leaves the dashboard showing a freshly connected source while
+        // matching keeps using the old combined signature — and nothing ever recomputes it, so the
+        // discrepancy would be permanent.
+        await using var transaction = await _db.Database.BeginTransactionAsync();
 
         foreach (var source in result.Results)
         {
@@ -196,6 +206,7 @@ public class SourcesController : Controller
 
         var totalSources = await RecomputeCombinedFingerprintAsync(userId);
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         TempData["Success"] = $"{string.Join(", ", result.Sources)} " +
             $"{(result.Sources.Count == 1 ? "was" : "were")} updated. " +

@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<FingerprintRecord> Fingerprints => Set<FingerprintRecord>();
     public DbSet<SourceFingerprintRecord> SourceFingerprints => Set<SourceFingerprintRecord>();
     public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
+    public DbSet<FingerprintScheme> FingerprintSchemes => Set<FingerprintScheme>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

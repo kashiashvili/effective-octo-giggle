@@ -39,9 +39,15 @@
                 <h3 class="mb-2">Why matching still works</h3>
                 <p>
                     Two MinHash signatures can be compared to estimate how similar the underlying
-                    interest sets are (Jaccard similarity) — without either set ever being
-                    reconstructable from the signature. Other users only ever see your username,
-                    a similarity percentage, and which source types you have in common.
+                    interest sets are (Jaccard similarity) without either side revealing what those
+                    interests are. Other users only ever see your username, a similarity percentage,
+                    and which source types you have in common.
+                </p>
+                <p class="text-muted mb-0">
+                    A signature is not reversible on its own, and it is additionally hashed with a
+                    secret held by this server and never stored beside it — so a copy of the database
+                    alone cannot be tested against a list of guessed interests to see which ones
+                    were yours.
                 </p>
             </div>
         </div>

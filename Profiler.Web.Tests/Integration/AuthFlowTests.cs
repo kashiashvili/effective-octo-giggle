@@ -263,6 +263,9 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
         {
             b.UseEnvironment(Environments.Production);
             b.UseSetting("https_port", "443");
+            // Outside Development the app refuses to start without a fingerprint pepper, which is
+            // the point of that check — supply one here as a real deployment would.
+            b.UseSetting(Profiler.Web.Security.FingerprintPepper.ConfigKey, "test-only-pepper");
         });
         var client = prod.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 

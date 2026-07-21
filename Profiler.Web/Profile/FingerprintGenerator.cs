@@ -12,23 +12,44 @@ public class FingerprintGenerator
 
     private readonly int _numHashes;
     private readonly (ulong a, ulong b)[] _params;
+    private readonly byte[] _pepper;
 
-    public FingerprintGenerator(int numHashes = 128)
+    /// <param name="pepper">
+    /// A secret belonging to the deployment, mixed into every hash. Without it the scheme is fully
+    /// public: interest labels come from a small, guessable vocabulary (`language:python`,
+    /// `genre:sci-fi`), and a MinHash slot holds the smallest hash over the set — so anyone holding
+    /// the database could hash each guess and see which ones appear, recovering real interests from
+    /// data that is supposed to be one-way. The pepper is what makes that attack require more than
+    /// the database. It is never stored beside the signatures, and changing it invalidates every
+    /// signature ever produced.
+    /// </param>
+    public FingerprintGenerator(int numHashes = 128, string? pepper = null)
     {
         _numHashes = numHashes;
+        _pepper = Encoding.UTF8.GetBytes(pepper ?? "");
         _params = new (ulong, ulong)[numHashes];
         for (int i = 0; i < numHashes; i++)
         {
-            var seed = SHA256.HashData(Encoding.UTF8.GetBytes($"minhash-param-{i}"));
+            // The hash family is derived under the pepper too, so a signature cannot be attacked by
+            // reproducing the parameters from the published source alone.
+            var seed = HMACSHA256.HashData(_pepper, Encoding.UTF8.GetBytes($"minhash-param-{i}"));
             ulong a = BitConverter.ToUInt64(seed, 0) % PRIME;
             ulong b = BitConverter.ToUInt64(seed, 8) % PRIME;
             _params[i] = (a == 0 ? 1 : a, b);
         }
     }
 
-    private static ulong StrToInt(string feature)
+    /// <summary>
+    /// A value that changes whenever the pepper does, and reveals nothing about it. Stored so the
+    /// app can notice that every existing signature was built under a different secret and is now
+    /// meaningless, rather than silently matching nobody against anybody.
+    /// </summary>
+    public string SchemeVerifier =>
+        Convert.ToHexString(HMACSHA256.HashData(_pepper, Encoding.UTF8.GetBytes($"scheme-v1-{_numHashes}")));
+
+    private ulong StrToInt(string feature)
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(feature));
+        var bytes = HMACSHA256.HashData(_pepper, Encoding.UTF8.GetBytes(feature));
         return BitConverter.ToUInt64(bytes, 0);
     }
 
