@@ -90,7 +90,7 @@
                                 <p class="match-contact">📮 @match.Contact</p>
                             }
                             <form asp-action="Hide" asp-controller="Matches" method="post" class="match-hide">
-                                <input type="hidden" name="userId" value="@match.UserId" />
+                                <input type="hidden" name="username" value="@match.Username" />
                                 <button type="submit" class="match-hide-btn" data-no-busy
                                         title="Hide @match.Username from your matches">🙈 Hide</button>
                             </form>

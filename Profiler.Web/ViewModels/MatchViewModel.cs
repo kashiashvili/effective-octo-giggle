@@ -2,7 +2,6 @@ namespace Profiler.Web.ViewModels;
 
 public class MatchViewModel
 {
-    public int UserId { get; set; }
     public string Username { get; set; } = "";
     public double Similarity { get; set; }
     public int SimilarityPercent => (int)Math.Round(Similarity * 100);

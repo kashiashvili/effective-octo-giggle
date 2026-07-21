@@ -262,7 +262,6 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
 
         var otherName = "hide_other_" + Guid.NewGuid().ToString("N")[..6];
         var fpJson = new FingerprintGenerator(128).Generate(new[] { "y:1", "y:2", "y:3" }).ToJson();
-        int otherId = 0;
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -270,7 +269,6 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
             var other = new AppUser { Username = otherName, PasswordHash = "x", IsDiscoverable = true };
             db.Users.Add(other);
             await db.SaveChangesAsync();
-            otherId = other.Id;
             db.Fingerprints.Add(new FingerprintRecord { UserId = me.Id, FingerprintJson = fpJson, SourcesJson = "[]" });
             db.Fingerprints.Add(new FingerprintRecord { UserId = other.Id, FingerprintJson = fpJson, SourcesJson = "[]" });
             await db.SaveChangesAsync();
@@ -278,11 +276,11 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
 
         Assert.Contains(otherName, await (await client.GetAsync("/matches")).Content.ReadAsStringAsync());
 
-        var hide = await PostFormAsync(client, "/matches", "/matches/hide", new() { ["userId"] = otherId.ToString() });
+        var hide = await PostFormAsync(client, "/matches", "/matches/hide", new() { ["username"] = otherName });
         Assert.Equal(HttpStatusCode.Redirect, hide.StatusCode);
         Assert.DoesNotContain(otherName, await (await client.GetAsync("/matches")).Content.ReadAsStringAsync());
 
-        var unhide = await PostFormAsync(client, "/matches/hidden", "/matches/unhide", new() { ["userId"] = otherId.ToString() });
+        var unhide = await PostFormAsync(client, "/matches/hidden", "/matches/unhide", new() { ["username"] = otherName });
         Assert.Equal(HttpStatusCode.Redirect, unhide.StatusCode);
         Assert.Contains(otherName, await (await client.GetAsync("/matches")).Content.ReadAsStringAsync());
     }

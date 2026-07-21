@@ -67,7 +67,6 @@ public class MatchesController : Controller
                 : new List<string>();
             return new MatchViewModel
             {
-                UserId = int.Parse(m.UserId),
                 Username = m.Username,
                 Similarity = m.Similarity,
                 SharedSources = mySources.Intersect(matchSources).ToList(),
@@ -81,14 +80,20 @@ public class MatchesController : Controller
         return View(viewModels);
     }
 
+    // Hiding is addressed by username rather than by row id: the username is already visible on the
+    // match card, whereas putting the internal id in the page would hand out a sequential identifier
+    // and, with it, a rough count of everyone registered.
     [HttpPost("hide")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Hide(int userId)
+    public async Task<IActionResult> Hide(string username)
     {
         var me = User.GetUserId();
-        if (userId != me && !await _db.UserBlocks.AnyAsync(b => b.BlockerId == me && b.BlockedId == userId))
+        var target = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+        if (target == null || target.Id == me) return RedirectToAction(nameof(Index));
+
+        if (!await _db.UserBlocks.AnyAsync(b => b.BlockerId == me && b.BlockedId == target.Id))
         {
-            _db.UserBlocks.Add(new Data.Models.UserBlock { BlockerId = me, BlockedId = userId });
+            _db.UserBlocks.Add(new Data.Models.UserBlock { BlockerId = me, BlockedId = target.Id });
             await _db.SaveChangesAsync();
             TempData["Success"] = "Hidden. You won't see each other in matches anymore.";
         }
@@ -101,17 +106,20 @@ public class MatchesController : Controller
         var me = User.GetUserId();
         var blocked = await _db.UserBlocks
             .Where(b => b.BlockerId == me)
-            .Join(_db.Users, b => b.BlockedId, u => u.Id, (b, u) => new MatchViewModel { UserId = u.Id, Username = u.Username })
+            .Join(_db.Users, b => b.BlockedId, u => u.Id, (b, u) => new MatchViewModel { Username = u.Username })
             .ToListAsync();
         return View(blocked);
     }
 
     [HttpPost("unhide")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Unhide(int userId)
+    public async Task<IActionResult> Unhide(string username)
     {
         var me = User.GetUserId();
-        var block = await _db.UserBlocks.FirstOrDefaultAsync(b => b.BlockerId == me && b.BlockedId == userId);
+        var target = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+        if (target == null) return RedirectToAction(nameof(Hidden));
+
+        var block = await _db.UserBlocks.FirstOrDefaultAsync(b => b.BlockerId == me && b.BlockedId == target.Id);
         if (block != null)
         {
             _db.UserBlocks.Remove(block);

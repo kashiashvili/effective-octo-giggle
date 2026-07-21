@@ -29,7 +29,7 @@
                             <li class="source-row">
                                 <span class="source-badge">@person.Username</span>
                                 <form asp-action="Unhide" asp-controller="Matches" method="post" class="ms-auto">
-                                    <input type="hidden" name="userId" value="@person.UserId" />
+                                    <input type="hidden" name="username" value="@person.Username" />
                                     <button type="submit" class="btn btn-outline btn-sm">Unhide</button>
                                 </form>
                             </li>
