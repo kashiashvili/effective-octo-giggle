@@ -17,7 +17,7 @@ public class AggregatorAndMatcherTests
 
         public string Name => _data?.Source ?? "Stub";
 
-        public Task<ProfileData> FetchAsync() =>
+        public Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default) =>
             _error != null ? Task.FromException<ProfileData>(_error) : Task.FromResult(_data!);
     }
 
@@ -36,10 +36,56 @@ public class AggregatorAndMatcherTests
 
         public string Name { get; }
 
-        public async Task<ProfileData> FetchAsync()
+        public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
         {
-            await Task.Delay(_delay);
+            await Task.Delay(_delay, cancellationToken);
             return _data ?? new ProfileData(Name, new[] { "slow:1" });
+        }
+    }
+
+    /// <summary>
+    /// A connector that only ever completes via cancellation, so a test can confirm the aggregator's
+    /// budget actually reaches into the connector's own awaited call instead of merely giving up on
+    /// waiting for it while it keeps running in the background.
+    /// </summary>
+    private sealed class CancellationAwareConnector : IConnector
+    {
+        private Task<ProfileData>? _lastFetch;
+
+        public CancellationAwareConnector(string name) => Name = name;
+
+        public string Name { get; }
+        public bool ObservedCancellation { get; private set; }
+
+        public Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
+        {
+            var task = RunAsync(cancellationToken);
+            _lastFetch = task;
+            return task;
+        }
+
+        /// <summary>
+        /// AggregateAsync bounds only its own wait by the budget, not how long this connector takes
+        /// to unwind afterward, so tests need a separate, generous wait before checking what the
+        /// connector observed.
+        /// </summary>
+        public Task WaitForOwnCompletionAsync(TimeSpan timeout) =>
+            _lastFetch == null ? Task.CompletedTask : Task.WhenAny(_lastFetch, Task.Delay(timeout));
+
+        private async Task<ProfileData> RunAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                // Far longer than any test budget, so this can only return via cancellation.
+                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                ObservedCancellation = true;
+                throw;
+            }
+
+            return new ProfileData(Name, new[] { "x:1" });
         }
     }
 
@@ -79,6 +125,33 @@ public class AggregatorAndMatcherTests
 
         var result = await aggregator.AggregateAsync();
 
+        Assert.Equal(new[] { "Fast" }, result.Sources);
+        var failure = Assert.Single(result.Failures);
+        Assert.Equal("Hung", failure.Source);
+        Assert.Contains("too long", failure.Message);
+    }
+
+    [Fact]
+    public async Task Aggregate_BudgetExpiring_CancelsTheConnectorsToken_RatherThanJustAbandoningIt()
+    {
+        var hung = new CancellationAwareConnector("Hung");
+        var aggregator = new ProfileAggregator(
+            new IConnector[]
+            {
+                new StubConnector(new ProfileData("Fast", new[] { "x:1" })),
+                hung
+            },
+            TimeSpan.FromMilliseconds(200));
+
+        var result = await aggregator.AggregateAsync();
+
+        // The budget only bounds AggregateAsync's own wait; give the connector's continuation a
+        // moment to actually run before checking what it observed. This is a generous backstop, not
+        // the expected runtime — it resolves almost immediately once cancellation fires.
+        await hung.WaitForOwnCompletionAsync(TimeSpan.FromSeconds(2));
+
+        Assert.True(hung.ObservedCancellation,
+            "expected the budget expiring to cancel the connector's own token, not merely abandon it while it kept running");
         Assert.Equal(new[] { "Fast" }, result.Sources);
         var failure = Assert.Single(result.Failures);
         Assert.Equal("Hung", failure.Source);

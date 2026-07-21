@@ -25,27 +25,28 @@ public class YouTubeConnector : IConnector
         return slug;
     }
 
-    private async Task<JsonDocument?> TryGetJson(string url)
+    private async Task<JsonDocument?> TryGetJson(string url, CancellationToken cancellationToken)
     {
         try
         {
             var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
             req.Headers.Add("User-Agent", "Profiler.Web/1.0");
-            using var resp = await _http.SendAsync(req);
+            using var resp = await _http.SendAsync(req, cancellationToken);
             if (!resp.IsSuccessStatusCode) return null;
-            var json = await resp.Content.ReadAsStringAsync();
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken);
             return JsonDocument.Parse(json);
         }
+        catch (OperationCanceledException) { throw; }
         catch { return null; }
     }
 
-    public async Task<ProfileData> FetchAsync()
+    public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new List<string>();
 
         using var subs = await TryGetJson(
-            "https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=50");
+            "https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=50", cancellationToken);
         if (subs != null && subs.RootElement.TryGetProperty("items", out var subsItems))
         {
             var channelCount = 0;
@@ -84,7 +85,7 @@ public class YouTubeConnector : IConnector
 
         var uniqueTags = new HashSet<string>();
         using var liked = await TryGetJson(
-            "https://www.googleapis.com/youtube/v3/videos?part=snippet&myRating=like&maxResults=50");
+            "https://www.googleapis.com/youtube/v3/videos?part=snippet&myRating=like&maxResults=50", cancellationToken);
         if (liked != null && liked.RootElement.TryGetProperty("items", out var likedItems))
         {
             foreach (var video in likedItems.EnumerateArray())

@@ -15,7 +15,7 @@ public class GoogleConnector : IConnector
         _token = token;
     }
 
-    public async Task<ProfileData> FetchAsync()
+    public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new List<string>();
 
@@ -26,11 +26,11 @@ public class GoogleConnector : IConnector
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token);
             req.Headers.Add("User-Agent", "Profiler.Web/1.0");
 
-            using var resp = await _http.SendAsync(req);
+            using var resp = await _http.SendAsync(req, cancellationToken);
             if (!resp.IsSuccessStatusCode)
                 throw new ConnectorException($"Google API returned {resp.StatusCode}");
 
-            var json = await resp.Content.ReadAsStringAsync();
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken);
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
@@ -50,6 +50,7 @@ public class GoogleConnector : IConnector
                         features.Add($"org-type:{v.GetString()?.ToLowerInvariant()}");
         }
         catch (ConnectorException) { throw; }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex) { throw new ConnectorException("Google connector error", ex); }
 
         return new ProfileData("Google", features.Distinct().ToList());

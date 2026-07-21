@@ -158,7 +158,7 @@ public class SourcesController : Controller
         }
 
         var aggregator = new ProfileAggregator(connectors);
-        var result = await aggregator.AggregateAsync();
+        var result = await aggregator.AggregateAsync(HttpContext.RequestAborted);
 
         if (result.Results.Count == 0)
         {

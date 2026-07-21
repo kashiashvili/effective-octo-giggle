@@ -27,7 +27,7 @@ public class TwitchConnector : IConnector
         return slug;
     }
 
-    private async Task<JsonDocument?> TryGetJson(string url)
+    private async Task<JsonDocument?> TryGetJson(string url, CancellationToken cancellationToken)
     {
         try
         {
@@ -35,19 +35,20 @@ public class TwitchConnector : IConnector
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
             req.Headers.Add("Client-Id", _clientId);
             req.Headers.Add("User-Agent", "Profiler.Web/1.0");
-            using var resp = await _http.SendAsync(req);
+            using var resp = await _http.SendAsync(req, cancellationToken);
             if (!resp.IsSuccessStatusCode) return null;
-            var json = await resp.Content.ReadAsStringAsync();
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken);
             return JsonDocument.Parse(json);
         }
+        catch (OperationCanceledException) { throw; }
         catch { return null; }
     }
 
-    public async Task<ProfileData> FetchAsync()
+    public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new List<string>();
 
-        using var userDoc = await TryGetJson("https://api.twitch.tv/helix/users");
+        using var userDoc = await TryGetJson("https://api.twitch.tv/helix/users", cancellationToken);
         string userId = "";
         if (userDoc != null
             && userDoc.RootElement.TryGetProperty("data", out var userData)
@@ -62,7 +63,7 @@ public class TwitchConnector : IConnector
             return new ProfileData("Twitch", features);
 
         using var streams = await TryGetJson(
-            $"https://api.twitch.tv/helix/streams/followed?user_id={userId}&first=100");
+            $"https://api.twitch.tv/helix/streams/followed?user_id={userId}&first=100", cancellationToken);
         if (streams != null && streams.RootElement.TryGetProperty("data", out var streamsData))
         {
             foreach (var stream in streamsData.EnumerateArray())
@@ -83,7 +84,7 @@ public class TwitchConnector : IConnector
         }
 
         using var channels = await TryGetJson(
-            $"https://api.twitch.tv/helix/channels/followed?user_id={userId}&first=100");
+            $"https://api.twitch.tv/helix/channels/followed?user_id={userId}&first=100", cancellationToken);
         if (channels != null && channels.RootElement.TryGetProperty("data", out var channelsData))
         {
             var count = 0;

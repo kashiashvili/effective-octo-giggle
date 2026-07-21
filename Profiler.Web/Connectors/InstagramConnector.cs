@@ -25,26 +25,27 @@ public class InstagramConnector : IConnector
         return slug;
     }
 
-    private async Task<JsonDocument?> TryGetJson(string url)
+    private async Task<JsonDocument?> TryGetJson(string url, CancellationToken cancellationToken)
     {
         try
         {
-            using var resp = await _http.GetAsync(url);
+            using var resp = await _http.GetAsync(url, cancellationToken);
             if (!resp.IsSuccessStatusCode) return null;
-            var json = await resp.Content.ReadAsStringAsync();
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken);
             return JsonDocument.Parse(json);
         }
+        catch (OperationCanceledException) { throw; }
         catch { return null; }
     }
 
-    public async Task<ProfileData> FetchAsync()
+    public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new List<string>();
 
         var hashtagsSeen = new HashSet<string>();
 
         using var media = await TryGetJson(
-            $"https://graph.instagram.com/me/media?fields=media_type,caption,hashtags&limit=50&access_token={_accessToken}");
+            $"https://graph.instagram.com/me/media?fields=media_type,caption,hashtags&limit=50&access_token={_accessToken}", cancellationToken);
         if (media != null && media.RootElement.TryGetProperty("data", out var mediaData))
         {
             foreach (var post in mediaData.EnumerateArray())
@@ -71,7 +72,7 @@ public class InstagramConnector : IConnector
         }
 
         using var tags = await TryGetJson(
-            $"https://graph.instagram.com/me/tags?fields=id,name&access_token={_accessToken}");
+            $"https://graph.instagram.com/me/tags?fields=id,name&access_token={_accessToken}", cancellationToken);
         if (tags != null && tags.RootElement.TryGetProperty("data", out var tagsData))
         {
             foreach (var tag in tagsData.EnumerateArray())

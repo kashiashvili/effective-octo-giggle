@@ -57,13 +57,13 @@ public class RssFeedsConnector : IConnector
     /// <see cref="SsrfGuard"/>. Auto-redirect is disabled on this connector's HttpClient, because
     /// a public URL that 302s to an internal address would otherwise bypass the guard.
     /// </summary>
-    private async Task<string?> FetchWithGuardedRedirectsAsync(Uri uri, int maxHops = 3)
+    private async Task<string?> FetchWithGuardedRedirectsAsync(Uri uri, CancellationToken cancellationToken, int maxHops = 3)
     {
         for (var hop = 0; hop <= maxHops; hop++)
         {
-            if (!await SsrfGuard.IsAllowedAsync(uri)) return null;
+            if (!await SsrfGuard.IsAllowedAsync(uri, cancellationToken)) return null;
 
-            using var resp = await _http.GetAsync(uri);
+            using var resp = await _http.GetAsync(uri, cancellationToken);
 
             if ((int)resp.StatusCode is >= 300 and < 400)
             {
@@ -75,7 +75,7 @@ public class RssFeedsConnector : IConnector
             }
 
             if (!resp.IsSuccessStatusCode) return null;
-            return await resp.Content.ReadAsStringAsync();
+            return await resp.Content.ReadAsStringAsync(cancellationToken);
         }
         return null;
     }
@@ -84,13 +84,14 @@ public class RssFeedsConnector : IConnector
     /// Fetches one feed, treating every failure as "this feed contributed nothing". A single dead or
     /// hostile URL must not cost the user the other nine.
     /// </summary>
-    private async Task<string?> TryFetchAsync(string url)
+    private async Task<string?> TryFetchAsync(string url, CancellationToken cancellationToken)
     {
-        try { return await FetchWithGuardedRedirectsAsync(new Uri(url)); }
+        try { return await FetchWithGuardedRedirectsAsync(new Uri(url), cancellationToken); }
+        catch (OperationCanceledException) { throw; }
         catch { return null; }
     }
 
-    public async Task<ProfileData> FetchAsync()
+    public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new List<string>();
         var urls = ParseUrls(_feedUrls).ToList();
@@ -98,7 +99,7 @@ public class RssFeedsConnector : IConnector
         // Ten feeds fetched one after another cost ten timeouts in the worst case, inside a POST the
         // user is waiting on. They are independent, so they go out together; parsing then happens in
         // the order the URLs were given, so the resulting features do not depend on network timing.
-        var documents = await Task.WhenAll(urls.Select(TryFetchAsync));
+        var documents = await Task.WhenAll(urls.Select(u => TryFetchAsync(u, cancellationToken)));
 
         foreach (var xml in documents)
         {

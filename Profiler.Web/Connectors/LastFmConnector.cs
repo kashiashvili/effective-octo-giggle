@@ -35,25 +35,26 @@ public class LastFmConnector : IConnector
         return Convert.ToHexString(bytes)[..12].ToLowerInvariant();
     }
 
-    private async Task<JsonDocument?> TryGetJson(string url)
+    private async Task<JsonDocument?> TryGetJson(string url, CancellationToken cancellationToken)
     {
         try
         {
-            using var resp = await _http.GetAsync(url);
+            using var resp = await _http.GetAsync(url, cancellationToken);
             if (!resp.IsSuccessStatusCode) return null;
-            var json = await resp.Content.ReadAsStringAsync();
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken);
             return JsonDocument.Parse(json);
         }
+        catch (OperationCanceledException) { throw; }
         catch { return null; }
     }
 
-    public async Task<ProfileData> FetchAsync()
+    public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new HashSet<string>();
         var baseUrl = "https://ws.audioscrobbler.com/2.0/";
 
         using var topArtists = await TryGetJson(
-            $"{baseUrl}?method=user.getTopArtists&user={Uri.EscapeDataString(_username)}&api_key={_apiKey}&format=json&limit=100");
+            $"{baseUrl}?method=user.getTopArtists&user={Uri.EscapeDataString(_username)}&api_key={_apiKey}&format=json&limit=100", cancellationToken);
         if (topArtists != null &&
             topArtists.RootElement.TryGetProperty("topartists", out var topartists) &&
             topartists.TryGetProperty("artist", out var artistArr))
@@ -73,7 +74,7 @@ public class LastFmConnector : IConnector
         }
 
         using var topTags = await TryGetJson(
-            $"{baseUrl}?method=user.getTopTags&user={Uri.EscapeDataString(_username)}&api_key={_apiKey}&format=json&limit=50");
+            $"{baseUrl}?method=user.getTopTags&user={Uri.EscapeDataString(_username)}&api_key={_apiKey}&format=json&limit=50", cancellationToken);
         if (topTags != null &&
             topTags.RootElement.TryGetProperty("toptags", out var toptags) &&
             toptags.TryGetProperty("tag", out var tagArr))
@@ -90,7 +91,7 @@ public class LastFmConnector : IConnector
         }
 
         using var topTracks = await TryGetJson(
-            $"{baseUrl}?method=user.getTopTracks&user={Uri.EscapeDataString(_username)}&api_key={_apiKey}&format=json&limit=100");
+            $"{baseUrl}?method=user.getTopTracks&user={Uri.EscapeDataString(_username)}&api_key={_apiKey}&format=json&limit=100", cancellationToken);
         if (topTracks != null &&
             topTracks.RootElement.TryGetProperty("toptracks", out var toptracks) &&
             toptracks.TryGetProperty("track", out var trackArr))

@@ -25,27 +25,28 @@ public class LinkedInConnector : IConnector
         return slug;
     }
 
-    private async Task<JsonDocument?> TryGetJson(string url)
+    private async Task<JsonDocument?> TryGetJson(string url, CancellationToken cancellationToken)
     {
         try
         {
             var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
             req.Headers.Add("X-Restli-Protocol-Version", "2.0.0");
-            using var resp = await _http.SendAsync(req);
+            using var resp = await _http.SendAsync(req, cancellationToken);
             if (!resp.IsSuccessStatusCode) return null;
-            var json = await resp.Content.ReadAsStringAsync();
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken);
             return JsonDocument.Parse(json);
         }
+        catch (OperationCanceledException) { throw; }
         catch { return null; }
     }
 
-    public async Task<ProfileData> FetchAsync()
+    public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new HashSet<string>();
 
         using var skills = await TryGetJson(
-            "https://api.linkedin.com/v2/skillsV2?q=memberAndSkill&projection=(elements*(name,proficiencyLevel))");
+            "https://api.linkedin.com/v2/skillsV2?q=memberAndSkill&projection=(elements*(name,proficiencyLevel))", cancellationToken);
         if (skills != null && skills.RootElement.TryGetProperty("elements", out var skillElements))
         {
             foreach (var skill in skillElements.EnumerateArray())
@@ -60,7 +61,7 @@ public class LinkedInConnector : IConnector
         }
 
         using var positions = await TryGetJson(
-            "https://api.linkedin.com/v2/positions?q=members&projection=(elements*(title,company~(name,industries~)))");
+            "https://api.linkedin.com/v2/positions?q=members&projection=(elements*(title,company~(name,industries~)))", cancellationToken);
         if (positions != null && positions.RootElement.TryGetProperty("elements", out var posElements))
         {
             foreach (var pos in posElements.EnumerateArray())

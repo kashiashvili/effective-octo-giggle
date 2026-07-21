@@ -25,25 +25,26 @@ public class TwitterConnector : IConnector
         return slug;
     }
 
-    private async Task<JsonDocument?> TryGetJson(string url)
+    private async Task<JsonDocument?> TryGetJson(string url, CancellationToken cancellationToken)
     {
         try
         {
             var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _bearerToken);
-            using var resp = await _http.SendAsync(req);
+            using var resp = await _http.SendAsync(req, cancellationToken);
             if (!resp.IsSuccessStatusCode) return null;
-            var json = await resp.Content.ReadAsStringAsync();
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken);
             return JsonDocument.Parse(json);
         }
+        catch (OperationCanceledException) { throw; }
         catch { return null; }
     }
 
-    public async Task<ProfileData> FetchAsync()
+    public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new HashSet<string>();
 
-        using var me = await TryGetJson("https://api.twitter.com/2/users/me");
+        using var me = await TryGetJson("https://api.twitter.com/2/users/me", cancellationToken);
         if (me == null) return new ProfileData("Twitter/X", features.ToList());
 
         string? userId = null;
@@ -55,7 +56,7 @@ public class TwitterConnector : IConnector
             return new ProfileData("Twitter/X", features.ToList());
 
         using var liked = await TryGetJson(
-            $"https://api.twitter.com/2/users/{userId}/liked_tweets?max_results=100&tweet.fields=entities,context_annotations");
+            $"https://api.twitter.com/2/users/{userId}/liked_tweets?max_results=100&tweet.fields=entities,context_annotations", cancellationToken);
 
         if (liked != null && liked.RootElement.TryGetProperty("data", out var tweets))
         {

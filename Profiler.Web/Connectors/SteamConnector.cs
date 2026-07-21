@@ -26,24 +26,25 @@ public class SteamConnector : IConnector
         return slug;
     }
 
-    private async Task<JsonDocument?> TryGetJson(string url)
+    private async Task<JsonDocument?> TryGetJson(string url, CancellationToken cancellationToken)
     {
         try
         {
-            using var resp = await _http.GetAsync(url);
+            using var resp = await _http.GetAsync(url, cancellationToken);
             if (!resp.IsSuccessStatusCode) return null;
-            var json = await resp.Content.ReadAsStringAsync();
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken);
             return JsonDocument.Parse(json);
         }
+        catch (OperationCanceledException) { throw; }
         catch { return null; }
     }
 
-    public async Task<ProfileData> FetchAsync()
+    public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new HashSet<string>();
 
         using var ownedGames = await TryGetJson(
-            $"https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={_apiKey}&steamid={_steamId}&include_appinfo=true&format=json");
+            $"https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={_apiKey}&steamid={_steamId}&include_appinfo=true&format=json", cancellationToken);
         if (ownedGames != null &&
             ownedGames.RootElement.TryGetProperty("response", out var response) &&
             response.TryGetProperty("games", out var games))
@@ -76,7 +77,7 @@ public class SteamConnector : IConnector
         }
 
         using var friends = await TryGetJson(
-            $"https://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key={_apiKey}&steamid={_steamId}&relationship=friend");
+            $"https://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key={_apiKey}&steamid={_steamId}&relationship=friend", cancellationToken);
         if (friends != null &&
             friends.RootElement.TryGetProperty("friendslist", out var friendsList) &&
             friendsList.TryGetProperty("friends", out var friendsArr))

@@ -35,18 +35,19 @@ public class SoundCloudConnector : IConnector
         return Convert.ToHexString(bytes)[..HashPrefixLength].ToLowerInvariant();
     }
 
-    private async Task<JsonDocument?> TryGetJson(string url)
+    private async Task<JsonDocument?> TryGetJson(string url, CancellationToken cancellationToken)
     {
         try
         {
             var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Authorization = new AuthenticationHeaderValue("OAuth", _accessToken);
             req.Headers.Add("User-Agent", "Profiler.Web/1.0");
-            using var resp = await _http.SendAsync(req);
+            using var resp = await _http.SendAsync(req, cancellationToken);
             if (!resp.IsSuccessStatusCode) return null;
-            var json = await resp.Content.ReadAsStringAsync();
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken);
             return JsonDocument.Parse(json);
         }
+        catch (OperationCanceledException) { throw; }
         catch { return null; }
     }
 
@@ -63,15 +64,15 @@ public class SoundCloudConnector : IConnector
         return tags;
     }
 
-    public async Task<ProfileData> FetchAsync()
+    public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new List<string>();
 
         // Verify auth
-        using var me = await TryGetJson("https://api.soundcloud.com/me");
+        using var me = await TryGetJson("https://api.soundcloud.com/me", cancellationToken);
         if (me == null) return new ProfileData("SoundCloud", features);
 
-        using var likes = await TryGetJson("https://api.soundcloud.com/me/likes/tracks?limit=100");
+        using var likes = await TryGetJson("https://api.soundcloud.com/me/likes/tracks?limit=100", cancellationToken);
         if (likes != null)
         {
             foreach (var track in likes.RootElement.EnumerateArray())
@@ -104,7 +105,7 @@ public class SoundCloudConnector : IConnector
             }
         }
 
-        using var followings = await TryGetJson("https://api.soundcloud.com/me/followings?limit=100");
+        using var followings = await TryGetJson("https://api.soundcloud.com/me/followings?limit=100", cancellationToken);
         if (followings != null)
         {
             var count = 0;

@@ -35,7 +35,7 @@ public class GoodreadsConnector : IConnector
         return Convert.ToHexString(bytes)[..12].ToLowerInvariant();
     }
 
-    public Task<ProfileData> FetchAsync()
+    public Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new List<string>();
 

@@ -28,18 +28,18 @@ public class GitHubConnector : IConnector
         return req;
     }
 
-    public async Task<ProfileData> FetchAsync()
+    public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new List<string>();
 
         try
         {
             // User info
-            using var userResp = await _http.SendAsync(BuildRequest($"https://api.github.com/users/{_username}"));
+            using var userResp = await _http.SendAsync(BuildRequest($"https://api.github.com/users/{_username}"), cancellationToken);
             if (!userResp.IsSuccessStatusCode)
                 throw new ConnectorException($"GitHub API returned {userResp.StatusCode} for user {_username}");
 
-            var userJson = await userResp.Content.ReadAsStringAsync();
+            var userJson = await userResp.Content.ReadAsStringAsync(cancellationToken);
             using var userDoc = JsonDocument.Parse(userJson);
             var userRoot = userDoc.RootElement;
 
@@ -47,10 +47,10 @@ public class GitHubConnector : IConnector
                 features.Add("activity:public-gist");
 
             // Repos
-            using var reposResp = await _http.SendAsync(BuildRequest($"https://api.github.com/users/{_username}/repos?per_page=100"));
+            using var reposResp = await _http.SendAsync(BuildRequest($"https://api.github.com/users/{_username}/repos?per_page=100"), cancellationToken);
             if (reposResp.IsSuccessStatusCode)
             {
-                var reposJson = await reposResp.Content.ReadAsStringAsync();
+                var reposJson = await reposResp.Content.ReadAsStringAsync(cancellationToken);
                 using var reposDoc = JsonDocument.Parse(reposJson);
                 bool hasForks = false;
                 foreach (var repo in reposDoc.RootElement.EnumerateArray())
@@ -79,10 +79,10 @@ public class GitHubConnector : IConnector
             }
 
             // Starred
-            using var starredResp = await _http.SendAsync(BuildRequest($"https://api.github.com/users/{_username}/starred?per_page=100"));
+            using var starredResp = await _http.SendAsync(BuildRequest($"https://api.github.com/users/{_username}/starred?per_page=100"), cancellationToken);
             if (starredResp.IsSuccessStatusCode)
             {
-                var starredJson = await starredResp.Content.ReadAsStringAsync();
+                var starredJson = await starredResp.Content.ReadAsStringAsync(cancellationToken);
                 using var starredDoc = JsonDocument.Parse(starredJson);
                 foreach (var repo in starredDoc.RootElement.EnumerateArray())
                 {
@@ -99,6 +99,7 @@ public class GitHubConnector : IConnector
             }
         }
         catch (ConnectorException) { throw; }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex) { throw new ConnectorException("GitHub connector error", ex); }
 
         return new ProfileData("GitHub", features.Distinct().ToList());

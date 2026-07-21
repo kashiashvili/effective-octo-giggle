@@ -11,7 +11,7 @@ namespace Profiler.Web.Connectors;
 /// </summary>
 public static class SsrfGuard
 {
-    public static async Task<bool> IsAllowedAsync(Uri uri)
+    public static async Task<bool> IsAllowedAsync(Uri uri, CancellationToken cancellationToken = default)
     {
         IPAddress[] addresses;
         if (IPAddress.TryParse(uri.Host, out var literal))
@@ -20,7 +20,10 @@ public static class SsrfGuard
         }
         else
         {
-            try { addresses = await Dns.GetHostAddressesAsync(uri.Host); }
+            // A hostile name server can stall a lookup, so this has to be cancellable too — it is
+            // the one step of a feed fetch that happens before any HttpClient timeout applies.
+            try { addresses = await Dns.GetHostAddressesAsync(uri.Host, cancellationToken); }
+            catch (OperationCanceledException) { throw; }
             catch { return false; }
         }
 

@@ -25,25 +25,26 @@ public class SpotifyConnector : IConnector
         return slug;
     }
 
-    private async Task<JsonDocument?> TryGetJson(string url)
+    private async Task<JsonDocument?> TryGetJson(string url, CancellationToken cancellationToken)
     {
         try
         {
             var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
-            using var resp = await _http.SendAsync(req);
+            using var resp = await _http.SendAsync(req, cancellationToken);
             if (!resp.IsSuccessStatusCode) return null;
-            var json = await resp.Content.ReadAsStringAsync();
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken);
             return JsonDocument.Parse(json);
         }
+        catch (OperationCanceledException) { throw; }
         catch { return null; }
     }
 
-    public async Task<ProfileData> FetchAsync()
+    public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new HashSet<string>();
 
-        using var artists = await TryGetJson("https://api.spotify.com/v1/me/top/artists?limit=50&time_range=medium_term");
+        using var artists = await TryGetJson("https://api.spotify.com/v1/me/top/artists?limit=50&time_range=medium_term", cancellationToken);
         if (artists != null && artists.RootElement.TryGetProperty("items", out var artistItems))
         {
             int artistCount = 0;
@@ -69,7 +70,7 @@ public class SpotifyConnector : IConnector
             }
         }
 
-        using var tracks = await TryGetJson("https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=medium_term");
+        using var tracks = await TryGetJson("https://api.spotify.com/v1/me/top/tracks?limit=50&time_range=medium_term", cancellationToken);
         if (tracks != null && tracks.RootElement.TryGetProperty("items", out var trackItems))
         {
             foreach (var track in trackItems.EnumerateArray())
@@ -87,7 +88,7 @@ public class SpotifyConnector : IConnector
             }
         }
 
-        using var playlists = await TryGetJson("https://api.spotify.com/v1/me/playlists?limit=50");
+        using var playlists = await TryGetJson("https://api.spotify.com/v1/me/playlists?limit=50", cancellationToken);
         if (playlists != null && playlists.RootElement.TryGetProperty("items", out var playlistItems))
         {
             foreach (var playlist in playlistItems.EnumerateArray())

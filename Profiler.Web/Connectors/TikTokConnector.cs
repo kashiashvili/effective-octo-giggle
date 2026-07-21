@@ -25,27 +25,28 @@ public class TikTokConnector : IConnector
         return slug;
     }
 
-    private async Task<JsonDocument?> TryGetJson(string url)
+    private async Task<JsonDocument?> TryGetJson(string url, CancellationToken cancellationToken)
     {
         try
         {
             var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
             req.Headers.Add("User-Agent", "Profiler.Web/1.0");
-            using var resp = await _http.SendAsync(req);
+            using var resp = await _http.SendAsync(req, cancellationToken);
             if (!resp.IsSuccessStatusCode) return null;
-            var json = await resp.Content.ReadAsStringAsync();
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken);
             return JsonDocument.Parse(json);
         }
+        catch (OperationCanceledException) { throw; }
         catch { return null; }
     }
 
-    public async Task<ProfileData> FetchAsync()
+    public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new List<string>();
 
         using var videos = await TryGetJson(
-            "https://open.tiktokapis.com/v2/video/list/?fields=title,video_description,hashtag_names&max_count=20");
+            "https://open.tiktokapis.com/v2/video/list/?fields=title,video_description,hashtag_names&max_count=20", cancellationToken);
         if (videos != null
             && videos.RootElement.TryGetProperty("data", out var videoData)
             && videoData.TryGetProperty("videos", out var videoList))
@@ -72,7 +73,7 @@ public class TikTokConnector : IConnector
         }
 
         using var following = await TryGetJson(
-            "https://open.tiktokapis.com/v2/following/list/?max_count=100&fields=display_name");
+            "https://open.tiktokapis.com/v2/following/list/?max_count=100&fields=display_name", cancellationToken);
         if (following != null
             && following.RootElement.TryGetProperty("data", out var followData)
             && followData.TryGetProperty("user_following", out var followList))

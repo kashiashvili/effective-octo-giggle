@@ -25,26 +25,27 @@ public class PinterestConnector : IConnector
         return slug;
     }
 
-    private async Task<JsonDocument?> TryGetJson(string url)
+    private async Task<JsonDocument?> TryGetJson(string url, CancellationToken cancellationToken)
     {
         try
         {
             var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token);
             req.Headers.Add("User-Agent", "Profiler.Web/1.0");
-            using var resp = await _http.SendAsync(req);
+            using var resp = await _http.SendAsync(req, cancellationToken);
             if (!resp.IsSuccessStatusCode) return null;
-            var json = await resp.Content.ReadAsStringAsync();
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken);
             return JsonDocument.Parse(json);
         }
+        catch (OperationCanceledException) { throw; }
         catch { return null; }
     }
 
-    public async Task<ProfileData> FetchAsync()
+    public async Task<ProfileData> FetchAsync(CancellationToken cancellationToken = default)
     {
         var features = new List<string>();
 
-        using var boards = await TryGetJson("https://api.pinterest.com/v5/boards");
+        using var boards = await TryGetJson("https://api.pinterest.com/v5/boards", cancellationToken);
         if (boards != null && boards.RootElement.TryGetProperty("items", out var items))
         {
             foreach (var board in items.EnumerateArray())
@@ -64,7 +65,7 @@ public class PinterestConnector : IConnector
         }
 
         // Boards the user is following (Pinterest API v5: /user_account/following/boards)
-        using var followed = await TryGetJson("https://api.pinterest.com/v5/user_account/following/boards");
+        using var followed = await TryGetJson("https://api.pinterest.com/v5/user_account/following/boards", cancellationToken);
         if (followed != null && followed.RootElement.TryGetProperty("items", out var fItems))
         {
             foreach (var board in fItems.EnumerateArray())
