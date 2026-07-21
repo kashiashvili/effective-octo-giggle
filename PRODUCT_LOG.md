@@ -253,6 +253,8 @@ dotnet test                           # 83 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **CI** — GitHub Actions workflow builds in Release and runs the full suite on every push and
+  pull request. The suite is offline, so CI needs no secrets or network.
 - **Full journey re-verified on a clean database** — dropped the dev database and walked the whole
   flow end to end: all five migrations applied from scratch, `/health` green, a stale cookie for a
   deleted user correctly rejected, register → auto sign-in → connect two sources in one submit →
