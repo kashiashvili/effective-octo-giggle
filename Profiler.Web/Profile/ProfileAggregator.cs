@@ -55,7 +55,10 @@ public class ProfileAggregator
         for (var i = 0; i < connectors.Count; i++)
         {
             var attempt = attempts[i];
-            if (!attempt.IsCompleted)
+            // FetchAsync catches everything, so a finished attempt cannot be faulted — but reading
+            // .Result on a faulted task would throw here and lose every other source's work, so the
+            // check is for success rather than merely completion.
+            if (!attempt.IsCompletedSuccessfully)
             {
                 // Abandoned rather than aborted: the connector's own client timeout ends it shortly.
                 result.Failures.Add(new ConnectorFailure(connectors[i].Name, "took too long to respond"));
