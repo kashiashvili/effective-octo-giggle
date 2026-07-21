@@ -206,7 +206,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 84 tests, fully offline
+dotnet test                           # 85 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -219,7 +219,7 @@ dotnet test                           # 84 tests, fully offline
 
 ## 9. Testing
 
-84 xUnit tests, **fully offline and fast (~1–2s)**:
+85 xUnit tests, **fully offline and fast (~1–2s)**:
 - **Unit:** fingerprint math (incl. the union = element-wise-min property), matcher
   (ranking, threshold, empty exclusion), aggregator (failures), view-model tiers/validation,
   connectors (CSV parsing + garbage handling + API-error handling via a stub HTTP handler).

@@ -148,6 +148,71 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
     }
 
     [Fact]
+    public async Task Disconnect_RecombinesFingerprint_AndRemovesItWithTheLastSource()
+    {
+        var client = NewClient();
+        var user = "disc_" + Guid.NewGuid().ToString("N")[..8];
+        await RegisterAsync(client, user);
+
+        var generator = new FingerprintGenerator(128);
+        var githubRaw = generator.GenerateRaw(new[] { "language:c", "topic:kernel" });
+        var rssRaw = generator.GenerateRaw(new[] { "rss-topic:privacy", "rss-keyword:crypto" });
+
+        int userId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            userId = (await db.Users.FirstAsync(u => u.Username == user)).Id;
+
+            db.SourceFingerprints.Add(new SourceFingerprintRecord
+            {
+                UserId = userId, Source = "GitHub", FeatureCount = 2,
+                RawSignatureJson = System.Text.Json.JsonSerializer.Serialize(githubRaw)
+            });
+            db.SourceFingerprints.Add(new SourceFingerprintRecord
+            {
+                UserId = userId, Source = "RSS/Blogs", FeatureCount = 2,
+                RawSignatureJson = System.Text.Json.JsonSerializer.Serialize(rssRaw)
+            });
+            db.Fingerprints.Add(new FingerprintRecord
+            {
+                UserId = userId,
+                FingerprintJson = FingerprintGenerator.FromRaw(
+                    FingerprintGenerator.CombineRaw(new[] { githubRaw, rssRaw })).ToJson(),
+                SourcesJson = "[\"GitHub\",\"RSS/Blogs\"]"
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // Dropping one source leaves the fingerprint in place, rebuilt from what remains.
+        var first = await PostFormAsync(client, "/sources/dashboard", "/sources/disconnect",
+            new() { ["source"] = "GitHub" });
+        Assert.Equal(HttpStatusCode.Redirect, first.StatusCode);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.False(await db.SourceFingerprints.AnyAsync(s => s.UserId == userId && s.Source == "GitHub"));
+
+            var fp = await db.Fingerprints.SingleAsync(f => f.UserId == userId);
+            Assert.Equal(FingerprintGenerator.FromRaw(rssRaw).ToJson(), fp.FingerprintJson);
+            Assert.DoesNotContain("GitHub", fp.SourcesJson);
+        }
+
+        // Dropping the last source removes the fingerprint entirely.
+        var second = await PostFormAsync(client, "/sources/dashboard", "/sources/disconnect",
+            new() { ["source"] = "RSS/Blogs" });
+        Assert.Equal(HttpStatusCode.Redirect, second.StatusCode);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.Empty(await db.SourceFingerprints.Where(s => s.UserId == userId).ToListAsync());
+            Assert.False(await db.Fingerprints.AnyAsync(f => f.UserId == userId));
+        }
+    }
+
+    [Fact]
     public async Task Health_IsAnonymous_AndReportsHealthy()
     {
         var resp = await NewClient().GetAsync("/health");
