@@ -5,6 +5,7 @@ using Profiler.Web.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Profiler.Web.Data;
@@ -199,6 +200,39 @@ if (!app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 app.UseRouting();
+
+// [RequestSizeLimit] on an action (currently only Sources/Connect) makes ASP.NET throw
+// BadHttpRequestException(413) while the body is read — deep inside model binding, well after
+// this point. That is real protection under Kestrel, but it depends on IHttpMaxRequestBodySizeFeature,
+// which the TestServer used by the integration test suite does not implement at all, so the limit
+// would silently go unenforced there. Checking the endpoint's declared limit against the advertised
+// Content-Length here — right after routing has matched an endpoint, but before anything tries to
+// read the body — rejects oversized submissions the same way in both a real deployment and the test
+// host, and does it without buffering a single byte. The exception catch stays as a second layer for
+// bodies that lack an upfront Content-Length (e.g. chunked transfer).
+app.Use(async (context, next) =>
+{
+    var maxBytes = context.GetEndpoint()?.Metadata.GetMetadata<IRequestSizeLimitMetadata>()?.MaxRequestBodySize;
+    if (maxBytes is { } limit && context.Request.ContentLength is { } contentLength && contentLength > limit)
+    {
+        await WriteUploadTooLargeResponseAsync(context.Response);
+        return;
+    }
+
+    try
+    {
+        await next(context);
+    }
+    catch (BadHttpRequestException ex) when (ex.StatusCode == StatusCodes.Status413PayloadTooLarge)
+    {
+        // Nothing sane to do once bytes are already on the wire; let it propagate to the
+        // framework's own handling rather than attempt (and fail) to rewrite the response.
+        if (context.Response.HasStarted) throw;
+
+        await WriteUploadTooLargeResponseAsync(context.Response);
+    }
+});
+
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -212,6 +246,43 @@ app.MapGet("/health", async (AppDbContext db) =>
         : Results.Json(new { status = "unhealthy" }, statusCode: StatusCodes.Status503ServiceUnavailable));
 
 app.Run();
+
+// Shared by both the upfront Content-Length check and the BadHttpRequestException fallback above,
+// so the two paths that can detect an oversized submission always render the same page. Styled
+// directly rather than through a view, the same way the rate limiter's OnRejected handler is: this
+// runs outside MVC, before an action (or any exception filter) ever gets a chance to run.
+static async Task WriteUploadTooLargeResponseAsync(HttpResponse response)
+{
+    response.Clear();
+    response.StatusCode = StatusCodes.Status413PayloadTooLarge;
+    response.ContentType = "text/html; charset=utf-8";
+    await response.WriteAsync("""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Upload too large – Profiler</title>
+            <link rel="stylesheet" href="/css/style.css">
+        </head>
+        <body>
+            <main class="page-wrap">
+                <div class="container">
+                    <div class="empty-state">
+                        <div class="empty-icon">📦</div>
+                        <h4>That upload was too large</h4>
+                        <p>Each CSV is limited to 10 MB, and 25 MB total per submission — this one went over.</p>
+                        <p>Goodreads and Netflix exports can usually be trimmed to a recent date range before
+                           re-exporting. Any other sources you wanted to connect can be submitted on their own
+                           in a separate submission.</p>
+                        <p class="mt-4"><a href="/sources/connect" class="btn btn-primary">Back to Connect Sources</a></p>
+                    </div>
+                </div>
+            </main>
+        </body>
+        </html>
+        """);
+}
 
 // Exposed so the integration-test host (WebApplicationFactory<Program>) can boot the real app.
 public partial class Program { }

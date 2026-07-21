@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
@@ -151,6 +152,41 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
         var html = await last.Content.ReadAsStringAsync();
         Assert.Contains("Too many attempts", html);
         Assert.Contains("/css/style.css", html); // styled, not bare text
+    }
+
+    [Fact]
+    public async Task Connect_OversizedUpload_ReturnsFriendly413_NotAGenericErrorPage()
+    {
+        var client = NewClient();
+        var user = "big_" + Guid.NewGuid().ToString("N")[..8];
+        await RegisterAsync(client, user);
+
+        var connectPage = await client.GetAsync("/sources/connect");
+        connectPage.EnsureSuccessStatusCode();
+        var token = await ExtractTokenAsync(connectPage);
+
+        // Just over the connect POST's 25 MB pipeline-level cap ([RequestSizeLimit] in
+        // SourcesController) — generated in memory, never written to disk.
+        var oversizedFile = new byte[26 * 1024 * 1024];
+
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(token), "__RequestVerificationToken" }
+        };
+        var fileContent = new ByteArrayContent(oversizedFile);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("text/csv");
+        content.Add(fileContent, "GoodreadsCsv", "goodreads.csv");
+
+        var resp = await client.PostAsync("/sources/connect", content);
+
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, resp.StatusCode);
+        var html = await resp.Content.ReadAsStringAsync();
+        Assert.Contains("too large", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("10 MB", html);
+        Assert.Contains("25 MB", html);
+        Assert.Contains("/sources/connect", html);
+        Assert.Contains("/css/style.css", html); // styled, not bare text
+        Assert.DoesNotContain("Something went wrong", html); // not the generic /Home/Error page
     }
 
     [Fact]
