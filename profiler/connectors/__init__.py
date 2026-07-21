@@ -1,1 +1,0 @@
-"""Connectors sub-package."""
