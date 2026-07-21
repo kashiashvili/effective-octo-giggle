@@ -63,14 +63,18 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
     }
 
     [Fact]
-    public async Task Register_AutoAuthenticates_AndLandsOnConnect()
+    public async Task Register_AutoAuthenticates_AndLandsOnTheRecoveryCode()
     {
         var client = NewClient();
         var user = "reg_" + Guid.NewGuid().ToString("N")[..8];
 
         var reg = await RegisterAsync(client, user);
         Assert.Equal(HttpStatusCode.Redirect, reg.StatusCode);
-        Assert.Contains("/sources/connect", reg.Headers.Location!.ToString());
+        // The code is shown before anything else, because it is only ever shown once; that page
+        // then leads on to Connect.
+        Assert.Contains("/account/recovery-code", reg.Headers.Location!.ToString());
+        var codePage = await client.GetAsync("/account/recovery-code");
+        Assert.Contains("/sources/connect", await codePage.Content.ReadAsStringAsync());
 
         // The auth cookie set by registration should now grant access to a protected page.
         var dash = await client.GetAsync("/sources/dashboard");

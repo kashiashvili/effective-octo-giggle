@@ -11,6 +11,7 @@
     bool thinFingerprint = sources.Count > 0 && totalSignals < 15;
     bool isDiscoverable = ViewBag.IsDiscoverable ?? true;
     bool hasStaleSource = sources.Any(s => s.IsStale);
+    bool hasRecoveryCode = ViewBag.HasRecoveryCode ?? true;
 }
 
 <div class="page-wrap">
@@ -145,6 +146,40 @@
                         </li>
                     </ul>
                 </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header dark">
+                Recovery code
+                @if (!hasRecoveryCode)
+                {
+                    <span class="badge badge-light">None on file</span>
+                }
+            </div>
+            <div class="card-body">
+                @if (!hasRecoveryCode)
+                {
+                    <p class="mb-2">
+                        <strong>You have no way back into this account if you forget your password.</strong>
+                        We hold no email address, so there is no reset link to send — a recovery code is
+                        the substitute. Generate one and save it.
+                    </p>
+                }
+                else
+                {
+                    <p class="text-muted mb-2">
+                        You were shown a recovery code once. If you didn't save it, generate a
+                        replacement — doing so invalidates the old one.
+                    </p>
+                }
+                <form asp-action="RegenerateRecoveryCode" asp-controller="Account" method="post" class="flex items-center gap-3">
+                    <input type="password" name="password" class="form-control" placeholder="Confirm your password"
+                           autocomplete="current-password" required style="max-width: 280px" />
+                    <button type="submit" class="btn @(hasRecoveryCode ? "btn-outline" : "btn-primary")">
+                        @(hasRecoveryCode ? "Generate a new code" : "Generate my recovery code")
+                    </button>
+                </form>
             </div>
         </div>
 

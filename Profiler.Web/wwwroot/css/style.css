@@ -696,6 +696,22 @@ footer {
   color: var(--gray-500);
   overflow-wrap: anywhere;
 }
+.recovery-code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-align: center;
+  word-break: break-all;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 2px dashed var(--gray-400);
+  border-radius: var(--radius);
+  background: var(--gray-50);
+  color: var(--gray-800);
+  user-select: all;
+}
+
 .match-freshness {
   margin-top: .5rem;
   font-size: .75rem;

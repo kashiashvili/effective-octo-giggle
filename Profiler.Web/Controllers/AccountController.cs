@@ -61,10 +61,12 @@ public class AccountController : Controller
             return View(vm);
         }
 
+        var recoveryCode = RecoveryCode.Generate();
         var user = new AppUser
         {
             Username = username,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(vm.Password)
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(vm.Password),
+            RecoveryCodeHash = RecoveryCode.Hash(recoveryCode)
         };
         _db.Users.Add(user);
         try
@@ -78,8 +80,10 @@ public class AccountController : Controller
         }
 
         await SignInUserAsync(user);
-        TempData["Success"] = "Welcome to Profiler! Connect a source to generate your fingerprint.";
-        return RedirectToAction("Connect", "Sources");
+        // Shown once, before anything else, because it is the only way back into this account and
+        // nobody can reissue it for them.
+        TempData["RecoveryCode"] = recoveryCode;
+        return RedirectToAction(nameof(ShowRecoveryCode));
     }
 
     [HttpGet("login")]
@@ -108,6 +112,99 @@ public class AccountController : Controller
 
         await SignInUserAsync(user);
         return RedirectToAction("Dashboard", "Sources");
+    }
+
+    /// <summary>
+    /// Displays a freshly issued recovery code, once. The code only ever exists in TempData, so a
+    /// reload or a later visit shows nothing — which is the honest behaviour, since only its hash was
+    /// kept and nobody can produce it again.
+    /// </summary>
+    [HttpGet("recovery-code")]
+    public IActionResult ShowRecoveryCode()
+    {
+        if (TempData["RecoveryCode"] is not string code)
+        {
+            TempData["Error"] = "That recovery code can only be shown once. Generate a new one if you didn't save it.";
+            return RedirectToAction("Dashboard", "Sources");
+        }
+        return View("RecoveryCode", code);
+    }
+
+    /// <summary>
+    /// Issues a replacement code, invalidating the previous one. Password-confirmed: someone who has
+    /// walked up to an unlocked browser should not be able to mint themselves a way back in later.
+    /// </summary>
+    [HttpPost("recovery-code")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RegenerateRecoveryCode(string password)
+    {
+        var user = await FindCurrentUserAsync();
+        if (user == null) return await SignOutToHomeAsync();
+
+        if (string.IsNullOrEmpty(password) || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+        {
+            TempData["Error"] = "No new code was generated — the password you entered is incorrect.";
+            return RedirectToAction("Dashboard", "Sources");
+        }
+
+        var code = RecoveryCode.Generate();
+        user.RecoveryCodeHash = RecoveryCode.Hash(code);
+        await _db.SaveChangesAsync();
+
+        TempData["RecoveryCode"] = code;
+        return RedirectToAction(nameof(ShowRecoveryCode));
+    }
+
+    [HttpGet("recover")]
+    [AllowAnonymous]
+    public IActionResult Recover()
+    {
+        if (User.Identity?.IsAuthenticated == true)
+            return RedirectToAction("Dashboard", "Sources");
+        return View(new RecoverAccountViewModel());
+    }
+
+    /// <summary>
+    /// The whole recovery path: prove possession of the code, set a new password, and get signed in.
+    /// Rate-limited with login, since it is the same thing an attacker would grind against.
+    /// </summary>
+    [HttpPost("recover")]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("login")]
+    public async Task<IActionResult> Recover(RecoverAccountViewModel vm)
+    {
+        if (!ModelState.IsValid) return View(vm);
+
+        var username = vm.Username.Trim();
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+
+        // One message for "no such user", "no code on file" and "wrong code" alike: which of the
+        // three it was would tell an attacker whether a username exists.
+        if (user == null || !RecoveryCode.Verify(vm.Code, user.RecoveryCodeHash))
+        {
+            ModelState.AddModelError("", "That username and recovery code don't match an account.");
+            return View(vm);
+        }
+
+        if (Security.PasswordPolicy.Validate(vm.NewPassword, username) is { } weak)
+        {
+            ModelState.AddModelError(nameof(vm.NewPassword), weak);
+            return View(vm);
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(vm.NewPassword);
+
+        // Single use, and immediately replaced: recovering must not leave the account with no way
+        // back the next time.
+        var replacement = RecoveryCode.Generate();
+        user.RecoveryCodeHash = RecoveryCode.Hash(replacement);
+        await _db.SaveChangesAsync();
+
+        await SignInUserAsync(user);
+        TempData["Success"] = "Your password has been reset. Here is your new recovery code — the old one no longer works.";
+        TempData["RecoveryCode"] = replacement;
+        return RedirectToAction(nameof(ShowRecoveryCode));
     }
 
     /// <summary>

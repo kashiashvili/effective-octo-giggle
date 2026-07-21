@@ -1,0 +1,35 @@
+@model string
+@{
+    ViewBag.Title = "Your Recovery Code";
+}
+
+<div class="auth-wrap">
+    <div class="auth-card">
+        <h2>🔑 Save your recovery code</h2>
+        <p class="text-center text-muted mb-4">
+            This is the only way back into your account if you forget your password.
+        </p>
+
+        <div class="recovery-code">@Model</div>
+
+        <div class="alert alert-danger">
+            <span class="alert-icon">⚠️</span>
+            <span>
+                <strong>It will not be shown again.</strong> We store only a hash of it, so nobody —
+                including us — can produce it for you later. Write it down or put it in your password
+                manager now.
+            </span>
+        </div>
+
+        <p class="text-muted" style="font-size: .85rem">
+            We don't ask for your email address, so there is no reset link to send. That's the trade:
+            no contact details on file, and this code instead.
+        </p>
+
+        <a href="/sources/connect" class="btn btn-primary btn-block">I've saved it — continue</a>
+        <hr class="auth-divider" />
+        <div class="auth-footer">
+            <p><a href="/sources/dashboard">Back to dashboard</a></p>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,48 @@
+@model Profiler.Web.ViewModels.RecoverAccountViewModel
+@{
+    ViewBag.Title = "Recover Your Account";
+}
+
+<div class="auth-wrap">
+    <div class="auth-card">
+        <h2>🔑 Recover your account</h2>
+        <p class="text-center text-muted mb-4">
+            Enter the recovery code you saved when you registered, and choose a new password.
+        </p>
+        <form asp-action="Recover" asp-controller="Account" method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <div class="form-group">
+                <label asp-for="Username" class="form-label">Username</label>
+                <input asp-for="Username" class="form-control" placeholder="Your username" autocomplete="username" />
+                <span asp-validation-for="Username" class="field-error"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Code" class="form-label">Recovery code</label>
+                <input asp-for="Code" class="form-control" placeholder="XXXXX-XXXXX-XXXXX-XXXXX"
+                       autocomplete="off" spellcheck="false" />
+                <span asp-validation-for="Code" class="field-error"></span>
+                <small class="text-muted">Dashes and capitalisation don't matter.</small>
+            </div>
+            <div class="form-group">
+                <label asp-for="NewPassword" class="form-label">New password</label>
+                <input asp-for="NewPassword" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="NewPassword" class="field-error"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="ConfirmNewPassword" class="form-label">Confirm new password</label>
+                <input asp-for="ConfirmNewPassword" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="ConfirmNewPassword" class="field-error"></span>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Reset my password</button>
+        </form>
+        <hr class="auth-divider" />
+        <div class="auth-footer">
+            <p class="text-muted">
+                Lost the code too? There is no way back in — we hold no email address to send a link
+                to. Nothing of yours is readable without it either: what's stored is an anonymized
+                fingerprint, not your interests.
+            </p>
+            <p><a href="/account/login">Back to sign in</a></p>
+        </div>
+    </div>
+</div>
