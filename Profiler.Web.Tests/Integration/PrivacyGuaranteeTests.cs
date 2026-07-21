@@ -20,6 +20,57 @@ public class PrivacyGuaranteeTests : IClassFixture<ProfilerWebFactory>
 
     public PrivacyGuaranteeTests(ProfilerWebFactory factory) => _factory = factory;
 
+    /// <summary>
+    /// A credential typed into the connect form must not come back in the response when the form is
+    /// re-rendered, or it would end up in browser history, proxy logs and screenshots.
+    /// Supplying a Last.fm key without its username builds no connector, so the form re-renders on
+    /// the validation error without any outbound request.
+    /// </summary>
+    [Fact]
+    public async Task Credentials_AreNotEchoedBack_WhenTheConnectFormRedisplays()
+    {
+        const string secret = "lastfm-secret-zzqx-987654";
+
+        var client = _factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        var user = "tok_" + Guid.NewGuid().ToString("N")[..8];
+        var reg = await client.GetAsync("/account/register");
+        var regToken = System.Text.RegularExpressions.Regex.Match(
+            await reg.Content.ReadAsStringAsync(),
+            "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
+        await client.PostAsync("/account/register", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["Username"] = user,
+            ["Password"] = "Tr0ubad0ur-x9",
+            ["ConfirmPassword"] = "Tr0ubad0ur-x9",
+            ["__RequestVerificationToken"] = regToken
+        }));
+
+        var connect = await client.GetAsync("/sources/connect");
+        var connectToken = System.Text.RegularExpressions.Regex.Match(
+            await connect.Content.ReadAsStringAsync(),
+            "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
+
+        // Both fields are half of a pair, so neither builds a connector and nothing is fetched.
+        // The Twitch client id is an ordinary text field and is expected to survive the redisplay;
+        // it is here to prove the credential's absence is not simply a failure to bind or redisplay.
+        const string publicValue = "twitch-client-zzqx-123456";
+        var resp = await client.PostAsync("/sources/connect", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["LastFmApiKey"] = secret,          // without LastFmUsername
+            ["TwitchClientId"] = publicValue,   // without TwitchToken
+            ["__RequestVerificationToken"] = connectToken
+        }));
+
+        var html = await resp.Content.ReadAsStringAsync();
+        Assert.Contains("connect at least one source", html); // the form really did redisplay
+        Assert.Contains(publicValue, html);                   // and redisplay does repopulate fields
+        Assert.DoesNotContain(secret, html);                  // yet the credential is not among them
+    }
+
     [Fact]
     public async Task RawInterests_NeverReachStorage()
     {
