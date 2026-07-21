@@ -91,18 +91,29 @@ is O(all users) in memory (needs LSH banding past a few thousand users).
 
 ## Current Phase
 
-Product Owner review (fresh independent review in progress).
+Developer — implementing the top remaining P1 from the independent review.
 
 ## Active Task
 
-Establish baseline, refresh this file, and select the next highest-value improvement from a
-fresh independent product review.
+**Account recovery without email.** A forgotten password permanently locks the account *and*
+makes the data undeletable (deletion is password-confirmed), so the locked-out user's
+fingerprint stays in the matching pool forever and their username is squatted. This
+contradicts the "delete everything, any time" promise the product sells on.
+
+Design: a one-time recovery code generated at registration, shown once, stored BCrypt-hashed,
+single-use. It resets the password (and therefore restores the ability to delete). No email is
+collected, so the privacy stance holds.
 
 ### Definition of Done
 
-- Baseline verified: build clean, full test suite green. ✅ (0 warnings, 116/116 passing)
-- `PROJECT_STATE.md` reflects the real product state. ✅
-- Next active task selected from the independent review and recorded here.
+- Code issued at registration and shown exactly once, with a page that makes clear it cannot
+  be shown again.
+- `/account/recover` (anonymous, rate-limited) takes username + code + new password in one
+  post; generic failure message that does not reveal whether a username exists.
+- Using a code invalidates it and issues a new one.
+- Signed-in users can regenerate a code, password-confirmed.
+- Existing accounts (no code on file) are nudged to generate one.
+- Migration; tests covering issue / use / single-use / wrong-code; docs updated.
 
 ## Current Execution Notes
 
@@ -110,11 +121,13 @@ Baseline command set:
 
 ```bash
 dotnet build            # expect 0 warnings, 0 errors
-dotnet test             # expect 116/116 passing, ~3s, fully offline
+dotnet test             # expect 135/135 passing, ~4s, fully offline
 dotnet run --project Profiler.Web   # http://localhost:5000
 ```
 
 Working branch: `rebuild/dotnet-profiler`. Commit continuously in focused units.
+QA server config: `.claude/launch.json` → `profiler-web-qa` on port 5241 (port 5240 belongs to
+another session).
 
 ## Backlog
 
@@ -124,16 +137,26 @@ Working branch: `rebuild/dotnet-profiler`. Commit continuously in focused units.
 
 ### P1 — Core Product
 
-- **Account recovery.** Forgetting a password currently means losing the account outright;
-  there is no reset path. Needs a design that does not require an email address (a one-time
-  recovery code issued at registration is the privacy-consistent option).
+- **Account recovery** — active task above.
+- **Contact is broadcast to every match with no mutual consent.** A contact line goes to up to
+  20 strangers at once with no per-person choice. Proposed: a mutual "connect request" — either
+  side can request, contacts are exchanged only when both accept. (The smaller half — saying
+  when a match has no contact, and nudging users who set none — is done.)
+- **Matching says how much you overlap but never what kind.** The per-source signatures are
+  already stored and never used for comparison, so users get "Strong match, ~41%" with no
+  conversation starter. Also, because the combined fingerprint is a union, users who connect
+  many sources score systematically lower against everyone — the app punishes engagement.
 
 ### P2 — Quality / Reliability / UX
 
-- Pending the fresh independent product review.
+- Oversized submissions fail unhandled: `[RequestSizeLimit(25MB)]` fires before the friendly
+  per-file check, so a >25 MB body yields a raw framework error page.
 
 ### P3 — Enhancement
 
+- Username homoglyph impersonation (`аdmin` with a Cyrillic а) is still accepted; `TextPolicy`
+  rejects only invisible/bidi characters. Proposed: reject mixed-script usernames (single
+  script + Common), which still admits the Cyrillic and Japanese names the tests pin.
 - Match list pagination / filtering beyond the top 20.
 
 ### P4 — Polish / Optional
@@ -142,20 +165,27 @@ Working branch: `rebuild/dotnet-profiler`. Commit continuously in focused units.
 
 ## Known Bugs / Risks
 
-- None confirmed at baseline; the independent review may surface some.
+- None open. Fixed this session: blocks outliving account deletion; sequential connector
+  fetches; rate limiting collapsing to one global bucket behind a proxy.
 
 ## Last Completed Iteration
 
-**Iteration:** baseline re-establishment (this session)
+**Iteration:** 5 (this session)
 
-**Completed:** Reconstructed product state from the repository after the state file was
-found still holding template placeholders.
+**Completed:** Baseline re-established and state file reconstructed; blocks no longer outlive a
+deleted account (schema cascade + migration purge + transparency page lists who you hid);
+connectors and RSS feeds fan out concurrently under a 30s budget; match cards state when there
+is no way to reach someone and how fresh the other fingerprint is; registration and connect are
+rate-limited; rate limiting made proxy-aware.
 
-**Validation:** `dotnet build` clean; `dotnet test` 116/116 passing.
+**Validation:** `dotnet build` 0 warnings; `dotnet test` 135/135 passing. Core journey verified
+end to end against a running server (register → connect GitHub/RSS → fingerprint 128 dims, raw
+interests absent from the database → matched pair with bio/contact → hide, symmetric → data
+export → password-confirmed deletion, cascade confirmed in SQLite).
 
-**Result:** Baseline green; independent Product Owner review dispatched.
+**Result:** All findings from the independent review are triaged; three P1/P2 items shipped.
 
 ## Next Mandatory Action
 
-Take the findings of the independent product review, record the highest-value item as the
-active task, and implement it immediately.
+Implement account recovery, validate, update `PRODUCT_LOG.md`, then return to Product Owner
+mode and take the next P1 from the backlog.
