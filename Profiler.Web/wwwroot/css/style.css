@@ -529,6 +529,7 @@ footer {
 .source-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: .75rem;
   padding: .6rem .25rem;
   border-bottom: 1px solid var(--gray-100);
@@ -847,4 +848,14 @@ footer {
   .hero-btns     { flex-direction: column; }
   .source-section-body .form-row { grid-template-columns: 1fr; }
   .matches-header { flex-direction: column; }
+
+  /* A source row does not fit on one narrow line: without this the timestamp squeezes into a
+     sliver and the Disconnect button is clipped off the edge of the card. */
+  .source-row small { flex-basis: 100%; }
+  .source-row form  { margin-left: 0; }
+
+  /* Same for the discoverability row: keep the button under its explanation rather than
+     crushing both. */
+  .visibility-row { flex-wrap: wrap; }
+  .visibility-row form { margin-left: 0; }
 }
