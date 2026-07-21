@@ -13,6 +13,16 @@ using Profiler.Web.Data;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+
+// TempData rides in a cookie, and one of the things it now carries is a freshly issued recovery
+// code on its way to the page that displays it. The payload is encrypted by Data Protection, but
+// the cookie itself defaults to being sent over plain HTTP too; match the auth cookie's policy so
+// it is confined to HTTPS wherever the request already is.
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.CookieTempDataProviderOptions>(opt =>
+{
+    opt.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    opt.Cookie.SameSite = SameSiteMode.Lax;
+});
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=profiler.db"));
 
