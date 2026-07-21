@@ -1,6 +1,61 @@
-﻿@{
-    ViewData["Title"] = "Privacy Policy";
+@{
+    ViewBag.Title = "Privacy";
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<div class="page-wrap">
+    <div class="container">
+        <div class="page-header">
+            <h1>🔒 How Profiler Protects Your Data</h1>
+            <p>Privacy is not a setting here — it is the architecture.</p>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="mb-2">What we store</h3>
+                <p>
+                    When you connect a source, we extract short interest labels (like
+                    <code>language:python</code> or <code>genre:sci-fi</code>) and immediately
+                    run them through a <strong>MinHash</strong> algorithm. Only the resulting
+                    numeric signature is saved, together with the list of source names you
+                    connected and your username and password hash (BCrypt). That's the whole database.
+                </p>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="mb-2">What we never store</h3>
+                <ul style="padding-left:1.25rem">
+                    <li>Raw interest data — book titles, watch history, starred repos, playlists</li>
+                    <li>Access tokens and API keys — they are used once to fetch your data and discarded</li>
+                    <li>Uploaded CSV files — parsed in memory, never written to disk</li>
+                    <li>Email addresses or any contact details — an account is just a username</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="mb-2">Why matching still works</h3>
+                <p>
+                    Two MinHash signatures can be compared to estimate how similar the underlying
+                    interest sets are (Jaccard similarity) — without either set ever being
+                    reconstructable from the signature. Other users only ever see your username,
+                    a similarity percentage, and which source types you have in common.
+                </p>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3 class="mb-2">You stay in control</h3>
+                <p>
+                    Disconnect any source from your dashboard at any time — its signature is
+                    deleted immediately and your fingerprint is rebuilt without it. You can also
+                    delete your entire account from the dashboard, which permanently removes your
+                    user record, fingerprint, and every per-source signature.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
