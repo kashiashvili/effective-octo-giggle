@@ -35,4 +35,22 @@ public class AntiforgeryCoverageTests
         // Guards the test above from silently passing if the discovery ever stops finding anything.
         Assert.NotEmpty(PostActions());
     }
+
+    /// <summary>
+    /// Controllers are authorized at the class level so that a newly added action is protected
+    /// unless it deliberately opts out. Home is the only public-facing one.
+    /// </summary>
+    [Fact]
+    public void EveryControllerExceptHome_IsAuthorizedAtClassLevel()
+    {
+        var unprotected = typeof(Profiler.Web.Controllers.AccountController).Assembly
+            .GetTypes()
+            .Where(t => typeof(Controller).IsAssignableFrom(t) && !t.IsAbstract)
+            .Where(t => t != typeof(Profiler.Web.Controllers.HomeController))
+            .Where(t => !t.GetCustomAttributes<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>(inherit: true).Any())
+            .Select(t => t.Name)
+            .ToList();
+
+        Assert.Empty(unprotected);
+    }
 }

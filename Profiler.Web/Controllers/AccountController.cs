@@ -13,6 +13,9 @@ using Profiler.Web.ViewModels;
 namespace Profiler.Web.Controllers;
 
 [Route("account")]
+// Deny by default: this controller serves profile, data export, password and deletion, so a new
+// action must be protected unless it deliberately opts out with [AllowAnonymous].
+[Authorize]
 public class AccountController : Controller
 {
     private readonly AppDbContext _db;
@@ -20,6 +23,7 @@ public class AccountController : Controller
     public AccountController(AppDbContext db) => _db = db;
 
     [HttpGet("register")]
+    [AllowAnonymous]
     public IActionResult Register()
     {
         if (User.Identity?.IsAuthenticated == true)
@@ -28,6 +32,7 @@ public class AccountController : Controller
     }
 
     [HttpPost("register")]
+    [AllowAnonymous]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(RegisterViewModel vm)
     {
@@ -71,6 +76,7 @@ public class AccountController : Controller
     }
 
     [HttpGet("login")]
+    [AllowAnonymous]
     public IActionResult Login()
     {
         if (User.Identity?.IsAuthenticated == true)
@@ -79,6 +85,7 @@ public class AccountController : Controller
     }
 
     [HttpPost("login")]
+    [AllowAnonymous]
     [ValidateAntiForgeryToken]
     [EnableRateLimiting("login")]
     public async Task<IActionResult> Login(LoginViewModel vm)
@@ -125,6 +132,7 @@ public class AccountController : Controller
     }
 
     [HttpPost("logout")]
+    [AllowAnonymous]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
@@ -133,7 +141,6 @@ public class AccountController : Controller
     }
 
     [HttpGet("profile")]
-    [Authorize]
     public async Task<IActionResult> Profile()
     {
         var user = await FindCurrentUserAsync();
@@ -142,7 +149,6 @@ public class AccountController : Controller
     }
 
     [HttpPost("profile")]
-    [Authorize]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Profile(ProfileViewModel vm)
     {
@@ -160,7 +166,6 @@ public class AccountController : Controller
     }
 
     [HttpGet("data")]
-    [Authorize]
     public async Task<IActionResult> Data()
     {
         var export = await BuildDataExportAsync();
@@ -169,7 +174,6 @@ public class AccountController : Controller
     }
 
     [HttpGet("data.json")]
-    [Authorize]
     public async Task<IActionResult> DataJson()
     {
         var export = await BuildDataExportAsync();
@@ -210,7 +214,6 @@ public class AccountController : Controller
     }
 
     [HttpPost("visibility")]
-    [Authorize]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Visibility(bool discoverable)
     {
@@ -227,11 +230,9 @@ public class AccountController : Controller
     }
 
     [HttpGet("password")]
-    [Authorize]
     public IActionResult Password() => View(new ChangePasswordViewModel());
 
     [HttpPost("password")]
-    [Authorize]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Password(ChangePasswordViewModel vm)
     {
@@ -266,7 +267,6 @@ public class AccountController : Controller
     }
 
     [HttpPost("delete")]
-    [Authorize]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string password)
     {
