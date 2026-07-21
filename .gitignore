@@ -17,3 +17,6 @@ keys/
 [Tt]est[Rr]esults/
 *.coverage
 coverage/
+
+# macOS finder metadata
+.DS_Store
