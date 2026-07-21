@@ -402,6 +402,27 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
         var user = "del_" + Guid.NewGuid().ToString("N")[..8];
         await RegisterAsync(client, user);
 
+        // Give the account derived data, so deletion is shown to take it with it.
+        int userId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            userId = (await db.Users.FirstAsync(u => u.Username == user)).Id;
+            var raw = new FingerprintGenerator(128).GenerateRaw(new[] { "z:1", "z:2" });
+            db.SourceFingerprints.Add(new SourceFingerprintRecord
+            {
+                UserId = userId, Source = "GitHub", FeatureCount = 2,
+                RawSignatureJson = System.Text.Json.JsonSerializer.Serialize(raw)
+            });
+            db.Fingerprints.Add(new FingerprintRecord
+            {
+                UserId = userId,
+                FingerprintJson = FingerprintGenerator.FromRaw(raw).ToJson(),
+                SourcesJson = "[\"GitHub\"]"
+            });
+            await db.SaveChangesAsync();
+        }
+
         var del = await PostFormAsync(client, "/sources/dashboard", "/account/delete", new()
         {
             ["password"] = "Tr0ubad0ur-x9"
@@ -412,6 +433,8 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             Assert.False(await db.Users.AnyAsync(u => u.Username == user));
+            Assert.False(await db.Fingerprints.AnyAsync(f => f.UserId == userId));
+            Assert.False(await db.SourceFingerprints.AnyAsync(s => s.UserId == userId));
         }
 
         var dash = await client.GetAsync("/sources/dashboard");

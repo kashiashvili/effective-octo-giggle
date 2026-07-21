@@ -96,6 +96,20 @@ public class AccountController : Controller
         return RedirectToAction("Dashboard", "Sources");
     }
 
+    /// <summary>
+    /// Loads the signed-in user. Cookie validation already rejects principals whose user row is
+    /// gone, so null here means the account was deleted during this very request; callers sign the
+    /// stale principal out rather than fail.
+    /// </summary>
+    private Task<AppUser?> FindCurrentUserAsync() =>
+        _db.Users.FirstOrDefaultAsync(u => u.Id == User.GetUserId());
+
+    private async Task<IActionResult> SignOutToHomeAsync()
+    {
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return Redirect("/");
+    }
+
     private async Task SignInUserAsync(AppUser user)
     {
         var identity = new ClaimsIdentity(new[]
@@ -122,13 +136,8 @@ public class AccountController : Controller
     [Authorize]
     public async Task<IActionResult> Profile()
     {
-        var userId = User.GetUserId();
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
-        if (user == null)
-        {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Redirect("/");
-        }
+        var user = await FindCurrentUserAsync();
+        if (user == null) return await SignOutToHomeAsync();
         return View(new ProfileViewModel { Bio = user.Bio, Contact = user.Contact });
     }
 
@@ -139,13 +148,8 @@ public class AccountController : Controller
     {
         if (!ModelState.IsValid) return View(vm);
 
-        var userId = User.GetUserId();
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
-        if (user == null)
-        {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Redirect("/");
-        }
+        var user = await FindCurrentUserAsync();
+        if (user == null) return await SignOutToHomeAsync();
 
         user.Bio = string.IsNullOrWhiteSpace(vm.Bio) ? null : vm.Bio.Trim();
         user.Contact = string.IsNullOrWhiteSpace(vm.Contact) ? null : vm.Contact.Trim();
@@ -160,11 +164,7 @@ public class AccountController : Controller
     public async Task<IActionResult> Data()
     {
         var export = await BuildDataExportAsync();
-        if (export == null)
-        {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Redirect("/");
-        }
+        if (export == null) return await SignOutToHomeAsync();
         return View(export);
     }
 
@@ -173,11 +173,7 @@ public class AccountController : Controller
     public async Task<IActionResult> DataJson()
     {
         var export = await BuildDataExportAsync();
-        if (export == null)
-        {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Redirect("/");
-        }
+        if (export == null) return await SignOutToHomeAsync();
 
         var json = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(export,
             new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
@@ -218,13 +214,8 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Visibility(bool discoverable)
     {
-        var userId = User.GetUserId();
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
-        if (user == null)
-        {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Redirect("/");
-        }
+        var user = await FindCurrentUserAsync();
+        if (user == null) return await SignOutToHomeAsync();
 
         user.IsDiscoverable = discoverable;
         await _db.SaveChangesAsync();
@@ -246,13 +237,8 @@ public class AccountController : Controller
     {
         if (!ModelState.IsValid) return View(vm);
 
-        var userId = User.GetUserId();
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
-        if (user == null)
-        {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Redirect("/");
-        }
+        var user = await FindCurrentUserAsync();
+        if (user == null) return await SignOutToHomeAsync();
 
         if (!BCrypt.Net.BCrypt.Verify(vm.CurrentPassword, user.PasswordHash))
         {
@@ -284,13 +270,8 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string password)
     {
-        var userId = User.GetUserId();
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
-        if (user == null)
-        {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Redirect("/");
-        }
+        var user = await FindCurrentUserAsync();
+        if (user == null) return await SignOutToHomeAsync();
 
         if (string.IsNullOrEmpty(password) || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
         {
@@ -298,8 +279,8 @@ public class AccountController : Controller
             return RedirectToAction("Dashboard", "Sources");
         }
 
-        _db.SourceFingerprints.RemoveRange(_db.SourceFingerprints.Where(s => s.UserId == userId));
-        _db.Fingerprints.RemoveRange(_db.Fingerprints.Where(f => f.UserId == userId));
+        _db.SourceFingerprints.RemoveRange(_db.SourceFingerprints.Where(s => s.UserId == user.Id));
+        _db.Fingerprints.RemoveRange(_db.Fingerprints.Where(f => f.UserId == user.Id));
         _db.Users.Remove(user);
         await _db.SaveChangesAsync();
 
