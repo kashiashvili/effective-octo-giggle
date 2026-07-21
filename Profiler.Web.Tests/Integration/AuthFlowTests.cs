@@ -1,0 +1,352 @@
+using System.Net;
+using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Profiler.Web.Data;
+using Profiler.Web.Data.Models;
+using Profiler.Web.Profile;
+using Xunit;
+
+namespace Profiler.Web.Tests.Integration;
+
+public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
+{
+    private readonly ProfilerWebFactory _factory;
+
+    public AuthFlowTests(ProfilerWebFactory factory) => _factory = factory;
+
+    private HttpClient NewClient() => _factory.CreateClient(new WebApplicationFactoryClientOptions
+    {
+        AllowAutoRedirect = false
+    });
+
+    private static async Task<string> ExtractTokenAsync(HttpResponseMessage resp)
+    {
+        var html = await resp.Content.ReadAsStringAsync();
+        var m = Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
+        Assert.True(m.Success, "Antiforgery token not found on page");
+        return m.Groups[1].Value;
+    }
+
+    private static async Task<HttpResponseMessage> PostFormAsync(
+        HttpClient client, string getUrl, string postUrl, Dictionary<string, string> fields)
+    {
+        var page = await client.GetAsync(getUrl);
+        page.EnsureSuccessStatusCode();
+        fields["__RequestVerificationToken"] = await ExtractTokenAsync(page);
+        return await client.PostAsync(postUrl, new FormUrlEncodedContent(fields));
+    }
+
+    private static Task<HttpResponseMessage> RegisterAsync(HttpClient client, string username, string password = "Tr0ubad0ur-x9")
+        => PostFormAsync(client, "/account/register", "/account/register", new()
+        {
+            ["Username"] = username,
+            ["Password"] = password,
+            ["ConfirmPassword"] = password
+        });
+
+    [Theory]
+    [InlineData("/sources/dashboard")]
+    [InlineData("/sources/connect")]
+    [InlineData("/matches")]
+    [InlineData("/account/profile")]
+    public async Task AnonymousProtectedPage_RedirectsToLogin(string url)
+    {
+        var client = NewClient();
+        var resp = await client.GetAsync(url);
+
+        Assert.Equal(HttpStatusCode.Redirect, resp.StatusCode);
+        Assert.Contains("/account/login", resp.Headers.Location!.ToString());
+    }
+
+    [Fact]
+    public async Task Register_AutoAuthenticates_AndLandsOnConnect()
+    {
+        var client = NewClient();
+        var user = "reg_" + Guid.NewGuid().ToString("N")[..8];
+
+        var reg = await RegisterAsync(client, user);
+        Assert.Equal(HttpStatusCode.Redirect, reg.StatusCode);
+        Assert.Contains("/sources/connect", reg.Headers.Location!.ToString());
+
+        // The auth cookie set by registration should now grant access to a protected page.
+        var dash = await client.GetAsync("/sources/dashboard");
+        Assert.Equal(HttpStatusCode.OK, dash.StatusCode);
+        Assert.Contains(user, await dash.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Login_WithWrongPassword_ShowsError()
+    {
+        var user = "bad_" + Guid.NewGuid().ToString("N")[..8];
+        await RegisterAsync(NewClient(), user);
+
+        var client = NewClient(); // fresh, unauthenticated
+        var resp = await PostFormAsync(client, "/account/login", "/account/login", new()
+        {
+            ["Username"] = user,
+            ["Password"] = "wrong-password"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        Assert.Contains("Invalid username or password", await resp.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Profile_SaveRoundTrips()
+    {
+        var client = NewClient();
+        var user = "prof_" + Guid.NewGuid().ToString("N")[..8];
+        await RegisterAsync(client, user);
+
+        var bio = "loves " + Guid.NewGuid().ToString("N")[..6];
+        var save = await PostFormAsync(client, "/account/profile", "/account/profile", new()
+        {
+            ["Bio"] = bio,
+            ["Contact"] = "@" + user
+        });
+        Assert.Equal(HttpStatusCode.Redirect, save.StatusCode);
+
+        var dash = await client.GetAsync("/sources/dashboard");
+        Assert.Contains(bio, await dash.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Register_RejectsCommonPassword()
+    {
+        var user = "weak_" + Guid.NewGuid().ToString("N")[..8];
+        var resp = await RegisterAsync(NewClient(), user, "password123");
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode); // re-rendered form, not a redirect
+        Assert.Contains("commonly used", await resp.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Health_IsAnonymous_AndReportsHealthy()
+    {
+        var resp = await NewClient().GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        Assert.Contains("healthy", await resp.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Hide_RemovesPersonFromMatches_And_UnhideRestores()
+    {
+        var client = NewClient();
+        var meName = "hide_me_" + Guid.NewGuid().ToString("N")[..6];
+        await RegisterAsync(client, meName);
+
+        var otherName = "hide_other_" + Guid.NewGuid().ToString("N")[..6];
+        var fpJson = new FingerprintGenerator(128).Generate(new[] { "y:1", "y:2", "y:3" }).ToJson();
+        int otherId = 0;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var me = await db.Users.FirstAsync(u => u.Username == meName);
+            var other = new AppUser { Username = otherName, PasswordHash = "x", IsDiscoverable = true };
+            db.Users.Add(other);
+            await db.SaveChangesAsync();
+            otherId = other.Id;
+            db.Fingerprints.Add(new FingerprintRecord { UserId = me.Id, FingerprintJson = fpJson, SourcesJson = "[]" });
+            db.Fingerprints.Add(new FingerprintRecord { UserId = other.Id, FingerprintJson = fpJson, SourcesJson = "[]" });
+            await db.SaveChangesAsync();
+        }
+
+        Assert.Contains(otherName, await (await client.GetAsync("/matches")).Content.ReadAsStringAsync());
+
+        var hide = await PostFormAsync(client, "/matches", "/matches/hide", new() { ["userId"] = otherId.ToString() });
+        Assert.Equal(HttpStatusCode.Redirect, hide.StatusCode);
+        Assert.DoesNotContain(otherName, await (await client.GetAsync("/matches")).Content.ReadAsStringAsync());
+
+        var unhide = await PostFormAsync(client, "/matches/hidden", "/matches/unhide", new() { ["userId"] = otherId.ToString() });
+        Assert.Equal(HttpStatusCode.Redirect, unhide.StatusCode);
+        Assert.Contains(otherName, await (await client.GetAsync("/matches")).Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task DataPage_And_JsonExport_ShowStoredData()
+    {
+        var client = NewClient();
+        var user = "data_" + Guid.NewGuid().ToString("N")[..8];
+        await RegisterAsync(client, user);
+
+        var page = await client.GetAsync("/account/data");
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        var html = await page.Content.ReadAsStringAsync();
+        Assert.Contains(user, html);
+        Assert.Contains("What we never store", html);
+
+        var json = await client.GetAsync("/account/data.json");
+        Assert.Equal(HttpStatusCode.OK, json.StatusCode);
+        Assert.Equal("application/json", json.Content.Headers.ContentType!.MediaType);
+        var body = await json.Content.ReadAsStringAsync();
+        Assert.Contains(user, body);
+        Assert.Contains("\"RawInterestsStored\": false", body);
+    }
+
+    [Fact]
+    public async Task Discoverability_Off_HidesUserFromOthersMatches()
+    {
+        var client = NewClient();
+        var meName = "vis_me_" + Guid.NewGuid().ToString("N")[..6];
+        await RegisterAsync(client, meName);
+
+        var otherName = "vis_other_" + Guid.NewGuid().ToString("N")[..6];
+        var fpJson = new FingerprintGenerator(128).Generate(new[] { "x:1", "x:2", "x:3" }).ToJson();
+
+        // Seed a second user who matches "me" 100% (identical signature).
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var me = await db.Users.FirstAsync(u => u.Username == meName);
+            var other = new AppUser { Username = otherName, PasswordHash = "x", IsDiscoverable = true };
+            db.Users.Add(other);
+            await db.SaveChangesAsync();
+            db.Fingerprints.Add(new FingerprintRecord { UserId = me.Id, FingerprintJson = fpJson, SourcesJson = "[\"GitHub\"]" });
+            db.Fingerprints.Add(new FingerprintRecord { UserId = other.Id, FingerprintJson = fpJson, SourcesJson = "[\"GitHub\"]" });
+            await db.SaveChangesAsync();
+        }
+
+        var visible = await client.GetAsync("/matches");
+        Assert.Contains(otherName, await visible.Content.ReadAsStringAsync());
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var other = await db.Users.FirstAsync(u => u.Username == otherName);
+            other.IsDiscoverable = false;
+            await db.SaveChangesAsync();
+        }
+
+        var hidden = await client.GetAsync("/matches");
+        Assert.DoesNotContain(otherName, await hidden.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Register_UsernameUniqueness_IsCaseInsensitive()
+    {
+        var baseName = "Case" + Guid.NewGuid().ToString("N")[..8];
+        var first = await RegisterAsync(NewClient(), baseName);
+        Assert.Equal(HttpStatusCode.Redirect, first.StatusCode);
+
+        // Registering the same name in a different case must be rejected.
+        var second = await RegisterAsync(NewClient(), baseName.ToUpperInvariant());
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        Assert.Contains("Username already taken", await second.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Login_IsCaseInsensitive_ForUsername()
+    {
+        var name = "Mixed" + Guid.NewGuid().ToString("N")[..8];
+        await RegisterAsync(NewClient(), name, "Tr0ubad0ur-x9");
+
+        var login = await PostFormAsync(NewClient(), "/account/login", "/account/login", new()
+        {
+            ["Username"] = name.ToLowerInvariant(),
+            ["Password"] = "Tr0ubad0ur-x9"
+        });
+
+        Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+        Assert.Contains("/sources", login.Headers.Location!.ToString());
+    }
+
+    [Fact]
+    public async Task ChangePassword_WrongCurrent_IsRejected()
+    {
+        var client = NewClient();
+        var user = "pw_" + Guid.NewGuid().ToString("N")[..8];
+        await RegisterAsync(client, user);
+
+        var resp = await PostFormAsync(client, "/account/password", "/account/password", new()
+        {
+            ["CurrentPassword"] = "not-the-password",
+            ["NewPassword"] = "brandnew123",
+            ["ConfirmNewPassword"] = "brandnew123"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode); // redisplays form with error
+        Assert.Contains("Current password is incorrect", await resp.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task ChangePassword_UpdatesCredential_OldFailsNewWorks()
+    {
+        var client = NewClient();
+        var user = "pw2_" + Guid.NewGuid().ToString("N")[..8];
+        await RegisterAsync(client, user, "Tr0ubad0ur-x9");
+
+        var change = await PostFormAsync(client, "/account/password", "/account/password", new()
+        {
+            ["CurrentPassword"] = "Tr0ubad0ur-x9",
+            ["NewPassword"] = "newsecret456",
+            ["ConfirmNewPassword"] = "newsecret456"
+        });
+        Assert.Equal(HttpStatusCode.Redirect, change.StatusCode);
+
+        // Old password no longer works.
+        var oldLogin = await PostFormAsync(NewClient(), "/account/login", "/account/login", new()
+        {
+            ["Username"] = user,
+            ["Password"] = "Tr0ubad0ur-x9"
+        });
+        Assert.Equal(HttpStatusCode.OK, oldLogin.StatusCode);
+        Assert.Contains("Invalid username or password", await oldLogin.Content.ReadAsStringAsync());
+
+        // New password works.
+        var newLogin = await PostFormAsync(NewClient(), "/account/login", "/account/login", new()
+        {
+            ["Username"] = user,
+            ["Password"] = "newsecret456"
+        });
+        Assert.Equal(HttpStatusCode.Redirect, newLogin.StatusCode);
+        Assert.Contains("/sources", newLogin.Headers.Location!.ToString());
+    }
+
+    [Fact]
+    public async Task AccountDeletion_RemovesUser_AndDeauthenticates()
+    {
+        var client = NewClient();
+        var user = "del_" + Guid.NewGuid().ToString("N")[..8];
+        await RegisterAsync(client, user);
+
+        var del = await PostFormAsync(client, "/sources/dashboard", "/account/delete", new()
+        {
+            ["password"] = "Tr0ubad0ur-x9"
+        });
+        Assert.Equal(HttpStatusCode.Redirect, del.StatusCode);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.False(await db.Users.AnyAsync(u => u.Username == user));
+        }
+
+        var dash = await client.GetAsync("/sources/dashboard");
+        Assert.Equal(HttpStatusCode.Redirect, dash.StatusCode);
+        Assert.Contains("/account/login", dash.Headers.Location!.ToString());
+    }
+
+    [Fact]
+    public async Task StaleCookie_ForDeletedUser_IsRejected()
+    {
+        var client = NewClient();
+        var user = "ghost_" + Guid.NewGuid().ToString("N")[..8];
+        await RegisterAsync(client, user);
+
+        // Delete the row out-of-band (bypassing the app's sign-out) — the cookie is now stale.
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var row = await db.Users.FirstAsync(u => u.Username == user);
+            db.Users.Remove(row);
+            await db.SaveChangesAsync();
+        }
+
+        var dash = await client.GetAsync("/sources/dashboard");
+        Assert.Equal(HttpStatusCode.Redirect, dash.StatusCode);
+        Assert.Contains("/account/login", dash.Headers.Location!.ToString());
+    }
+}
