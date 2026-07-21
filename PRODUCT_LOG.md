@@ -208,7 +208,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 95 tests, fully offline
+dotnet test                           # 96 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -221,7 +221,7 @@ dotnet test                           # 95 tests, fully offline
 
 ## 9. Testing
 
-95 xUnit tests, **fully offline and fast (~1–2s)**:
+96 xUnit tests, **fully offline and fast (~1–2s)**:
 - **Unit:** fingerprint math (incl. the union = element-wise-min property), matcher
   (ranking, threshold, empty exclusion), aggregator (failures), view-model tiers/validation,
   connectors (CSV parsing + garbage handling + API-error handling via a stub HTTP handler).
@@ -250,6 +250,15 @@ dotnet test                           # 95 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **The core privacy promise is now asserted against the database** — "raw interests are never
+  stored" had only ever been true by construction. A test now sends distinctive interests through
+  the real fingerprinting and persistence path, then searches every row of every table for any
+  trace of them, and separately confirms the signature *was* stored so the assertion cannot pass
+  vacuously. Verified to fail when a leak is introduced.
+- **Internal user ids no longer reach the page** — the hide/unhide forms carried the target's
+  database id, handing every signed-in user a sequential identifier for their matches and a rough
+  count of everyone registered. They post the username instead, and `MatchViewModel` no longer has
+  an id to leak.
 - **Authorization is now deny-by-default** — `AccountController` mixed anonymous and protected
   actions and depended on each protected one remembering `[Authorize]`; a new action serving
   profile or export data would have been public. The class is authorized and register/login/logout
