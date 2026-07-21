@@ -71,7 +71,8 @@ public class MatchesController : Controller
                 Similarity = m.Similarity,
                 SharedSources = mySources.Intersect(matchSources).ToList(),
                 Bio = matchFp?.User.Bio,
-                Contact = matchFp?.User.Contact
+                Contact = matchFp?.User.Contact,
+                UpdatedAt = matchFp?.UpdatedAt ?? DateTime.UtcNow
             };
         }).ToList();
 

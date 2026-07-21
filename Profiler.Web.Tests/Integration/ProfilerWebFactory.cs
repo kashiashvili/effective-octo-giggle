@@ -8,7 +8,7 @@ using Profiler.Web.Data;
 namespace Profiler.Web.Tests.Integration;
 
 /// <summary>
-/// Boots the real app against an isolated per-instance SQLite file and a relaxed login rate limit,
+/// Boots the real app against an isolated per-instance SQLite file and relaxed rate limits,
 /// so integration tests exercise the true middleware/controller pipeline without touching dev data.
 /// </summary>
 public class ProfilerWebFactory : WebApplicationFactory<Program>
@@ -19,6 +19,8 @@ public class ProfilerWebFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment(Environments.Development);
         builder.UseSetting("RateLimiting:LoginPermitLimit", "100000");
+        builder.UseSetting("RateLimiting:RegisterPermitLimit", "100000");
+        builder.UseSetting("RateLimiting:ConnectPermitLimit", "100000");
 
         builder.ConfigureServices(services =>
         {

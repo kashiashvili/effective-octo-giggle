@@ -278,6 +278,23 @@ public class AggregatorAndMatcherTests
         Assert.Equal(label, vm.TierLabel);
     }
 
+    [Theory]
+    [InlineData(0, "updated today", false)]
+    [InlineData(10, "updated this month", false)]
+    [InlineData(60, "updated about 2 months ago", false)]
+    [InlineData(200, "updated about 7 months ago", true)]
+    [InlineData(500, "updated over a year ago", true)]
+    public void MatchViewModel_ReportsFingerprintAge_AndFlagsStaleOnes(int daysOld, string label, bool stale)
+    {
+        var vm = new Profiler.Web.ViewModels.MatchViewModel
+        {
+            UpdatedAt = DateTime.UtcNow.AddDays(-daysOld)
+        };
+
+        Assert.Equal(label, vm.FreshnessLabel);
+        Assert.Equal(stale, vm.IsStale);
+    }
+
     private static IList<System.ComponentModel.DataAnnotations.ValidationResult> Validate(object model)
     {
         var results = new List<System.ComponentModel.DataAnnotations.ValidationResult>();

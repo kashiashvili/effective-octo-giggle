@@ -696,6 +696,11 @@ footer {
   color: var(--gray-500);
   overflow-wrap: anywhere;
 }
+.match-freshness {
+  margin-top: .5rem;
+  font-size: .75rem;
+  color: var(--gray-400);
+}
 .match-hide { margin-top: 1rem; text-align: right; }
 .match-hide-btn {
   background: none;

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Profiler.Web.Connectors;
 using Profiler.Web.Data;
@@ -60,6 +61,9 @@ public class SourcesController : Controller
     // Two 10 MB CSVs plus form fields. Rejects oversized bodies at the pipeline level, before
     // ASP.NET buffers up to its 128 MB default and the per-file check below ever runs.
     [RequestSizeLimit(25 * 1024 * 1024)]
+    // Every submit fans out to third-party APIs (and user-supplied RSS URLs), so this endpoint
+    // is metered the same as login/register rather than left to make unlimited outbound calls.
+    [EnableRateLimiting("connect")]
     public async Task<IActionResult> Connect(ConnectSourcesViewModel vm)
     {
         var userId = CurrentUserId;

@@ -206,6 +206,8 @@ All settings come from `appsettings.json` or environment variables.
 |-----|---------|---------|
 | `ConnectionStrings:Default` | `Data Source=profiler.db` | SQLite database location |
 | `RateLimiting:LoginPermitLimit` | `5` | Login attempts per IP per minute |
+| `RateLimiting:RegisterPermitLimit` | `5` | Registrations per IP per hour |
+| `RateLimiting:ConnectPermitLimit` | `10` | Source-connect submits per IP per minute |
 | `DataProtection:KeyPath` | `<contentRoot>/keys` | Where the auth-cookie key ring is stored (git-ignored secret) |
 
 ---
@@ -256,6 +258,19 @@ dotnet test                           # 116 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **Registration and connect are rate-limited too** — only login was metered. Unlimited registration
+  lets one person flood the matching pool with sybil accounts, which degrades match quality for real
+  users and is the enabling step for harvesting the contact lines matches expose; an unmetered
+  connect endpoint lets the host be used to hammer third parties, since every submit fans out to
+  external APIs and user-supplied RSS URLs. Both now use the same per-IP fixed-window limiter and
+  styled 429 page as login: `RateLimiting:RegisterPermitLimit` (5/hour) and
+  `RateLimiting:ConnectPermitLimit` (10/minute).
+- **Match cards show how fresh the other person's fingerprint is** — tokens are never stored, so
+  refreshes are manual and an abandoned profile never decays; a year-old snapshot was presented as a
+  "Strong match" with nothing to say so. Cards now carry a coarse age ("updated this month", "updated
+  about 7 months ago") and flag anything past the same 90-day staleness threshold used for your own
+  sources. The wording is deliberately coarse — a match's exact activity time is nobody else's
+  business.
 - **Match cards say when there is no way to reach someone** — a card showed a username, a tier and a
   percentage, and if that person had left their contact line blank it simply ended there, turning the
   step the product exists for into a dead end with nothing explaining it. Cards now say so, and note

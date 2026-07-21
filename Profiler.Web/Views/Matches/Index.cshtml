@@ -90,6 +90,16 @@
                                 <span class="compat-pct @match.Tier">@match.TierLabel</span>
                                 <span class="text-muted">~@match.SimilarityPercent% shared</span>
                             </div>
+                            <div class="match-freshness text-muted">
+                                @if (match.IsStale)
+                                {
+                                    <span title="Their interests haven't been refreshed in a while, so this match is based on an old snapshot.">🕰️ @match.FreshnessLabel</span>
+                                }
+                                else
+                                {
+                                    <span>@match.FreshnessLabel</span>
+                                }
+                            </div>
                             <div class="progress-wrap">
                                 <div class="progress-bar @match.Tier" style="width: @match.SimilarityPercent%"></div>
                             </div>

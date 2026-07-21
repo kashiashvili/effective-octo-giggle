@@ -91,6 +91,8 @@ All settings can be supplied via `appsettings.json` or environment variables.
 |----------------------------------|----------------------|------------------------------------------------------|
 | `ConnectionStrings:Default`      | `Data Source=profiler.db` | SQLite database location                        |
 | `RateLimiting:LoginPermitLimit`  | `5`                  | Allowed login attempts per IP per minute             |
+| `RateLimiting:RegisterPermitLimit` | `5`                | Allowed registrations per IP per hour                |
+| `RateLimiting:ConnectPermitLimit`  | `10`               | Allowed source-connect submits per IP per minute      |
 | `DataProtection:KeyPath`         | `<contentRoot>/keys` | Where the auth-cookie key ring is persisted          |
 
 ## Deployment notes

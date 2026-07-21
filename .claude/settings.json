@@ -1,0 +1,15 @@
+ {
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'AUTONOMOUS PRODUCT LOOP IS ACTIVE. Read PROJECT_STATE.md immediately. Completing the previous task is not completion of the overall mission. Resume from the current state, return to Product Owner mode when appropriate, select the next highest-value work, and continue the Product Owner → Architect → Developer → QA → Product Owner cycle.'"
+          }
+        ]
+      }
+    ]
+  }
+}

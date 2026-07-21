@@ -61,6 +61,20 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 // Brute-force protection for the login endpoint (per client IP).
 // Limit is configurable ("RateLimiting:LoginPermitLimit") so tests can relax it.
 var loginPermitLimit = builder.Configuration.GetValue<int?>("RateLimiting:LoginPermitLimit") ?? 5;
+
+// Unlimited registration lets one person flood the matching pool with sybil accounts, which
+// degrades match quality for real users and is the enabling step for harvesting the contact
+// lines that matches expose. A generous hourly window is enough to stop that without ever
+// bothering someone who is just having trouble picking a username.
+// Limit is configurable ("RateLimiting:RegisterPermitLimit") so tests can relax it.
+var registerPermitLimit = builder.Configuration.GetValue<int?>("RateLimiting:RegisterPermitLimit") ?? 5;
+
+// The connect endpoint makes outbound requests to third-party APIs (and, via the RSS connector,
+// to whatever URL the caller supplies), so an unmetered connect lets this host be used to hammer
+// third parties on someone else's behalf.
+// Limit is configurable ("RateLimiting:ConnectPermitLimit") so tests can relax it.
+var connectPermitLimit = builder.Configuration.GetValue<int?>("RateLimiting:ConnectPermitLimit") ?? 10;
+
 builder.Services.AddRateLimiter(opt =>
 {
     opt.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -69,6 +83,22 @@ builder.Services.AddRateLimiter(opt =>
         _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = loginPermitLimit,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        }));
+    opt.AddPolicy("register", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = registerPermitLimit,
+            Window = TimeSpan.FromHours(1),
+            QueueLimit = 0
+        }));
+    opt.AddPolicy("connect", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = connectPermitLimit,
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0
         }));
