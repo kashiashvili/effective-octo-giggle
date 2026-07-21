@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -210,6 +212,36 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
             Assert.Empty(await db.SourceFingerprints.Where(s => s.UserId == userId).ToListAsync());
             Assert.False(await db.Fingerprints.AnyAsync(f => f.UserId == userId));
         }
+    }
+
+    [Fact]
+    public async Task Production_RedirectsPlainHttpToHttps()
+    {
+        // The redirection middleware quietly does nothing when it cannot work out which port to
+        // send people to, so the port has to be supplied here just as it does in a real deployment.
+        using var prod = _factory.WithWebHostBuilder(b =>
+        {
+            b.UseEnvironment(Environments.Production);
+            b.UseSetting("https_port", "443");
+        });
+        var client = prod.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var resp = await client.GetAsync("/health");
+
+        // Development stays on plain HTTP; everything else must be pushed to HTTPS.
+        Assert.Equal(HttpStatusCode.TemporaryRedirect, resp.StatusCode);
+        Assert.StartsWith("https://", resp.Headers.Location!.ToString());
+    }
+
+    [Fact]
+    public async Task ErrorPage_IsFriendly_AndLeaksNoInternals()
+    {
+        var html = await NewClient().GetStringAsync("/home/error");
+
+        Assert.Contains("Something went wrong", html);
+        Assert.DoesNotContain("Stack", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Exception", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Profiler.Web.Controllers", html);
     }
 
     [Fact]

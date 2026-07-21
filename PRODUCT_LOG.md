@@ -208,7 +208,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 90 tests, fully offline
+dotnet test                           # 92 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -221,7 +221,7 @@ dotnet test                           # 90 tests, fully offline
 
 ## 9. Testing
 
-90 xUnit tests, **fully offline and fast (~1–2s)**:
+92 xUnit tests, **fully offline and fast (~1–2s)**:
 - **Unit:** fingerprint math (incl. the union = element-wise-min property), matcher
   (ranking, threshold, empty exclusion), aggregator (failures), view-model tiers/validation,
   connectors (CSV parsing + garbage handling + API-error handling via a stub HTTP handler).
@@ -250,6 +250,12 @@ dotnet test                           # 90 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **Production posture verified, and a deployment trap documented** — the docs claimed HTTPS
+  redirection outside Development and a friendly error page, but neither had ever been exercised.
+  Both now have tests. Writing the first one surfaced something worth knowing: ASP.NET's HTTPS
+  redirection **silently does nothing when it cannot determine the HTTPS port**, which is exactly
+  what happens behind a TLS-terminating proxy. `ASPNETCORE_HTTPS_PORT` (or forwarded headers) must
+  be set or the app serves plain HTTP with no redirect and no warning. Added to the README.
 - **Mobile layout checked and fixed** — the app had never been viewed at phone width. The
   dashboard's source and discoverability rows were flex rows that assumed desktop width, so at
   375px the Disconnect and "Hide me" buttons were clipped off the card edge. They wrap now.

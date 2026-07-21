@@ -97,6 +97,10 @@ All settings can be supplied via `appsettings.json` or environment variables.
 
 - **Run behind HTTPS.** In non-Development environments the app enables HSTS and
   HTTPS redirection, and the auth cookie is only sent over HTTPS.
+  Note that ASP.NET's HTTPS redirection **silently does nothing if it cannot determine
+  the HTTPS port**. If TLS is terminated by a proxy, set `ASPNETCORE_HTTPS_PORT` (or
+  configure forwarded headers) — otherwise requests will simply be served over HTTP
+  with no redirect and no warning.
 - **Persist the key ring.** Auth cookies are protected by the Data Protection key
   ring at `DataProtection:KeyPath`. Mount this on a persistent volume (or point it
   at shared storage for multi-instance deploys) so cookies survive restarts and
@@ -115,7 +119,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 dotnet test
 ```
 
-The suite (90 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (92 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 
