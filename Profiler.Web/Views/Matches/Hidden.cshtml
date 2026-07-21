@@ -1,0 +1,43 @@
+@model List<Profiler.Web.ViewModels.MatchViewModel>
+@{
+    ViewBag.Title = "Hidden People";
+}
+
+<div class="page-wrap">
+    <div class="container">
+        <div class="matches-header">
+            <h1>🙈 Hidden People</h1>
+            <p class="matches-meta">People you've hidden won't appear in your matches, and you won't appear in theirs.</p>
+        </div>
+
+        @if (!Model.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-icon">🤝</div>
+                <h4>No one hidden</h4>
+                <p>You haven't hidden anyone. You can hide a person from any match card.</p>
+                <p class="mt-4"><a href="/matches" class="btn btn-outline">Back to matches</a></p>
+            </div>
+        }
+        else
+        {
+            <div class="card">
+                <div class="card-body">
+                    <ul class="action-list">
+                        @foreach (var person in Model)
+                        {
+                            <li class="source-row">
+                                <span class="source-badge">@person.Username</span>
+                                <form asp-action="Unhide" asp-controller="Matches" method="post" class="ms-auto">
+                                    <input type="hidden" name="userId" value="@person.UserId" />
+                                    <button type="submit" class="btn btn-outline btn-sm">Unhide</button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+            <p class="mt-4"><a href="/matches" class="btn btn-outline">← Back to matches</a></p>
+        }
+    </div>
+</div>

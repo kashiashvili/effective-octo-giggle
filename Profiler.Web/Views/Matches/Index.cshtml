@@ -2,56 +2,103 @@
 @{
     ViewBag.Title = "Your Matches";
     bool noFingerprint = ViewBag.NoFingerprint ?? false;
+    bool othersExist = ViewBag.OthersExist ?? false;
+    bool isDiscoverable = ViewBag.IsDiscoverable ?? true;
 }
 
-<div class="matches-container">
-    <div class="matches-header">
-        <h1>🤝 Your Top Matches</h1>
-        <p>Ranked by Jaccard similarity of your MinHash fingerprints</p>
-    </div>
+<div class="page-wrap">
+    <div class="container">
+        <div class="matches-header">
+            <h1>🤝 Your Top Matches</h1>
+            <p class="matches-meta">People whose interests overlap with yours, estimated privately from MinHash fingerprints</p>
+        </div>
 
-    @if (noFingerprint)
-    {
-        <div class="empty-state">
-            <div class="empty-icon">🔌</div>
-            <h2>No fingerprint yet</h2>
-            <p>Connect your data sources to generate your fingerprint and find matches.</p>
-            <a href="/sources/connect" class="btn btn-primary">Connect Sources</a>
-        </div>
-    }
-    else if (!Model.Any())
-    {
-        <div class="empty-state">
-            <div class="empty-icon">👥</div>
-            <h2>No matches yet</h2>
-            <p>You're the first user with a fingerprint! Invite friends to discover matches.</p>
-            <a href="/sources/connect" class="btn btn-secondary">Update Sources</a>
-        </div>
-    }
-    else
-    {
-        <div class="matches-grid">
-            @foreach (var match in Model)
-            {
-                <div class="match-card">
-                    <div class="match-avatar">
-                        @match.Username.Substring(0, 1).ToUpper()
-                    </div>
-                    <div class="match-info">
-                        <h3 class="match-username">@match.Username</h3>
-                        <div class="similarity-bar-container">
-                            <div class="similarity-bar" style="width: @match.SimilarityPercent%"></div>
-                        </div>
-                        <span class="similarity-label">@match.SimilarityPercent% similarity</span>
-                        @if (match.SharedSources.Any())
-                        {
-                            <div class="shared-sources">
-                                Shared: @string.Join(", ", match.SharedSources)
+        @if (!noFingerprint && !isDiscoverable)
+        {
+            <div class="alert alert-info">
+                <span class="alert-icon">🙈</span>
+                <span>You're currently <strong>hidden</strong> — you can browse your matches, but you won't appear in theirs. Change this on your <a href="/sources/dashboard">dashboard</a>.</span>
+            </div>
+        }
+
+        @if (noFingerprint)
+        {
+            <div class="empty-state">
+                <div class="empty-icon">🔌</div>
+                <h4>No fingerprint yet</h4>
+                <p>Connect your data sources to generate your fingerprint and find matches.</p>
+                <p class="mt-4"><a href="/sources/connect" class="btn btn-primary">Connect Sources</a></p>
+            </div>
+        }
+        else if (!Model.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-icon">👥</div>
+                @if (othersExist)
+                {
+                    <h4>No close matches yet</h4>
+                    <p>Other people are here, but nobody shares enough of your interests to call a match yet. Connecting more sources sharpens your fingerprint — and new members join over time.</p>
+                }
+                else
+                {
+                    <h4>You're the first one here</h4>
+                    <p>No one else has a fingerprint yet. Invite friends so you have people to match with!</p>
+                }
+                <p class="mt-4"><a href="/sources/connect" class="btn btn-outline">Add more sources</a></p>
+            </div>
+        }
+        else
+        {
+            <div class="matches-grid">
+                @for (var i = 0; i < Model.Count; i++)
+                {
+                    var match = Model[i];
+                    <div class="match-card">
+                        <div class="match-card-body">
+                            <div class="match-user">
+                                <span class="avatar a@(i % 6 + 1)">@match.Username.Substring(0, 1).ToUpper()</span>
+                                <div>
+                                    <div class="match-username">@match.Username</div>
+                                    @if (match.SharedSources.Any())
+                                    {
+                                        <div class="match-sources">
+                                            @foreach (var s in match.SharedSources)
+                                            {
+                                                <span class="badge badge-gray">@s</span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="match-sources"><span class="text-muted">No sources in common</span></div>
+                                    }
+                                </div>
                             </div>
-                        }
+                            <div class="compat-row">
+                                <span class="compat-pct @match.Tier">@match.TierLabel</span>
+                                <span class="text-muted">~@match.SimilarityPercent% shared</span>
+                            </div>
+                            <div class="progress-wrap">
+                                <div class="progress-bar @match.Tier" style="width: @match.SimilarityPercent%"></div>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(match.Bio))
+                            {
+                                <p class="match-bio">@match.Bio</p>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(match.Contact))
+                            {
+                                <p class="match-contact">📮 @match.Contact</p>
+                            }
+                            <form asp-action="Hide" asp-controller="Matches" method="post" class="match-hide">
+                                <input type="hidden" name="userId" value="@match.UserId" />
+                                <button type="submit" class="match-hide-btn" data-no-busy
+                                        title="Hide @match.Username from your matches">🙈 Hide</button>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            }
-        </div>
-    }
+                }
+            </div>
+            <p class="mt-4 text-center"><a href="/matches/hidden" class="text-muted">Manage hidden people</a></p>
+        }
+    </div>
 </div>
