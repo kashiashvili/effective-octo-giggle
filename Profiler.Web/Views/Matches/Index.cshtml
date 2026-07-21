@@ -4,6 +4,7 @@
     bool noFingerprint = ViewBag.NoFingerprint ?? false;
     bool othersExist = ViewBag.OthersExist ?? false;
     bool isDiscoverable = ViewBag.IsDiscoverable ?? true;
+    bool hasOwnContact = ViewBag.HasOwnContact ?? true;
 }
 
 <div class="page-wrap">
@@ -18,6 +19,17 @@
             <div class="alert alert-info">
                 <span class="alert-icon">🙈</span>
                 <span>You're currently <strong>hidden</strong> — you can browse your matches, but you won't appear in theirs. Change this on your <a href="/sources/dashboard">dashboard</a>.</span>
+            </div>
+        }
+
+        @if (!noFingerprint && !hasOwnContact && Model.Any())
+        {
+            <div class="alert alert-info">
+                <span class="alert-icon">📭</span>
+                <span>
+                    You haven't shared a way to be reached, so nobody here can answer you.
+                    <a href="/account/profile">Add a contact line</a> — it's shown only to people you match with.
+                </span>
             </div>
         }
 
@@ -88,6 +100,16 @@
                             @if (!string.IsNullOrWhiteSpace(match.Contact))
                             {
                                 <p class="match-contact">📮 @match.Contact</p>
+                            }
+                            else
+                            {
+                                <p class="match-contact text-muted">
+                                    📭 @match.Username hasn't shared a way to be reached.
+                                    @if (hasOwnContact)
+                                    {
+                                        <text>They can still reach you.</text>
+                                    }
+                                </p>
                             }
                             <form asp-action="Hide" asp-controller="Matches" method="post" class="match-hide">
                                 <input type="hidden" name="username" value="@match.Username" />

@@ -77,6 +77,12 @@ public class MatchesController : Controller
 
         // Lets the empty state distinguish "you are the only user" from "others exist, none close yet".
         ViewBag.OthersExist = matcher.CandidateCount(userId.ToString()) > 0;
+
+        // Reaching out is the point of the whole product, and it only works if at least one side
+        // published a way to be reached. Someone who left their own contact blank sees a list of
+        // people who cannot answer them, with nothing explaining why.
+        ViewBag.HasOwnContact = !string.IsNullOrWhiteSpace(
+            allFps.FirstOrDefault(f => f.UserId == userId)?.User.Contact);
         return View(viewModels);
     }
 
