@@ -40,6 +40,12 @@ public class AccountController : Controller
 
         var username = vm.Username.Trim();
 
+        if (Security.UsernamePolicy.Validate(username) is { } badName)
+        {
+            ModelState.AddModelError(nameof(vm.Username), badName);
+            return View(vm);
+        }
+
         if (Security.PasswordPolicy.Validate(vm.Password, username) is { } weak)
         {
             ModelState.AddModelError(nameof(vm.Password), weak);

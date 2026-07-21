@@ -245,6 +245,20 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
     }
 
     [Fact]
+    public async Task Register_RejectsWhitespaceOnlyUsername()
+    {
+        var client = NewClient();
+        var resp = await RegisterAsync(client, "   ");
+
+        // Must not create an account whose username trims away to nothing.
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.False(await db.Users.AnyAsync(u => u.Username == "" || u.Username == "   "));
+    }
+
+    [Fact]
     public async Task Health_IsAnonymous_AndReportsHealthy()
     {
         var resp = await NewClient().GetAsync("/health");
