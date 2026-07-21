@@ -91,9 +91,9 @@ is O(all users) in memory (needs LSH banding past a few thousand users).
 
 ## Current Phase
 
-Developer — implementing the top remaining P1 from the independent review.
+QA/Validation — last P2 (oversized-upload error page) in flight; then Product Owner review.
 
-## Active Task
+## Previous Active Task (complete)
 
 **Account recovery without email.** A forgotten password permanently locks the account *and*
 makes the data undeletable (deletion is password-confirmed), so the locked-out user's
@@ -104,16 +104,14 @@ Design: a one-time recovery code generated at registration, shown once, stored B
 single-use. It resets the password (and therefore restores the ability to delete). No email is
 collected, so the privacy stance holds.
 
-### Definition of Done
+### Definition of Done — all met
 
-- Code issued at registration and shown exactly once, with a page that makes clear it cannot
-  be shown again.
-- `/account/recover` (anonymous, rate-limited) takes username + code + new password in one
-  post; generic failure message that does not reveal whether a username exists.
-- Using a code invalidates it and issues a new one.
-- Signed-in users can regenerate a code, password-confirmed.
-- Existing accounts (no code on file) are nudged to generate one.
-- Migration; tests covering issue / use / single-use / wrong-code; docs updated.
+- Code issued at registration and shown exactly once. ✅
+- `/account/recover` (anonymous, rate-limited), single post, generic failure message. ✅
+- Single-use; using it issues a replacement. ✅
+- Signed-in users can regenerate, password-confirmed. ✅
+- Accounts with no code on file are nudged on the dashboard. ✅
+- Migration `AddRecoveryCode`; 14 tests; README and `PRODUCT_LOG.md` updated. ✅
 
 ## Current Execution Notes
 
@@ -137,26 +135,26 @@ another session).
 
 ### P1 — Core Product
 
-- **Account recovery** — active task above.
 - **Contact is broadcast to every match with no mutual consent.** A contact line goes to up to
   20 strangers at once with no per-person choice. Proposed: a mutual "connect request" — either
   side can request, contacts are exchanged only when both accept. (The smaller half — saying
-  when a match has no contact, and nudging users who set none — is done.)
-- **Matching says how much you overlap but never what kind.** The per-source signatures are
-  already stored and never used for comparison, so users get "Strong match, ~41%" with no
-  conversation starter. Also, because the combined fingerprint is a union, users who connect
-  many sources score systematically lower against everyone — the app punishes engagement.
+  when a match has no contact, and nudging users who set none — is done.) Judged the largest
+  remaining product bet; it is a design change, not a defect, since the field is opt-in and
+  labelled.
 
 ### P2 — Quality / Reliability / UX
 
 - Oversized submissions fail unhandled: `[RequestSizeLimit(25MB)]` fires before the friendly
-  per-file check, so a >25 MB body yields a raw framework error page.
+  per-file check, so a >25 MB body yields a raw framework error page. **In flight.**
 
 ### P3 — Enhancement
 
-- Username homoglyph impersonation (`аdmin` with a Cyrillic а) is still accepted; `TextPolicy`
-  rejects only invisible/bidi characters. Proposed: reject mixed-script usernames (single
-  script + Common), which still admits the Cyrillic and Japanese names the tests pin.
+- Consider containment-based scoring so a wide-ranging profile is not diluted by the union.
+  Reviewed and deliberately deferred: Jaccard of the union is a defensible definition of overall
+  similarity, and the new per-source line makes the effect legible rather than mysterious.
+- Pure-lookalike usernames (a name written *entirely* in Cyrillic that reads as Latin, e.g.
+  `сор` vs `cop`) are still possible now that mixed-alphabet names are refused. Closing it needs
+  a confusable-skeleton column with a unique index and a backfill.
 - Match list pagination / filtering beyond the top 20.
 
 ### P4 — Polish / Optional
@@ -170,22 +168,29 @@ another session).
 
 ## Last Completed Iteration
 
-**Iteration:** 5 (this session)
+**Iteration:** 8 (this session)
 
-**Completed:** Baseline re-established and state file reconstructed; blocks no longer outlive a
-deleted account (schema cascade + migration purge + transparency page lists who you hid);
-connectors and RSS feeds fan out concurrently under a 30s budget; match cards state when there
-is no way to reach someone and how fresh the other fingerprint is; registration and connect are
-rate-limited; rate limiting made proxy-aware.
+**Completed, in order:** baseline re-established and the state file reconstructed from the
+repository; blocks no longer outlive a deleted account (schema cascade + migration purge, and
+the transparency page now lists who you hid); connectors and RSS feeds fan out concurrently
+under a 30s budget; match cards state when there is no way to reach someone; registration and
+connect rate-limited; rate limiting made proxy-aware (`ForwardedHeaders`, refused if enabled
+without a trust list); match cards show fingerprint freshness; **account recovery codes**;
+per-source overlap on match cards ("Closest on RSS/Blogs"); usernames may no longer mix
+alphabets.
 
-**Validation:** `dotnet build` 0 warnings; `dotnet test` 135/135 passing. Core journey verified
-end to end against a running server (register → connect GitHub/RSS → fingerprint 128 dims, raw
-interests absent from the database → matched pair with bio/contact → hide, symmetric → data
-export → password-confirmed deletion, cascade confirmed in SQLite).
+**Validation:** `dotnet build` 0 warnings; `dotnet test` 158/158 passing. All 7 migrations apply
+cleanly to a fresh database. Core journey verified end to end against a running server at each
+step — register → recovery code shown once → connect GitHub/RSS (real network) → fingerprint 128
+dims with raw interests absent from every table → matched pair with bio/contact and per-source
+overlap → hide, symmetric → data export → password reset by recovery code, old password dead →
+password-confirmed deletion with cascade confirmed in SQLite.
 
-**Result:** All findings from the independent review are triaged; three P1/P2 items shipped.
+**Result:** Every P0–P3 finding from the independent review is either shipped or explicitly
+deferred with a reason. One P1 (mutual contact consent) remains as a deliberate product bet.
 
 ## Next Mandatory Action
 
-Implement account recovery, validate, update `PRODUCT_LOG.md`, then return to Product Owner
-mode and take the next P1 from the backlog.
+Land the oversized-upload error page, re-run validation, then perform a fresh independent
+Product Owner review against the current code — not against this file — and either take the
+mutual-consent P1 or record why it should not be built.
