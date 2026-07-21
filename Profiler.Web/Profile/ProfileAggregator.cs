@@ -2,36 +2,57 @@ using Profiler.Web.Connectors;
 
 namespace Profiler.Web.Profile;
 
+public record ConnectorFailure(string Source, string Message);
+
+public record SourceResult(string Source, List<string> Features);
+
+public class AggregationResult
+{
+    public List<SourceResult> Results { get; } = new();
+    public List<ConnectorFailure> Failures { get; } = new();
+
+    public List<string> Sources => Results.Select(r => r.Source).ToList();
+    public List<string> Features => Results.SelectMany(r => r.Features).ToList();
+}
+
 public class ProfileAggregator
 {
     private readonly IEnumerable<IConnector> _connectors;
-    private readonly bool _skipErrors;
 
-    public ProfileAggregator(IEnumerable<IConnector> connectors, bool skipErrors = true)
+    public ProfileAggregator(IEnumerable<IConnector> connectors)
     {
         _connectors = connectors;
-        _skipErrors = skipErrors;
     }
 
-    public async Task<(List<string> sources, List<string> features)> AggregateAsync()
+    public async Task<AggregationResult> AggregateAsync()
     {
-        var sources = new List<string>();
-        var features = new List<string>();
+        var result = new AggregationResult();
 
         foreach (var connector in _connectors)
         {
             try
             {
                 var data = await connector.FetchAsync();
-                sources.Add(data.Source);
-                features.AddRange(data.Features);
+                if (data.Features.Count == 0)
+                {
+                    // Connectors that swallow HTTP errors surface here as "success with no data";
+                    // either way the source contributed nothing and must not be listed as connected.
+                    result.Failures.Add(new ConnectorFailure(connector.Name,
+                        "returned no interest data — check the credentials or account name"));
+                    continue;
+                }
+                result.Results.Add(new SourceResult(data.Source, data.Features.ToList()));
             }
-            catch (Exception)
+            catch (ConnectorException ex)
             {
-                if (!_skipErrors) throw;
+                result.Failures.Add(new ConnectorFailure(connector.Name, ex.Message));
+            }
+            catch (Exception ex)
+            {
+                result.Failures.Add(new ConnectorFailure(connector.Name, $"Unexpected error: {ex.Message}"));
             }
         }
 
-        return (sources, features);
+        return result;
     }
 }

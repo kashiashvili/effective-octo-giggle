@@ -12,6 +12,9 @@ public class ProfileFingerprint
         Signature = signature;
     }
 
+    /// <summary>An all-zero signature means no features were collected; it must not participate in matching.</summary>
+    public bool IsEmpty => Signature.Length == 0 || Signature.All(v => v == 0);
+
     public double Similarity(ProfileFingerprint other)
     {
         if (Signature.Length == 0 || other.Signature.Length == 0) return 0.0;
