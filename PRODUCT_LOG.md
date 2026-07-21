@@ -109,14 +109,18 @@ and the two CSV uploads need no account credentials.
 ### Privacy controls
 - **Discoverability toggle** — "Hide me from matches" keeps your fingerprint and your own
   match view, but removes you from everyone else's results. Defaults to discoverable.
-- **Data transparency** — `/account/data` shows exactly what is stored about you, with a
-  "what we never store" section and a JSON download (`/account/data.json`).
+- **Data transparency** — `/account/data` shows exactly what is stored about you, including the
+  people you have hidden, with a "what we never store" section and a JSON download
+  (`/account/data.json`). Who hid *you* is deliberately not shown, to either party.
 - **Hide a specific person** — a "Hide" button on any match card removes that person from your
   matches, symmetrically (neither sees the other). Manage/undo at `/matches/hidden`.
 
 ### Robustness & failure handling
 - Per-connector failures are surfaced to the user; a connector that returns no data is
   treated as a failure (many APIs return an error body with a 200-ish shape).
+- Connectors are fetched **concurrently under a 30s overall budget** (as are the RSS feeds within
+  the RSS connector), so connecting several sources costs the slowest one rather than the sum, and a
+  hung source is reported instead of holding the whole POST until a gateway kills it.
 - A fingerprint is **never saved from zero features**; a partial failure keeps the
   sources that succeeded and leaves your existing data intact.
 
@@ -172,6 +176,7 @@ to `MatchViewModel` (adding the matched user's bio/contact and shared source typ
 | `AppUser` | Id, Username, PasswordHash, CreatedAt, Bio?, Contact?, IsDiscoverable | Username is case-insensitive unique (NOCASE); Bio/Contact are the opt-in public profile |
 | `FingerprintRecord` | UserId (PK), FingerprintJson, SourcesJson, UpdatedAt | The **combined** (truncated) signature used for matching |
 | `SourceFingerprintRecord` | Id, UserId, Source, RawSignatureJson, FeatureCount, UpdatedAt | One per (user, source); **raw 64-bit** signature; unique index on (UserId, Source) |
+| `UserBlock` | Id, BlockerId, BlockedId, CreatedAt | One person hiding another; unique on (Blocker, Blocked). Cascades from **both** ends, so a block cannot outlive either party's account deletion |
 
 Schema changes are made with EF migrations and applied on startup via
 `db.Database.Migrate()`.
@@ -251,6 +256,28 @@ dotnet test                           # 116 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **Match cards say when there is no way to reach someone** — a card showed a username, a tier and a
+  percentage, and if that person had left their contact line blank it simply ended there, turning the
+  step the product exists for into a dead end with nothing explaining it. Cards now say so, and note
+  when the other person can still reach you. Anyone who left their *own* contact blank is told once,
+  above the list, that nobody there can answer them, with a link to set one.
+- **Connecting sources no longer costs the sum of every timeout** — connectors were awaited one at a
+  time, and the RSS connector awaited each of its ten feeds one at a time, each able to sit on the 15s
+  client timeout. A realistic submission could run for minutes inside a blocking POST, long enough for
+  a typical gateway to return 504 and lose everything — including uploaded CSVs, which a browser
+  cannot repopulate. Connectors now fan out together, as do the RSS feeds within their connector,
+  under a **30s overall budget**: whatever answered is saved and anything outstanding is reported as
+  having taken too long. Results are still ordered by connector, not by who answered first. Verified
+  live against three real feeds: 2s, 67 signals.
+- **Blocks no longer outlive a deleted account** — deletion removed the user, their fingerprint and
+  their source signatures, but left every `UserBlocks` row referring to them, and the table had no
+  foreign keys at all. What survived was a record that two named people wanted nothing to do with
+  each other, one of whom had asked to be erased. Blocks now cascade from both ends at the schema
+  level (migration `CascadeUserBlocks`, which also purges the orphans already accumulated) and the
+  delete path removes them explicitly as well, so the promise does not depend on the provider
+  enforcing foreign keys. `/account/data` and the JSON export now also list **the people you have
+  hidden**, which they omitted while claiming to show everything stored about you; who hid *you*
+  stays unlisted, since telling someone they were hidden would defeat the control.
 - **Display text is checked for deceptive characters** — usernames, bios and contact lines are all
   read by a stranger deciding whether to make contact, so all three now reject bidirectional
   overrides and invisible/control characters (`TextPolicy`). A contact line is the sharpest case: an
