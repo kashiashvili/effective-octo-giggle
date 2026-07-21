@@ -50,15 +50,17 @@ fingerprint; the underlying interests are discarded after the fingerprint is bui
 
 ## 2. Core user journey
 
-1. **Register** → account is created and you are **signed in automatically**, landing
-   on the Connect page.
+1. **Register** → account is created, you are **signed in automatically**, and you are shown
+   your **recovery code once** (there is no email address on file, so this is the only way
+   back in) before landing on the Connect page.
 2. **Connect at least one source.** The quickest need no tokens: a GitHub username, RSS
    feed URLs, or a Goodreads/Netflix CSV export. Others accept OAuth tokens / API keys.
 3. Profiler **fetches your interests, builds the fingerprint, and discards the raw data.**
 4. **View your matches** — ranked, with a qualitative tier and the source types you share.
 5. **See each match's optional bio and contact** and reach out off-platform.
 6. **Manage yourself** from the dashboard: see per-source signal counts, disconnect a
-   source, edit your public profile, change your password, or delete your account.
+   source, edit your public profile, change your password, regenerate your recovery code, or
+   delete your account.
 
 ---
 
@@ -69,8 +71,12 @@ fingerprint; the underlying interests are discarded after the fingerprint is bui
 - **Persistent cookie authentication** (30-day sliding expiry) — you stay signed in
   across server restarts and redeploys.
 - **Change password** (verifies current password, requires a different new one).
-- **Delete account** — password-confirmed; removes the user, their fingerprint, and all
-  per-source signatures, then signs out.
+- **Recovery code** — the substitute for a password-reset email, since no email address is
+  collected. 100 bits in Crockford base32, shown once at registration, stored as a BCrypt hash
+  only. Single-use, and using it issues a replacement. Regenerate from the dashboard
+  (password-confirmed). Reachable from the sign-in page.
+- **Delete account** — password-confirmed; removes the user, their fingerprint, all per-source
+  signatures, and every block involving them, then signs out.
 
 ### Data sources (18 connectors)
 GitHub (username; optional token), Goodreads (CSV), Netflix (CSV), Google, Facebook,
@@ -173,7 +179,7 @@ to `MatchViewModel` (adding the matched user's bio/contact and shared source typ
 
 | Entity | Key fields | Notes |
 |--------|-----------|-------|
-| `AppUser` | Id, Username, PasswordHash, CreatedAt, Bio?, Contact?, IsDiscoverable | Username is case-insensitive unique (NOCASE); Bio/Contact are the opt-in public profile |
+| `AppUser` | Id, Username, PasswordHash, CreatedAt, Bio?, Contact?, IsDiscoverable, RecoveryCodeHash? | Username is case-insensitive unique (NOCASE); Bio/Contact are the opt-in public profile |
 | `FingerprintRecord` | UserId (PK), FingerprintJson, SourcesJson, UpdatedAt | The **combined** (truncated) signature used for matching |
 | `SourceFingerprintRecord` | Id, UserId, Source, RawSignatureJson, FeatureCount, UpdatedAt | One per (user, source); **raw 64-bit** signature; unique index on (UserId, Source) |
 | `UserBlock` | Id, BlockerId, BlockedId, CreatedAt | One person hiding another; unique on (Blocker, Blocked). Cascades from **both** ends, so a block cannot outlive either party's account deletion |
@@ -219,7 +225,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 135 tests, fully offline
+dotnet test                           # 155 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -249,7 +255,8 @@ dotnet test                           # 135 tests, fully offline
 - **Sources can't auto-refresh.** Because tokens are never stored (privacy), refreshing a
   source means re-entering its credentials. This is intentional.
 - **No in-app messaging.** Matches connect via the contact line each person opts to share.
-- **No email / password reset.** Account deletion is the only recovery path today.
+- **No email address, therefore no reset link.** Recovery is a one-time code the user must keep;
+  losing both the password and the code means the account is unreachable by anyone, including us.
 - Matching returns the top 20; there is no pagination or manual filtering yet.
 - **Matching is O(all users) in memory.** Every `/matches` request loads and deserialises every
   user's fingerprint, then compares against all of them. Fine at current scale; past a few
@@ -263,6 +270,17 @@ dotnet test                           # 135 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **A forgotten password is no longer fatal** — there was no reset path, and because deletion is
+  password-confirmed, a locked-out user could not even remove themselves: their fingerprint stayed in
+  everyone else's match pool forever and their username stayed squatted. No email address is
+  collected (that is the point of the product), so recovery is a **one-time code** instead: 100 bits
+  in Crockford base32 — no I/L/O/U, since it gets written down and typed back — shown exactly once at
+  registration and stored only as a BCrypt hash. It resets the password in a single post, is
+  single-use, and immediately issues a replacement so recovering never leaves the account with no way
+  back. A wrong code and an unknown username give the same message, and the endpoint shares the login
+  rate limiter. Signed-in users can regenerate a code, password-confirmed; accounts created before
+  this have none and are told so on the dashboard. Verified end to end against a running server,
+  including typing the code back lowercase and without dashes.
 - **Rate limiting now survives a reverse proxy** — every limiter partitions on the connecting IP, and
   behind the TLS-terminating proxy the deployment notes describe, that address is the *proxy's* for
   every visitor. All of them shared one bucket, so the login limit was five attempts per minute for

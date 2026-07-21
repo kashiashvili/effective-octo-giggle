@@ -24,7 +24,8 @@ Built with ASP.NET Core MVC, Entity Framework Core, and SQLite.
   instead of false-precision percentages
 - **Optional public profile** – add a short bio and a way to be reached, shown only
   to people you match with; rendered as plain text (never a live link)
-- **Account controls** – persistent cookie sign-in, per-source disconnect, and
+- **Account controls** – persistent cookie sign-in, a one-time recovery code (no email
+  address is collected, so there is no reset link), per-source disconnect, and
   password-confirmed account deletion that removes all of your data
 
 ---
@@ -132,7 +133,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 dotnet test
 ```
 
-The suite (116 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (155 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 
