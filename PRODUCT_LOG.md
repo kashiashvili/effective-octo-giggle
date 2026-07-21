@@ -138,7 +138,9 @@ and the two CSV uploads need no account credentials.
   treated as a failure (many APIs return an error body with a 200-ish shape).
 - Connectors are fetched **concurrently under a 30s overall budget** (as are the RSS feeds within
   the RSS connector), so connecting several sources costs the slowest one rather than the sum, and a
-  hung source is reported instead of holding the whole POST until a gateway kills it.
+  hung source is reported instead of holding the whole POST until a gateway kills it. The budget and
+  the caller going away both reach the connectors as a `CancellationToken`, so outbound work is
+  **aborted, not merely abandoned**.
 - A fingerprint is **never saved from zero features**; a partial failure keeps the
   sources that succeeded and leaves your existing data intact.
 - An oversized connect submission (over the 25 MB pipeline cap) gets a styled "upload too large"
@@ -246,7 +248,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 182 tests, fully offline
+dotnet test                           # 183 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -291,6 +293,15 @@ dotnet test                           # 182 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **Outbound work is now aborted rather than abandoned** — the 30s budget could only stop *waiting*,
+  since `IConnector.FetchAsync` took no `CancellationToken`. The claim that each client's 15s timeout
+  ended things shortly was untrue for multi-request connectors (RSS follows up to three redirect hops
+  across ten feeds, each hop with its own timeout), so one client could leave requests running long
+  after the response was sent. The token now runs the whole way: the aggregator links the budget with
+  the caller's `RequestAborted`, every connector forwards it to each outbound call, and the SSRF
+  guard's DNS lookup takes it too — the one step of a feed fetch no HttpClient timeout covers.
+  Cancellation is deliberately not swallowed by the connectors' catch-all handlers, which would
+  otherwise report it as "returned no interest data".
 - **The stored fingerprint was reversible by anyone holding the database; it no longer is.** The
   product tells people their interests cannot be read back out of what is stored, and against a
   database thief that was untrue: the MinHash parameters came from a published constant, features
