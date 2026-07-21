@@ -123,6 +123,31 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
     }
 
     [Fact]
+    public async Task Login_RateLimited_ReturnsStyled429()
+    {
+        // This factory keeps the limit high; drop it so the limiter actually trips.
+        using var limited = _factory.WithWebHostBuilder(b => b.UseSetting("RateLimiting:LoginPermitLimit", "1"));
+        var client = limited.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        HttpResponseMessage? last = null;
+        for (var i = 0; i < 3; i++)
+        {
+            last = await PostFormAsync(client, "/account/login", "/account/login", new()
+            {
+                ["Username"] = "nobody",
+                ["Password"] = "wrong-password"
+            });
+            if (last.StatusCode == HttpStatusCode.TooManyRequests) break;
+        }
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, last!.StatusCode);
+        Assert.Equal("text/html", last.Content.Headers.ContentType!.MediaType);
+        var html = await last.Content.ReadAsStringAsync();
+        Assert.Contains("Too many attempts", html);
+        Assert.Contains("/css/style.css", html); // styled, not bare text
+    }
+
+    [Fact]
     public async Task Health_IsAnonymous_AndReportsHealthy()
     {
         var resp = await NewClient().GetAsync("/health");

@@ -206,7 +206,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 83 tests, fully offline
+dotnet test                           # 84 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -219,7 +219,7 @@ dotnet test                           # 83 tests, fully offline
 
 ## 9. Testing
 
-83 xUnit tests, **fully offline and fast (~1–2s)**:
+84 xUnit tests, **fully offline and fast (~1–2s)**:
 - **Unit:** fingerprint math (incl. the union = element-wise-min property), matcher
   (ranking, threshold, empty exclusion), aggregator (failures), view-model tiers/validation,
   connectors (CSV parsing + garbage handling + API-error handling via a stub HTTP handler).
@@ -235,7 +235,6 @@ dotnet test                           # 83 tests, fully offline
   source means re-entering its credentials. This is intentional.
 - **No in-app messaging.** Matches connect via the contact line each person opts to share.
 - **No email / password reset.** Account deletion is the only recovery path today.
-- **Rate-limit response is plain text** (429), not a styled page — a minor rough edge.
 - **DNS rebinding is not fully closed.** `SsrfGuard` validates the resolved address before the
   request, but `HttpClient` resolves again when it connects, so a hostname that changes its
   answer between the two could still slip through. Closing it fully means pinning the
@@ -253,6 +252,9 @@ dotnet test                           # 83 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **Styled rate-limit page** — tripping the login limiter returned bare text with no way back,
+  which a user who simply forgot their password could hit. It now returns a proper 429 page
+  (with `Retry-After`) that links the app's own stylesheet rather than duplicating it.
 - **CI** — GitHub Actions workflow builds in Release and runs the full suite on every push and
   pull request. The suite is offline, so CI needs no secrets or network.
 - **Full journey re-verified on a clean database** — dropped the dev database and walked the whole

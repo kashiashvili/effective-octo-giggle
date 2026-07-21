@@ -71,11 +71,35 @@ builder.Services.AddRateLimiter(opt =>
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0
         }));
+    // Rejection happens before MVC, so this renders a small page directly rather than a view.
+    // It links the app's own stylesheet instead of duplicating any of it.
     opt.OnRejected = async (ctx, token) =>
     {
-        ctx.HttpContext.Response.ContentType = "text/plain";
-        await ctx.HttpContext.Response.WriteAsync(
-            "Too many login attempts. Please wait a minute and try again.", token);
+        ctx.HttpContext.Response.ContentType = "text/html; charset=utf-8";
+        ctx.HttpContext.Response.Headers.RetryAfter = "60";
+        await ctx.HttpContext.Response.WriteAsync("""
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Too many attempts – Profiler</title>
+                <link rel="stylesheet" href="/css/style.css">
+            </head>
+            <body>
+                <main class="page-wrap">
+                    <div class="container">
+                        <div class="empty-state">
+                            <div class="empty-icon">⏳</div>
+                            <h4>Too many attempts</h4>
+                            <p>For your account's safety we pause sign-in attempts for a minute. Please wait, then try again.</p>
+                            <p class="mt-4"><a href="/account/login" class="btn btn-primary">Back to sign in</a></p>
+                        </div>
+                    </div>
+                </main>
+            </body>
+            </html>
+            """, token);
     };
 });
 
