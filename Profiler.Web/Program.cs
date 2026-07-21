@@ -61,7 +61,14 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                     return;
                 }
                 var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-                if (!await db.Users.AnyAsync(u => u.Id == userId))
+                var user = await db.Users
+                    .Where(u => u.Id == userId)
+                    .Select(u => new { u.SessionsValidFrom })
+                    .FirstOrDefaultAsync();
+
+                // Gone, or signed in before the account's cutoff — the latter is how a password
+                // change, or an explicit "sign out everywhere", reaches sessions on other devices.
+                if (user == null || ctx.Principal.WasIssuedBefore(user.SessionsValidFrom))
                 {
                     ctx.RejectPrincipal();
                     await ctx.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

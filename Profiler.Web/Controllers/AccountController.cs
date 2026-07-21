@@ -155,6 +155,25 @@ public class AccountController : Controller
         return RedirectToAction(nameof(ShowRecoveryCode));
     }
 
+    /// <summary>
+    /// Ends every other session without changing the password — for a shared or borrowed device
+    /// someone forgot to sign out of, where there is nothing wrong with the password itself.
+    /// </summary>
+    [HttpPost("sign-out-everywhere")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SignOutEverywhere()
+    {
+        var user = await FindCurrentUserAsync();
+        if (user == null) return await SignOutToHomeAsync();
+
+        user.SessionsValidFrom = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        await SignInUserAsync(user);
+
+        TempData["Success"] = "Signed out on every other device. You're still signed in here.";
+        return RedirectToAction("Dashboard", "Sources");
+    }
+
     [HttpGet("recover")]
     [AllowAnonymous]
     public IActionResult Recover()
@@ -194,6 +213,8 @@ public class AccountController : Controller
         }
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(vm.NewPassword);
+        // Recovery is the strongest signal there is that someone else may be holding a session.
+        user.SessionsValidFrom = DateTime.UtcNow;
 
         // Single use, and immediately replaced: recovering must not leave the account with no way
         // back the next time.
@@ -226,7 +247,10 @@ public class AccountController : Controller
         var identity = new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Username)
+            new Claim(ClaimTypes.Name, user.Username),
+            // What lets a later password change invalidate this ticket without invalidating the
+            // session doing the changing.
+            new Claim(ClaimsPrincipalExtensions.IssuedAtClaim, DateTime.UtcNow.ToString("O"))
         }, CookieAuthenticationDefaults.AuthenticationScheme);
 
         await HttpContext.SignInAsync(
@@ -386,9 +410,14 @@ public class AccountController : Controller
         }
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(vm.NewPassword);
+        // Someone changing their password is usually doing it because a session may not be theirs
+        // anymore. Cutting off every ticket issued so far is the point of the exercise; re-issuing
+        // afterwards keeps the person who asked signed in.
+        user.SessionsValidFrom = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+        await SignInUserAsync(user);
 
-        TempData["Success"] = "Your password has been changed.";
+        TempData["Success"] = "Your password has been changed, and you've been signed out everywhere else.";
         return RedirectToAction("Dashboard", "Sources");
     }
 

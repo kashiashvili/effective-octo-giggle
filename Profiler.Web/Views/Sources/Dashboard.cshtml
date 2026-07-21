@@ -151,7 +151,7 @@
 
         <div class="card mt-4">
             <div class="card-header dark">
-                Recovery code
+                Account security
                 @if (!hasRecoveryCode)
                 {
                     <span class="badge badge-light">None on file</span>
@@ -173,6 +173,10 @@
                         replacement — doing so invalidates the old one.
                     </p>
                 }
+                <form asp-action="SignOutEverywhere" asp-controller="Account" method="post" class="mb-3">
+                    <button type="submit" class="btn btn-outline">Sign out on every other device</button>
+                    <small class="text-muted">Ends every other session. You stay signed in here.</small>
+                </form>
                 <form asp-action="RegenerateRecoveryCode" asp-controller="Account" method="post" class="flex items-center gap-3">
                     <input type="password" name="password" class="form-control" placeholder="Confirm your password"
                            autocomplete="current-password" required style="max-width: 280px" />

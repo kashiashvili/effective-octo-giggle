@@ -23,5 +23,12 @@ public class AppUser
     /// </summary>
     public string? RecoveryCodeHash { get; set; }
 
+    /// <summary>
+    /// Sign-ins issued before this moment are no longer honoured. Cookies are persistent for 30
+    /// days, so without this a changed password does nothing about the session that prompted the
+    /// change — the one remediation the product offers would be theatre.
+    /// </summary>
+    public DateTime SessionsValidFrom { get; set; } = DateTime.UtcNow;
+
     public FingerprintRecord? Fingerprint { get; set; }
 }
