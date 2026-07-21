@@ -237,7 +237,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 155 tests, fully offline
+dotnet test                           # 168 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -282,6 +282,19 @@ dotnet test                           # 155 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **An oversized upload is now explained rather than dumped** — `[RequestSizeLimit]` fires while the
+  request body is read, long before the action and its friendly per-file check, so a too-large CSV
+  produced a raw framework error page and the user lost everything typed into the form (file inputs
+  cannot be repopulated by a browser). Oversized submissions now get a styled 413 stating both limits
+  and what to do about them. It is caught two ways: the advertised `Content-Length` is compared
+  against the endpoint's own declared limit before a byte is buffered, and `BadHttpRequestException`
+  is caught as a fallback for bodies with no upfront length. The precheck also matters for coverage —
+  `TestServer` does not implement `IHttpMaxRequestBodySizeFeature`, so the exception path alone could
+  never be exercised by the integration suite.
+- **The TempData cookie is confined to HTTPS** — TempData rides in a cookie, and since recovery
+  landed it carries a freshly issued recovery code on its way to the page that displays it. The
+  payload is Data Protection encrypted, but the cookie defaulted to being sent over plain HTTP too;
+  it now follows the auth cookie's `SameAsRequest` policy.
 - **Usernames may no longer mix alphabets** — the earlier text rules caught invisible and
   direction-flipping characters, but a Cyrillic "а" is simply indistinguishable from a Latin one, so
   `аdmin` could register and sit next to `admin` on a match card with nothing to tell them apart. The
