@@ -122,7 +122,8 @@ and the two CSV uploads need no account credentials.
 
 ### Security hardening
 - Passwords hashed with **BCrypt**, screened against common passwords / username containment /
-  near-single-character strings. **Antiforgery** tokens on every POST.
+  near-single-character strings. Usernames reject invisible and bidirectional-override
+  characters. **Antiforgery** tokens on every POST (asserted by a reflection test).
 - **Login rate limiting** (5 attempts/min per IP, configurable).
 - **15s timeout** on all connector HTTP calls; **10 MB cap** per CSV upload, plus a 25 MB
   `RequestSizeLimit` on the connect endpoint so oversized bodies are rejected before buffering.
@@ -208,7 +209,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 96 tests, fully offline
+dotnet test                           # 110 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -221,7 +222,7 @@ dotnet test                           # 96 tests, fully offline
 
 ## 9. Testing
 
-96 xUnit tests, **fully offline and fast (~1–2s)**:
+110 xUnit tests, **fully offline and fast (~1–2s)**:
 - **Unit:** fingerprint math (incl. the union = element-wise-min property), matcher
   (ranking, threshold, empty exclusion), aggregator (failures), view-model tiers/validation,
   connectors (CSV parsing + garbage handling + API-error handling via a stub HTTP handler).
@@ -250,6 +251,14 @@ dotnet test                           # 96 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **Usernames can no longer carry invisible or direction-flipping characters** — the username is
+  the only thing a stranger sees before deciding to make contact, and bidirectional overrides or
+  zero-width characters let one account impersonate another. Those specific characters are refused;
+  accented, Cyrillic and Japanese names are explicitly still accepted, asserted by tests so the
+  rule cannot drift into a Latin-only filter.
+- **Credentials are not echoed back** when the connect form redisplays — previously true only
+  because password inputs omit their value, now asserted, with a text field in the same request
+  proving the check isn't passing through a binding failure.
 - **The core privacy promise is now asserted against the database** — "raw interests are never
   stored" had only ever been true by construction. A test now sends distinctive interests through
   the real fingerprinting and persistence path, then searches every row of every table for any
