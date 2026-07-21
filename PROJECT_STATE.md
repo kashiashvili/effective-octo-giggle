@@ -91,7 +91,7 @@ is O(all users) in memory (needs LSH banding past a few thousand users).
 
 ## Current Phase
 
-QA/Validation — last P2 (oversized-upload error page) in flight; then Product Owner review.
+Developer — working the second independent review's findings; connector cancellation in flight.
 
 ## Previous Active Task (complete)
 
@@ -144,17 +144,19 @@ another session).
 
 ### P2 — Quality / Reliability / UX
 
-- Oversized submissions fail unhandled: `[RequestSizeLimit(25MB)]` fires before the friendly
-  per-file check, so a >25 MB body yields a raw framework error page. **In flight.**
+- Connectors cannot be cancelled (`IConnector.FetchAsync` takes no `CancellationToken`), so the
+  30s budget abandons rather than aborts and outbound work outlives the response. **In flight.**
 
 ### P3 — Enhancement
 
 - Consider containment-based scoring so a wide-ranging profile is not diluted by the union.
   Reviewed and deliberately deferred: Jaccard of the union is a defensible definition of overall
   similarity, and the new per-source line makes the effect legible rather than mysterious.
+- Username uniqueness folds case only for ASCII (SQLite `NOCASE`), so `André` and `ANDRÉ` are two
+  accounts that read as one person. Same fix as the confusable-skeleton item below — a normalised
+  username column with a unique index and a backfill — so take them together.
 - Pure-lookalike usernames (a name written *entirely* in Cyrillic that reads as Latin, e.g.
-  `сор` vs `cop`) are still possible now that mixed-alphabet names are refused. Closing it needs
-  a confusable-skeleton column with a unique index and a backfill.
+  `сор` vs `cop`) are still possible now that mixed-alphabet names are refused.
 - Match list pagination / filtering beyond the top 20.
 
 ### P4 — Polish / Optional
@@ -163,8 +165,16 @@ another session).
 
 ## Known Bugs / Risks
 
-- None open. Fixed this session: blocks outliving account deletion; sequential connector
-  fetches; rate limiting collapsing to one global bucket behind a proxy.
+- **Operational:** `Fingerprint:Pepper` is now required outside Development, and it must be kept
+  for the life of the deployment. If it is lost or changed, every stored signature becomes
+  meaningless — the app detects this at startup and clears them, so everyone must reconnect their
+  sources. The raw interests needed to rebuild them are deliberately gone.
+- Deploying the session cutoff signs everyone out once: cookies issued before it carry no
+  issue-time claim and are treated as expired.
+- Otherwise none open. Fixed this session: a stored fingerprint that could be reversed by anyone
+  holding the database; sessions surviving a password change; blocks outliving account deletion;
+  sequential connector fetches; rate limiting collapsing to one global bucket behind a proxy;
+  a non-atomic connect path; one-way discoverability.
 
 ## Last Completed Iteration
 
@@ -186,11 +196,30 @@ dims with raw interests absent from every table → matched pair with bio/contac
 overlap → hide, symmetric → data export → password reset by recovery code, old password dead →
 password-confirmed deletion with cascade confirmed in SQLite.
 
-**Result:** Every P0–P3 finding from the independent review is either shipped or explicitly
-deferred with a reason. One P1 (mutual contact consent) remains as a deliberate product bet.
+**Result:** Every P0–P3 finding from the first independent review is either shipped or explicitly
+deferred with a reason.
+
+## Iteration 9 (in progress)
+
+A second independent review, run against the current code rather than against this file, found a
+**P0 the first one missed**: the stored fingerprint was reversible. The MinHash parameters came
+from a published constant and features were hashed with unsalted SHA-256, so anyone holding the
+database could hash guessed interest labels and see which appeared in a stored signature — the
+attack recovers 20 of 20 interests, and is now a test. Fixed by HMAC-keying every hash with a
+per-deployment pepper, with a startup refusal when it is missing and a scheme verifier so a
+rotation clears the now-meaningless signatures instead of silently breaking every comparison.
+
+Also shipped from that review: session invalidation on password change and recovery, plus an
+explicit "sign out everywhere"; reciprocal discoverability for bios and contact lines; the connect
+path made atomic; per-policy 429 wording; username length measured after trimming.
+
+Reviewed and found clean by that review, worth not re-deriving: credentials do not reach logs
+(.NET redacts query strings by default, verified with a probe); the concurrent fan-out is
+thread-safe across all 18 connectors; `RecoveryCode`, `ProxyTrust`, the `UserBlock` cascade and
+the per-source overlap all do what the changelog claims.
 
 ## Next Mandatory Action
 
-Land the oversized-upload error page, re-run validation, then perform a fresh independent
-Product Owner review against the current code — not against this file — and either take the
-mutual-consent P1 or record why it should not be built.
+Land connector cancellation, re-run validation, then commission a third independent review. Judge
+completion against the criteria above — two reviews in a row have each found a defect the previous
+one missed, so a clean review is the evidence to wait for, not a finished task list.
