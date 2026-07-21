@@ -1,8 +1,8 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Profiler.Web.Data;
+using Profiler.Web.Security;
 using Profiler.Web.Matching;
 using Profiler.Web.Profile;
 using Profiler.Web.ViewModels;
@@ -25,7 +25,7 @@ public class MatchesController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = User.GetUserId();
 
         var myFp = await _db.Fingerprints.FirstOrDefaultAsync(f => f.UserId == userId);
         if (myFp == null)
@@ -85,7 +85,7 @@ public class MatchesController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Hide(int userId)
     {
-        var me = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var me = User.GetUserId();
         if (userId != me && !await _db.UserBlocks.AnyAsync(b => b.BlockerId == me && b.BlockedId == userId))
         {
             _db.UserBlocks.Add(new Data.Models.UserBlock { BlockerId = me, BlockedId = userId });
@@ -98,7 +98,7 @@ public class MatchesController : Controller
     [HttpGet("hidden")]
     public async Task<IActionResult> Hidden()
     {
-        var me = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var me = User.GetUserId();
         var blocked = await _db.UserBlocks
             .Where(b => b.BlockerId == me)
             .Join(_db.Users, b => b.BlockedId, u => u.Id, (b, u) => new MatchViewModel { UserId = u.Id, Username = u.Username })
@@ -110,7 +110,7 @@ public class MatchesController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Unhide(int userId)
     {
-        var me = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var me = User.GetUserId();
         var block = await _db.UserBlocks.FirstOrDefaultAsync(b => b.BlockerId == me && b.BlockedId == userId);
         if (block != null)
         {

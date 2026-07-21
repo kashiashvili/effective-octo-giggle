@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Profiler.Web.Data;
+using Profiler.Web.Security;
 using Profiler.Web.Data.Models;
 using Profiler.Web.ViewModels;
 
@@ -121,7 +122,7 @@ public class AccountController : Controller
     [Authorize]
     public async Task<IActionResult> Profile()
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = User.GetUserId();
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null)
         {
@@ -138,7 +139,7 @@ public class AccountController : Controller
     {
         if (!ModelState.IsValid) return View(vm);
 
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = User.GetUserId();
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null)
         {
@@ -185,7 +186,7 @@ public class AccountController : Controller
 
     private async Task<DataExportViewModel?> BuildDataExportAsync()
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = User.GetUserId();
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null) return null;
 
@@ -217,7 +218,7 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Visibility(bool discoverable)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = User.GetUserId();
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null)
         {
@@ -245,7 +246,7 @@ public class AccountController : Controller
     {
         if (!ModelState.IsValid) return View(vm);
 
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = User.GetUserId();
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null)
         {
@@ -283,7 +284,7 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string password)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = User.GetUserId();
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null)
         {

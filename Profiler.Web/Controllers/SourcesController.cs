@@ -1,10 +1,10 @@
-using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Profiler.Web.Connectors;
 using Profiler.Web.Data;
+using Profiler.Web.Security;
 using Profiler.Web.Data.Models;
 using Profiler.Web.Profile;
 using Profiler.Web.ViewModels;
@@ -26,7 +26,7 @@ public class SourcesController : Controller
         _httpFactory = httpFactory;
     }
 
-    private int CurrentUserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private int CurrentUserId => User.GetUserId();
 
     [HttpGet("dashboard")]
     public async Task<IActionResult> Dashboard()

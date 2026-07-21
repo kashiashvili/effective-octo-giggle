@@ -1,7 +1,7 @@
 using System.Net.Sockets;
-using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Profiler.Web.Connectors;
+using Profiler.Web.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
@@ -43,8 +43,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             // Reject such cookies so a deleted account can never resurrect as a ghost session.
             OnValidatePrincipal = async ctx =>
             {
-                var idClaim = ctx.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (!int.TryParse(idClaim, out var userId))
+                if (!ctx.Principal.TryGetUserId(out var userId))
                 {
                     ctx.RejectPrincipal();
                     return;
