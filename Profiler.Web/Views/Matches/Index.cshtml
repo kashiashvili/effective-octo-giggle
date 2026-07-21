@@ -18,7 +18,7 @@
         {
             <div class="alert alert-info">
                 <span class="alert-icon">🙈</span>
-                <span>You're currently <strong>hidden</strong> — you can browse your matches, but you won't appear in theirs. Change this on your <a href="/sources/dashboard">dashboard</a>.</span>
+                <span>You're currently <strong>hidden</strong> — you can browse your matches, but you won't appear in theirs, and their bios and contact details stay hidden from you while you're hidden from them. Change this on your <a href="/sources/dashboard">dashboard</a>.</span>
             </div>
         }
 
@@ -116,6 +116,12 @@
                             @if (!string.IsNullOrWhiteSpace(match.Contact))
                             {
                                 <p class="match-contact">📮 @match.Contact</p>
+                            }
+                            else if (!isDiscoverable)
+                            {
+                                <p class="match-contact text-muted">
+                                    🙈 Hidden while you are. Become discoverable to see how people can be reached.
+                                </p>
                             }
                             else
                             {

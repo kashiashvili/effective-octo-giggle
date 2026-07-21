@@ -99,14 +99,21 @@ public class MatchesController : Controller
                 overlaps.Sort((a, b) => b.Similarity.CompareTo(a.Similarity));
             }
 
+            // Discoverability was enforced in one direction only: an account could stay permanently
+            // invisible while reading everyone's contact line on every refresh, and could never be
+            // hidden by the people it read, since hiding someone requires seeing their card first.
+            // The contact line is the only genuinely personal thing stored here, so the toggle is
+            // reciprocal for it.
+            var iAmVisible = ViewBag.IsDiscoverable ?? true;
+
             return new MatchViewModel
             {
                 Username = m.Username,
                 Similarity = m.Similarity,
                 SharedSources = shared,
                 SharedSourceOverlaps = overlaps,
-                Bio = matchFp?.User.Bio,
-                Contact = matchFp?.User.Contact,
+                Bio = iAmVisible ? matchFp?.User.Bio : null,
+                Contact = iAmVisible ? matchFp?.User.Contact : null,
                 UpdatedAt = matchFp?.UpdatedAt ?? DateTime.UtcNow
             };
         }).ToList();

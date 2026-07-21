@@ -344,6 +344,24 @@ public class AggregatorAndMatcherTests
         Assert.Equal(stale, vm.IsStale);
     }
 
+    [Theory]
+    [InlineData("  a  ")]      // three characters, one of them real
+    [InlineData("   ")]
+    [InlineData(" ab ")]
+    public void RegisterViewModel_MeasuresTheUsernameItWouldActuallyStore(string typed)
+    {
+        // The controller trims before storing, so validating the untrimmed value would let a name
+        // shorter than the advertised minimum through.
+        var results = Validate(new Profiler.Web.ViewModels.RegisterViewModel
+        {
+            Username = typed,
+            Password = "Tr0ubad0ur-x9",
+            ConfirmPassword = "Tr0ubad0ur-x9"
+        });
+
+        Assert.Contains(results, r => r.MemberNames.Contains("Username"));
+    }
+
     private static IList<System.ComponentModel.DataAnnotations.ValidationResult> Validate(object model)
     {
         var results = new List<System.ComponentModel.DataAnnotations.ValidationResult>();

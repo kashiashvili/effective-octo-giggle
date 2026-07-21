@@ -127,13 +127,30 @@ builder.Services.AddRateLimiter(opt =>
     {
         ctx.HttpContext.Response.ContentType = "text/html; charset=utf-8";
         ctx.HttpContext.Response.Headers.RetryAfter = "60";
-        await ctx.HttpContext.Response.WriteAsync("""
+
+        // One handler serves all three policies, so it has to say something true for each. Being
+        // told "we pause sign-in attempts" after filling in the longest form in the product, with
+        // only a link back to sign-in, is how someone loses everything they typed.
+        var path = ctx.HttpContext.Request.Path;
+        var (heading, explanation, link, linkText) = path.StartsWithSegments("/sources")
+            ? ("Too many source updates",
+               "Connecting a source sends requests to other services on your behalf, so we limit how often it can run. Wait a minute and try again — nothing you had already connected was changed.",
+               "/sources/connect", "Back to Connect Sources")
+            : path.StartsWithSegments("/account/register")
+                ? ("Too many sign-up attempts",
+                   "We limit how many accounts can be created from one place. Please wait a little and try again.",
+                   "/account/register", "Back to sign up")
+                : ("Too many attempts",
+                   "For your account's safety we pause sign-in attempts for a minute. Please wait, then try again.",
+                   "/account/login", "Back to sign in");
+
+        await ctx.HttpContext.Response.WriteAsync($"""
             <!DOCTYPE html>
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Too many attempts – Profiler</title>
+                <title>{heading} – Profiler</title>
                 <link rel="stylesheet" href="/css/style.css">
             </head>
             <body>
@@ -141,9 +158,9 @@ builder.Services.AddRateLimiter(opt =>
                     <div class="container">
                         <div class="empty-state">
                             <div class="empty-icon">⏳</div>
-                            <h4>Too many attempts</h4>
-                            <p>For your account's safety we pause sign-in attempts for a minute. Please wait, then try again.</p>
-                            <p class="mt-4"><a href="/account/login" class="btn btn-primary">Back to sign in</a></p>
+                            <h4>{heading}</h4>
+                            <p>{explanation}</p>
+                            <p class="mt-4"><a href="{link}" class="btn btn-primary">{linkText}</a></p>
                         </div>
                     </div>
                 </main>

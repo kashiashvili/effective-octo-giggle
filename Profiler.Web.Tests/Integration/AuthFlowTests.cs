@@ -401,6 +401,53 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
         Assert.DoesNotContain(otherName, await hidden.Content.ReadAsStringAsync());
     }
 
+    /// <summary>
+    /// The toggle used to work one way only: an account could stay permanently invisible while
+    /// reading everyone's contact line, and could never be hidden in return, because hiding someone
+    /// requires seeing their card first.
+    /// </summary>
+    [Fact]
+    public async Task Discoverability_Off_AlsoHidesOtherPeoplesContactDetailsFromYou()
+    {
+        var client = NewClient();
+        var meName = "mirror_me_" + Guid.NewGuid().ToString("N")[..6];
+        await RegisterAsync(client, meName);
+
+        var otherName = "mirror_other_" + Guid.NewGuid().ToString("N")[..6];
+        const string contact = "mastodon-zzqx-4417";
+        var fpJson = new FingerprintGenerator(128).Generate(new[] { "m:1", "m:2", "m:3" }).ToJson();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var me = await db.Users.FirstAsync(u => u.Username == meName);
+            var other = new AppUser
+            {
+                Username = otherName, PasswordHash = "x", IsDiscoverable = true, Contact = contact
+            };
+            db.Users.Add(other);
+            await db.SaveChangesAsync();
+            db.Fingerprints.Add(new FingerprintRecord { UserId = me.Id, FingerprintJson = fpJson, SourcesJson = "[\"GitHub\"]" });
+            db.Fingerprints.Add(new FingerprintRecord { UserId = other.Id, FingerprintJson = fpJson, SourcesJson = "[\"GitHub\"]" });
+            await db.SaveChangesAsync();
+        }
+
+        Assert.Contains(contact, await (await client.GetAsync("/matches")).Content.ReadAsStringAsync());
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var me = await db.Users.FirstAsync(u => u.Username == meName);
+            me.IsDiscoverable = false;
+            await db.SaveChangesAsync();
+        }
+
+        var whileHidden = await (await client.GetAsync("/matches")).Content.ReadAsStringAsync();
+        // Still matched -- similarity is not the personal part -- but the contact line is withheld.
+        Assert.Contains(otherName, whileHidden);
+        Assert.DoesNotContain(contact, whileHidden);
+    }
+
     [Fact]
     public async Task Register_UsernameUniqueness_IsCaseInsensitive()
     {

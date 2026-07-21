@@ -102,7 +102,10 @@ public class RateLimitingTests : IClassFixture<LowRegisterLimitWebFactory>
         Assert.Equal(HttpStatusCode.TooManyRequests, limited!.StatusCode);
         Assert.Equal("text/html", limited.Content.Headers.ContentType!.MediaType);
         var html = await limited.Content.ReadAsStringAsync();
-        Assert.Contains("Too many attempts", html);
-        Assert.Contains("/css/style.css", html); // shares the same styled 429 page as login
+        // The page is shared with login but the wording is not: someone who was rate-limited while
+        // signing up must not be told their sign-in attempts were paused.
+        Assert.Contains("Too many sign-up attempts", html);
+        Assert.Contains("/account/register", html);
+        Assert.Contains("/css/style.css", html); // still the same styled 429 page
     }
 }
