@@ -59,17 +59,52 @@ public class MatchesController : Controller
         var mySources = JsonSerializer.Deserialize<List<string>>(myFp.SourcesJson) ?? new();
 
         var matches = matcher.FindMatches(userId.ToString(), minSimilarity: MinMatchSimilarity);
+
+        // Per-source signatures are only needed for the handful of people who actually matched, so
+        // they are loaded after ranking rather than for everyone with a fingerprint.
+        var matchedIds = matches.Select(m => int.Parse(m.UserId)).ToList();
+        var perSource = (await _db.SourceFingerprints
+                .Where(s => s.UserId == userId || matchedIds.Contains(s.UserId))
+                .Select(s => new { s.UserId, s.Source, s.RawSignatureJson })
+                .ToListAsync())
+            .GroupBy(s => s.UserId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.ToDictionary(
+                    s => s.Source,
+                    s => JsonSerializer.Deserialize<ulong[]>(s.RawSignatureJson) ?? Array.Empty<ulong>()));
+
+        perSource.TryGetValue(userId, out var mySignatures);
+
         var viewModels = matches.Select(m =>
         {
             var matchFp = allFps.FirstOrDefault(f => f.UserId.ToString() == m.UserId);
             var matchSources = matchFp != null
                 ? JsonSerializer.Deserialize<List<string>>(matchFp.SourcesJson) ?? new()
                 : new List<string>();
+            var shared = mySources.Intersect(matchSources).ToList();
+            var overlaps = new List<SharedSourceOverlap>();
+            if (mySignatures != null && perSource.TryGetValue(int.Parse(m.UserId), out var theirSignatures))
+            {
+                foreach (var source in shared)
+                {
+                    if (!mySignatures.TryGetValue(source, out var mine)) continue;
+                    if (!theirSignatures.TryGetValue(source, out var theirs)) continue;
+                    overlaps.Add(new SharedSourceOverlap
+                    {
+                        Source = source,
+                        Similarity = FingerprintGenerator.RawSimilarity(mine, theirs)
+                    });
+                }
+                overlaps.Sort((a, b) => b.Similarity.CompareTo(a.Similarity));
+            }
+
             return new MatchViewModel
             {
                 Username = m.Username,
                 Similarity = m.Similarity,
-                SharedSources = mySources.Intersect(matchSources).ToList(),
+                SharedSources = shared,
+                SharedSourceOverlaps = overlaps,
                 Bio = matchFp?.User.Bio,
                 Contact = matchFp?.User.Contact,
                 UpdatedAt = matchFp?.UpdatedAt ?? DateTime.UtcNow

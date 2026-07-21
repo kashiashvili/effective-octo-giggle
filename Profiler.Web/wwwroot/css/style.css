@@ -696,6 +696,12 @@ footer {
   color: var(--gray-500);
   overflow-wrap: anywhere;
 }
+.match-strongest {
+  margin-top: .35rem;
+  font-size: .78rem;
+  color: var(--gray-600);
+}
+
 .recovery-code {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
   font-size: 1.1rem;

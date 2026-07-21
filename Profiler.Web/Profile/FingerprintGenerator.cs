@@ -84,6 +84,29 @@ public class FingerprintGenerator
         return combined ?? Array.Empty<ulong>();
     }
 
+    /// <summary>
+    /// Estimated Jaccard similarity between two raw signatures — used to compare a single source
+    /// against the same source on someone else, which is what turns "41% similar" into "mostly on
+    /// music". Slots left empty on both sides carry no evidence and are excluded rather than counted
+    /// as agreement.
+    /// </summary>
+    public static double RawSimilarity(ulong[] a, ulong[] b)
+    {
+        var len = Math.Min(a.Length, b.Length);
+        if (len == 0) return 0.0;
+
+        var compared = 0;
+        var matches = 0;
+        for (var i = 0; i < len; i++)
+        {
+            if (a[i] == EmptySlot && b[i] == EmptySlot) continue;
+            compared++;
+            if (a[i] == b[i]) matches++;
+        }
+
+        return compared == 0 ? 0.0 : (double)matches / compared;
+    }
+
     /// <summary>Truncate a raw signature into the stored/compared form. EmptySlot maps to 0.</summary>
     public static ProfileFingerprint FromRaw(ulong[] raw)
     {

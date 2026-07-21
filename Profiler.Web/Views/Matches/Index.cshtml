@@ -79,6 +79,12 @@
                                                 <span class="badge badge-gray">@s</span>
                                             }
                                         </div>
+                                        @if (match.StrongestOverlap is { } best)
+                                        {
+                                            <div class="match-strongest">
+                                                Closest on <strong>@best.Source</strong> (~@best.SimilarityPercent% there)
+                                            </div>
+                                        }
                                     }
                                     else
                                     {

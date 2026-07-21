@@ -7,6 +7,17 @@ public class MatchViewModel
     public int SimilarityPercent => (int)Math.Round(Similarity * 100);
     public List<string> SharedSources { get; set; } = new();
 
+    /// <summary>
+    /// Per-source-type overlap, strongest first. A single number says how much two people overlap but
+    /// never what kind, which is the main reason a match never turns into a message. The per-source
+    /// signatures needed for this were already being stored and never compared.
+    /// </summary>
+    public List<SharedSourceOverlap> SharedSourceOverlaps { get; set; } = new();
+
+    /// <summary>The source you overlap on most, when it stands out enough to be worth saying.</summary>
+    public SharedSourceOverlap? StrongestOverlap =>
+        SharedSourceOverlaps.FirstOrDefault(o => o.SimilarityPercent >= 10);
+
     /// <summary>Optional public bio the matched user chose to share.</summary>
     public string? Bio { get; set; }
 
@@ -49,4 +60,12 @@ public class MatchViewModel
     public string TierLabel => SimilarityPercent >= 60 ? "Strong match"
         : SimilarityPercent >= 30 ? "Good match"
         : "Some overlap";
+}
+
+/// <summary>How much two people overlap within one source type, e.g. Spotify against Spotify.</summary>
+public class SharedSourceOverlap
+{
+    public string Source { get; set; } = "";
+    public double Similarity { get; set; }
+    public int SimilarityPercent => (int)Math.Round(Similarity * 100);
 }

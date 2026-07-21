@@ -278,6 +278,55 @@ public class AggregatorAndMatcherTests
         Assert.Equal(label, vm.TierLabel);
     }
 
+    [Fact]
+    public void RawSimilarity_IsOneForIdenticalSources_AndNearZeroForUnrelatedOnes()
+    {
+        var gen = new FingerprintGenerator();
+        var music = new[] { "artist:a", "artist:b", "artist:c", "genre:jazz" };
+        var other = new[] { "artist:x", "artist:y", "artist:z", "genre:metal" };
+
+        Assert.Equal(1.0, FingerprintGenerator.RawSimilarity(gen.GenerateRaw(music), gen.GenerateRaw(music)));
+        Assert.True(FingerprintGenerator.RawSimilarity(gen.GenerateRaw(music), gen.GenerateRaw(other)) < 0.2);
+    }
+
+    [Fact]
+    public void RawSimilarity_IgnoresSlotsEmptyOnBothSides_RatherThanScoringThemAsAgreement()
+    {
+        var gen = new FingerprintGenerator();
+        var empty = gen.GenerateRaw(Array.Empty<string>());
+
+        // Two sources that collected nothing have no evidence of overlap, not perfect overlap.
+        Assert.Equal(0.0, FingerprintGenerator.RawSimilarity(empty, empty));
+    }
+
+    /// <summary>
+    /// The combined fingerprint is the union of every source, so someone who connects a lot of
+    /// sources scores lower against everyone — the score is diluted by interests the other person
+    /// was never going to share. Comparing one source against the same source recovers what the
+    /// union hides, which is what the match card reports as "closest on X".
+    /// </summary>
+    [Fact]
+    public void PerSourceOverlap_SurfacesAgreementThatTheCombinedFingerprintDilutes()
+    {
+        var gen = new FingerprintGenerator();
+
+        var sharedMusic = Enumerable.Range(0, 40).Select(i => $"artist:shared-{i}").ToArray();
+        var busyExtras = Enumerable.Range(0, 400).Select(i => $"repo:busy-{i}").ToArray();
+
+        var busyPerSource = new[] { gen.GenerateRaw(sharedMusic), gen.GenerateRaw(busyExtras) };
+        var focusedPerSource = new[] { gen.GenerateRaw(sharedMusic) };
+
+        var busyCombined = FingerprintGenerator.FromRaw(FingerprintGenerator.CombineRaw(busyPerSource));
+        var focusedCombined = FingerprintGenerator.FromRaw(FingerprintGenerator.CombineRaw(focusedPerSource));
+
+        var combined = busyCombined.Similarity(focusedCombined);
+        var perSource = FingerprintGenerator.RawSimilarity(busyPerSource[0], focusedPerSource[0]);
+
+        // Identical music libraries, yet the overall score is dragged far down by the other source.
+        Assert.Equal(1.0, perSource);
+        Assert.True(combined < 0.35, $"expected the union to dilute the score, got {combined:P0}");
+    }
+
     [Theory]
     [InlineData(0, "updated today", false)]
     [InlineData(10, "updated this month", false)]
