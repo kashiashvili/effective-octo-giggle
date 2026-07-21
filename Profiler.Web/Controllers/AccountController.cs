@@ -40,7 +40,7 @@ public class AccountController : Controller
 
         var username = vm.Username.Trim();
 
-        if (Security.UsernamePolicy.Validate(username) is { } badName)
+        if (Security.TextPolicy.ValidateUsername(username) is { } badName)
         {
             ModelState.AddModelError(nameof(vm.Username), badName);
             return View(vm);
@@ -162,6 +162,21 @@ public class AccountController : Controller
 
         var user = await FindCurrentUserAsync();
         if (user == null) return await SignOutToHomeAsync();
+
+        // A bio may span lines; a contact line may not, since a newline there could push the
+        // visible part away from what is actually stored.
+        foreach (var (value, label, field, allowNewlines) in new[]
+        {
+            (vm.Bio, "Bios", nameof(vm.Bio), true),
+            (vm.Contact, "Contact details", nameof(vm.Contact), false)
+        })
+        {
+            if (Security.TextPolicy.ValidateProfileText(value, label, allowNewlines) is { } problem)
+            {
+                ModelState.AddModelError(field, problem);
+                return View(vm);
+            }
+        }
 
         user.Bio = string.IsNullOrWhiteSpace(vm.Bio) ? null : vm.Bio.Trim();
         user.Contact = string.IsNullOrWhiteSpace(vm.Contact) ? null : vm.Contact.Trim();
