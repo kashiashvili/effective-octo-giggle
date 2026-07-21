@@ -122,8 +122,8 @@ and the two CSV uploads need no account credentials.
 
 ### Security hardening
 - Passwords hashed with **BCrypt**, screened against common passwords / username containment /
-  near-single-character strings. Usernames reject invisible and bidirectional-override
-  characters. **Antiforgery** tokens on every POST (asserted by a reflection test).
+  near-single-character strings. Usernames, bios and contact lines reject invisible and
+  bidirectional-override characters. **Antiforgery** tokens on every POST (asserted by a reflection test).
 - **Login rate limiting** (5 attempts/min per IP, configurable).
 - **15s timeout** on all connector HTTP calls; **10 MB cap** per CSV upload, plus a 25 MB
   `RequestSizeLimit` on the connect endpoint so oversized bodies are rejected before buffering.
@@ -209,7 +209,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 110 tests, fully offline
+dotnet test                           # 116 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -222,7 +222,7 @@ dotnet test                           # 110 tests, fully offline
 
 ## 9. Testing
 
-110 xUnit tests, **fully offline and fast (~1–2s)**:
+116 xUnit tests, **fully offline and fast (~1–2s)**:
 - **Unit:** fingerprint math (incl. the union = element-wise-min property), matcher
   (ranking, threshold, empty exclusion), aggregator (failures), view-model tiers/validation,
   connectors (CSV parsing + garbage handling + API-error handling via a stub HTTP handler).
@@ -251,6 +251,12 @@ dotnet test                           # 110 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **Display text is checked for deceptive characters** — usernames, bios and contact lines are all
+  read by a stranger deciding whether to make contact, so all three now reject bidirectional
+  overrides and invisible/control characters (`TextPolicy`). A contact line is the sharpest case: an
+  override makes it display as something other than what it copies. Bios may span lines; usernames
+  and contact lines may not. Accented, Cyrillic and Japanese text is explicitly still accepted,
+  asserted by tests so the rule cannot drift into a Latin-only filter.
 - **Usernames can no longer carry invisible or direction-flipping characters** — the username is
   the only thing a stranger sees before deciding to make contact, and bidirectional overrides or
   zero-width characters let one account impersonate another. Those specific characters are refused;
