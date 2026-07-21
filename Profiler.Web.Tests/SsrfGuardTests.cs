@@ -25,4 +25,24 @@ public class SsrfGuardTests
     {
         Assert.True(await SsrfGuard.IsAllowedAsync(new Uri(url)));
     }
+
+    [Theory]
+    [InlineData("127.0.0.1")]
+    [InlineData("169.254.169.254")]
+    [InlineData("10.1.2.3")]
+    [InlineData("::1")]
+    public async Task ResolveAllowed_Throws_ForInternalHosts(string host)
+    {
+        var ex = await Assert.ThrowsAsync<IOException>(() => SsrfGuard.ResolveAllowedAsync(host));
+        Assert.Contains("non-public", ex.Message);
+    }
+
+    [Fact]
+    public async Task ResolveAllowed_ReturnsTheAddressesThatWillBeConnectedTo()
+    {
+        var addresses = await SsrfGuard.ResolveAllowedAsync("8.8.8.8");
+
+        // Callers connect to exactly these, which is what removes the rebinding window.
+        Assert.Equal(new[] { System.Net.IPAddress.Parse("8.8.8.8") }, addresses);
+    }
 }

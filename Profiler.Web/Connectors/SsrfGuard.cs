@@ -27,6 +27,34 @@ public static class SsrfGuard
         return addresses.Length > 0 && addresses.All(IsPubliclyRoutable);
     }
 
+    /// <summary>
+    /// Resolves a host and returns its addresses only if every one of them is publicly routable.
+    /// Callers connect to exactly these addresses, which is what closes the DNS-rebinding window:
+    /// validating a name and then letting the socket layer resolve it again would leave room for
+    /// the answer to change in between.
+    /// </summary>
+    public static async Task<IPAddress[]> ResolveAllowedAsync(string host, CancellationToken cancellationToken = default)
+    {
+        IPAddress[] addresses;
+        if (IPAddress.TryParse(host, out var literal))
+        {
+            addresses = new[] { literal };
+        }
+        else
+        {
+            try { addresses = await Dns.GetHostAddressesAsync(host, cancellationToken); }
+            catch (Exception ex)
+            {
+                throw new IOException($"Refusing to connect to '{host}': the host could not be resolved.", ex);
+            }
+        }
+
+        if (addresses.Length == 0 || !addresses.All(IsPubliclyRoutable))
+            throw new IOException($"Refusing to connect to '{host}': it resolves to a non-public address.");
+
+        return addresses;
+    }
+
     public static bool IsPubliclyRoutable(IPAddress ip)
     {
         if (ip.IsIPv4MappedToIPv6) ip = ip.MapToIPv4();

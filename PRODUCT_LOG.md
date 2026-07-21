@@ -132,7 +132,9 @@ and the two CSV uploads need no account credentials.
 - **SSRF protection** on user-supplied RSS feed URLs: hosts resolving to loopback, private,
   link-local (incl. cloud metadata), CGNAT, unique-local, multicast or reserved addresses are
   refused before any request is made (`SsrfGuard`, fail-closed). RSS uses a dedicated client with
-  auto-redirect disabled and follows redirects manually (max 3), re-validating each hop.
+  auto-redirect disabled and follows redirects manually (max 3), re-validating each hop, and its
+  connections are **pinned to the addresses just validated** (`SocketsHttpHandler.ConnectCallback`),
+  which closes the DNS-rebinding window between checking a name and connecting to it.
 - **5 MB response cap** on connector HTTP clients, so a hostile endpoint cannot exhaust memory.
 
 ---
@@ -206,7 +208,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 85 tests, fully offline
+dotnet test                           # 90 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -219,7 +221,7 @@ dotnet test                           # 85 tests, fully offline
 
 ## 9. Testing
 
-85 xUnit tests, **fully offline and fast (~1–2s)**:
+90 xUnit tests, **fully offline and fast (~1–2s)**:
 - **Unit:** fingerprint math (incl. the union = element-wise-min property), matcher
   (ranking, threshold, empty exclusion), aggregator (failures), view-model tiers/validation,
   connectors (CSV parsing + garbage handling + API-error handling via a stub HTTP handler).
@@ -235,10 +237,6 @@ dotnet test                           # 85 tests, fully offline
   source means re-entering its credentials. This is intentional.
 - **No in-app messaging.** Matches connect via the contact line each person opts to share.
 - **No email / password reset.** Account deletion is the only recovery path today.
-- **DNS rebinding is not fully closed.** `SsrfGuard` validates the resolved address before the
-  request, but `HttpClient` resolves again when it connects, so a hostname that changes its
-  answer between the two could still slip through. Closing it fully means pinning the
-  connection to the validated IP (custom `SocketsHttpHandler.ConnectCallback`).
 - Matching returns the top 20; there is no pagination or manual filtering yet.
 - **Matching is O(all users) in memory.** Every `/matches` request loads and deserialises every
   user's fingerprint, then compares against all of them. Fine at current scale; past a few
@@ -252,6 +250,11 @@ dotnet test                           # 85 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **DNS-rebinding window closed** — the SSRF guard validated a hostname and then let `HttpClient`
+  resolve it again to open the socket, leaving room for the answer to change in between. The RSS
+  client now resolves, validates, and connects to those exact addresses via
+  `SocketsHttpHandler.ConnectCallback`, so what was checked is what is reached. Verified that a
+  real HTTPS feed still fetches (TLS and manual redirect following are unaffected).
 - **Styled rate-limit page** — tripping the login limiter returned bare text with no way back,
   which a user who simply forgot their password could hit. It now returns a proper 429 page
   (with `Retry-After`) that links the app's own stylesheet rather than duplicating it.

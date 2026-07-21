@@ -1,5 +1,7 @@
+using System.Net.Sockets;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
+using Profiler.Web.Connectors;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
@@ -114,13 +116,34 @@ builder.Services.AddHttpClient("connectors", client =>
 });
 
 // RSS is the only connector that fetches user-supplied URLs, so it gets a locked-down client:
-// auto-redirect is off and every hop is re-validated by SsrfGuard inside the connector.
+// auto-redirect is off (the connector follows hops itself, re-validating each one) and the
+// connection is pinned to addresses SsrfGuard has just approved, so a name cannot resolve to
+// something public during the check and something internal when the socket is opened.
 builder.Services.AddHttpClient("rss-connector", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(15);
     client.MaxResponseContentBufferSize = maxConnectorResponseBytes;
 })
-.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    AllowAutoRedirect = false,
+    ConnectCallback = async (context, cancellationToken) =>
+    {
+        var addresses = await SsrfGuard.ResolveAllowedAsync(context.DnsEndPoint.Host, cancellationToken);
+
+        var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
+        try
+        {
+            await socket.ConnectAsync(addresses, context.DnsEndPoint.Port, cancellationToken);
+            return new NetworkStream(socket, ownsSocket: true);
+        }
+        catch
+        {
+            socket.Dispose();
+            throw;
+        }
+    }
+});
 
 var app = builder.Build();
 
