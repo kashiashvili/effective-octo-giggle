@@ -208,7 +208,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 92 tests, fully offline
+dotnet test                           # 95 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -221,7 +221,7 @@ dotnet test                           # 92 tests, fully offline
 
 ## 9. Testing
 
-92 xUnit tests, **fully offline and fast (~1–2s)**:
+95 xUnit tests, **fully offline and fast (~1–2s)**:
 - **Unit:** fingerprint math (incl. the union = element-wise-min property), matcher
   (ranking, threshold, empty exclusion), aggregator (failures), view-model tiers/validation,
   connectors (CSV parsing + garbage handling + API-error handling via a stub HTTP handler).
@@ -250,6 +250,11 @@ dotnet test                           # 92 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **Authorization is now deny-by-default** — `AccountController` mixed anonymous and protected
+  actions and depended on each protected one remembering `[Authorize]`; a new action serving
+  profile or export data would have been public. The class is authorized and register/login/logout
+  opt out explicitly. Reflection tests assert every POST carries an antiforgery token and every
+  controller except Home is authorized at class level — both verified to fail when violated.
 - **Production posture verified, and a deployment trap documented** — the docs claimed HTTPS
   redirection outside Development and a friendly error page, but neither had ever been exercised.
   Both now have tests. Writing the first one surfaced something worth knowing: ASP.NET's HTTPS
