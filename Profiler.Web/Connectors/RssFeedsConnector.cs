@@ -52,6 +52,34 @@ public class RssFeedsConnector : IConnector
             .Select(w => w.ToLowerInvariant());
     }
 
+    /// <summary>
+    /// Fetches a feed, following redirects manually so that every hop is re-checked by
+    /// <see cref="SsrfGuard"/>. Auto-redirect is disabled on this connector's HttpClient, because
+    /// a public URL that 302s to an internal address would otherwise bypass the guard.
+    /// </summary>
+    private async Task<string?> FetchWithGuardedRedirectsAsync(Uri uri, int maxHops = 3)
+    {
+        for (var hop = 0; hop <= maxHops; hop++)
+        {
+            if (!await SsrfGuard.IsAllowedAsync(uri)) return null;
+
+            using var resp = await _http.GetAsync(uri);
+
+            if ((int)resp.StatusCode is >= 300 and < 400)
+            {
+                var location = resp.Headers.Location;
+                if (location == null) return null;
+                uri = location.IsAbsoluteUri ? location : new Uri(uri, location);
+                if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return null;
+                continue;
+            }
+
+            if (!resp.IsSuccessStatusCode) return null;
+            return await resp.Content.ReadAsStringAsync();
+        }
+        return null;
+    }
+
     public async Task<ProfileData> FetchAsync()
     {
         var features = new List<string>();
@@ -61,9 +89,8 @@ public class RssFeedsConnector : IConnector
         {
             try
             {
-                using var resp = await _http.GetAsync(url);
-                if (!resp.IsSuccessStatusCode) continue;
-                var xml = await resp.Content.ReadAsStringAsync();
+                var xml = await FetchWithGuardedRedirectsAsync(new Uri(url));
+                if (xml == null) continue;
                 XDocument doc;
                 try { doc = XDocument.Parse(xml); }
                 catch { continue; }

@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Profiler.Web.Connectors;
@@ -10,8 +12,11 @@ using Profiler.Web.ViewModels;
 namespace Profiler.Web.Controllers;
 
 [Route("sources")]
+[Authorize]
 public class SourcesController : Controller
 {
+    private const long MaxCsvUploadBytes = 10 * 1024 * 1024;
+
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _httpFactory;
 
@@ -21,42 +26,56 @@ public class SourcesController : Controller
         _httpFactory = httpFactory;
     }
 
-    private IActionResult? RequireLogin()
-    {
-        if (HttpContext.Session.GetInt32("UserId") is null)
-            return RedirectToAction("Login", "Account");
-        return null;
-    }
+    private int CurrentUserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpGet("dashboard")]
     public async Task<IActionResult> Dashboard()
     {
-        if (RequireLogin() is { } r) return r;
-        var userId = HttpContext.Session.GetInt32("UserId")!.Value;
-        var fp = await _db.Fingerprints.FirstOrDefaultAsync(f => f.UserId == userId);
-        ViewBag.HasFingerprint = fp != null;
-        ViewBag.Sources = fp != null
-            ? JsonSerializer.Deserialize<List<string>>(fp.SourcesJson) ?? new()
-            : new List<string>();
+        var userId = CurrentUserId;
+
+        ViewBag.HasFingerprint = await _db.Fingerprints.AnyAsync(f => f.UserId == userId);
+        ViewBag.Sources = await _db.SourceFingerprints
+            .Where(s => s.UserId == userId)
+            .OrderByDescending(s => s.FeatureCount)
+            .ThenBy(s => s.Source)
+            .Select(s => new SourceStatusViewModel { Source = s.Source, FeatureCount = s.FeatureCount, UpdatedAt = s.UpdatedAt })
+            .ToListAsync();
+
+        var user = await _db.Users.FirstAsync(u => u.Id == userId);
+        ViewBag.Bio = user.Bio;
+        ViewBag.Contact = user.Contact;
+        ViewBag.IsDiscoverable = user.IsDiscoverable;
         return View();
     }
 
     [HttpGet("connect")]
-    public IActionResult Connect()
+    public async Task<IActionResult> Connect()
     {
-        if (RequireLogin() is { } r) return r;
+        ViewBag.ConnectedSources = await ConnectedSourceNamesAsync(CurrentUserId);
         return View(new ConnectSourcesViewModel());
     }
 
     [HttpPost("connect")]
     [ValidateAntiForgeryToken]
+    // Two 10 MB CSVs plus form fields. Rejects oversized bodies at the pipeline level, before
+    // ASP.NET buffers up to its 128 MB default and the per-file check below ever runs.
+    [RequestSizeLimit(25 * 1024 * 1024)]
     public async Task<IActionResult> Connect(ConnectSourcesViewModel vm)
     {
-        if (RequireLogin() is { } r) return r;
-        var userId = HttpContext.Session.GetInt32("UserId")!.Value;
+        var userId = CurrentUserId;
+
+        foreach (var (file, label) in new[] { (vm.GoodreadsCsv, "Goodreads"), (vm.NetflixCsv, "Netflix") })
+        {
+            if (file is { } f && f.Length > MaxCsvUploadBytes)
+            {
+                ModelState.AddModelError("", $"{label} CSV is too large (max 10 MB).");
+                ViewBag.ConnectedSources = await ConnectedSourceNamesAsync(userId);
+                return View(vm);
+            }
+        }
 
         var connectors = new List<IConnector>();
-        var http = _httpFactory.CreateClient();
+        var http = _httpFactory.CreateClient("connectors");
 
         if (!string.IsNullOrWhiteSpace(vm.GitHubUser))
             connectors.Add(new GitHubConnector(http, vm.GitHubUser, vm.GitHubToken));
@@ -112,7 +131,7 @@ public class SourcesController : Controller
             connectors.Add(new TwitchConnector(http, vm.TwitchToken, vm.TwitchClientId));
 
         if (!string.IsNullOrWhiteSpace(vm.RssFeedUrls))
-            connectors.Add(new RssFeedsConnector(http, vm.RssFeedUrls));
+            connectors.Add(new RssFeedsConnector(_httpFactory.CreateClient("rss-connector"), vm.RssFeedUrls));
 
         if (!string.IsNullOrWhiteSpace(vm.SoundCloudToken))
             connectors.Add(new SoundCloudConnector(http, vm.SoundCloudToken));
@@ -123,34 +142,140 @@ public class SourcesController : Controller
         if (connectors.Count == 0)
         {
             ModelState.AddModelError("", "Please connect at least one source.");
+            ViewBag.ConnectedSources = await ConnectedSourceNamesAsync(userId);
             return View(vm);
         }
 
         var aggregator = new ProfileAggregator(connectors);
-        var (sources, features) = await aggregator.AggregateAsync();
+        var result = await aggregator.AggregateAsync();
+
+        if (result.Results.Count == 0)
+        {
+            foreach (var failure in result.Failures)
+                ModelState.AddModelError("", $"{failure.Source}: {failure.Message}");
+            ModelState.AddModelError("", "No interest data could be collected, so nothing was updated.");
+            ViewBag.ConnectedSources = await ConnectedSourceNamesAsync(userId);
+            return View(vm);
+        }
 
         var generator = new FingerprintGenerator();
-        var fp = generator.Generate(features);
+        var now = DateTime.UtcNow;
+
+        foreach (var source in result.Results)
+        {
+            var distinctFeatures = source.Features.Distinct().ToList();
+            var raw = generator.GenerateRaw(distinctFeatures);
+            var record = await _db.SourceFingerprints
+                .FirstOrDefaultAsync(s => s.UserId == userId && s.Source == source.Source);
+            if (record == null)
+            {
+                _db.SourceFingerprints.Add(new SourceFingerprintRecord
+                {
+                    UserId = userId,
+                    Source = source.Source,
+                    RawSignatureJson = JsonSerializer.Serialize(raw),
+                    FeatureCount = distinctFeatures.Count,
+                    UpdatedAt = now
+                });
+            }
+            else
+            {
+                record.RawSignatureJson = JsonSerializer.Serialize(raw);
+                record.FeatureCount = distinctFeatures.Count;
+                record.UpdatedAt = now;
+            }
+        }
+        await _db.SaveChangesAsync();
+
+        var totalSources = await RecomputeCombinedFingerprintAsync(userId);
+        await _db.SaveChangesAsync();
+
+        TempData["Success"] = $"{string.Join(", ", result.Sources)} " +
+            $"{(result.Sources.Count == 1 ? "was" : "were")} updated. " +
+            $"Your fingerprint now covers {totalSources} source{(totalSources == 1 ? "" : "s")}.";
+        if (result.Failures.Count > 0)
+            TempData["Error"] = "Some sources could not be fetched and were left out — " +
+                string.Join("; ", result.Failures.Select(f => $"{f.Source}: {f.Message}"));
+
+        return RedirectToAction("Index", "Matches");
+    }
+
+    [HttpPost("disconnect")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Disconnect(string source)
+    {
+        var userId = CurrentUserId;
+
+        var record = await _db.SourceFingerprints
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.Source == source);
+        if (record == null)
+        {
+            TempData["Error"] = $"{source} is not a connected source.";
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        _db.SourceFingerprints.Remove(record);
+        var remaining = await RecomputeCombinedFingerprintAsync(userId);
+        await _db.SaveChangesAsync();
+
+        TempData["Success"] = remaining > 0
+            ? $"{source} disconnected. Your fingerprint now covers {remaining} source{(remaining == 1 ? "" : "s")}."
+            : $"{source} disconnected. You have no connected sources left, so your fingerprint was removed.";
+        return RedirectToAction(nameof(Dashboard));
+    }
+
+    private async Task<List<string>> ConnectedSourceNamesAsync(int userId) =>
+        await _db.SourceFingerprints
+            .Where(s => s.UserId == userId)
+            .OrderBy(s => s.Source)
+            .Select(s => s.Source)
+            .ToListAsync();
+
+    /// <summary>
+    /// Rebuilds the matching fingerprint as the element-wise minimum of the user's per-source
+    /// raw signatures (pending removals in the change tracker are respected). Returns the
+    /// number of sources included. Caller saves changes.
+    /// </summary>
+    private async Task<int> RecomputeCombinedFingerprintAsync(int userId)
+    {
+        var sourceRecords = (await _db.SourceFingerprints
+                .Where(s => s.UserId == userId)
+                .ToListAsync())
+            .Where(s => _db.Entry(s).State != EntityState.Deleted)
+            .ToList();
 
         var existing = await _db.Fingerprints.FirstOrDefaultAsync(f => f.UserId == userId);
+
+        if (sourceRecords.Count == 0)
+        {
+            if (existing != null)
+                _db.Fingerprints.Remove(existing);
+            return 0;
+        }
+
+        var raws = sourceRecords
+            .Select(s => JsonSerializer.Deserialize<ulong[]>(s.RawSignatureJson) ?? Array.Empty<ulong>())
+            .Where(raw => raw.Length > 0);
+        var fingerprint = FingerprintGenerator.FromRaw(FingerprintGenerator.CombineRaw(raws));
+        var sources = sourceRecords.Select(s => s.Source).OrderBy(s => s).ToList();
+
         if (existing == null)
         {
             _db.Fingerprints.Add(new FingerprintRecord
             {
                 UserId = userId,
-                FingerprintJson = fp.ToJson(),
+                FingerprintJson = fingerprint.ToJson(),
                 SourcesJson = JsonSerializer.Serialize(sources),
                 UpdatedAt = DateTime.UtcNow
             });
         }
         else
         {
-            existing.FingerprintJson = fp.ToJson();
+            existing.FingerprintJson = fingerprint.ToJson();
             existing.SourcesJson = JsonSerializer.Serialize(sources);
             existing.UpdatedAt = DateTime.UtcNow;
         }
 
-        await _db.SaveChangesAsync();
-        return RedirectToAction("Index", "Matches");
+        return sourceRecords.Count;
     }
 }

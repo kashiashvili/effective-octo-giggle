@@ -3,14 +3,44 @@
     ViewBag.Title = "Connect Sources";
 }
 
-<div class="connect-container">
+<div class="page-wrap">
+  <div class="container">
     <div class="connect-header">
         <h1>🔌 Connect Your Sources</h1>
         <p>Link your accounts to generate your privacy-preserving fingerprint. Raw data is never stored.</p>
+        @{
+            var connected = ViewBag.ConnectedSources as List<string> ?? new List<string>();
+        }
+        @if (connected.Any())
+        {
+            <p class="mt-2">
+                <span class="text-muted">Already connected (submitting one again refreshes just that source):</span>
+                @foreach (var s in connected)
+                {
+                    <span class="source-badge">@s</span>
+                }
+            </p>
+        }
     </div>
 
     <form asp-action="Connect" asp-controller="Sources" method="post" enctype="multipart/form-data">
-        <div asp-validation-summary="ModelOnly" class="alert alert-error"></div>
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+        @if (!connected.Any())
+        {
+            <div class="alert alert-info start-here">
+                <span class="alert-icon">👉</span>
+                <span>
+                    <strong>New here?</strong> The quickest sources need no tokens — just enter a
+                    <strong>GitHub username</strong>, paste some <strong>RSS feed URLs</strong>, or upload a
+                    <strong>Goodreads/Netflix CSV</strong> export. Connect one now; you can always add more later.
+                    The remaining cards accept OAuth tokens if you already have them.
+                </span>
+            </div>
+        }
+
+        <h2 class="source-group-title">No account needed</h2>
+        <p class="source-group-hint">Fastest way to start — just a username, a file, or a feed URL.</p>
 
         <div class="sources-form-grid">
             <!-- GitHub -->
@@ -56,6 +86,26 @@
                 </div>
             </div>
 
+            <!-- RSS/Blogs -->
+            <div class="source-form-card rss-card">
+                <div class="source-form-header">
+                    <span class="source-icon">📰</span>
+                    <h3>RSS / Blogs</h3>
+                </div>
+                <div class="form-group">
+                    <label>Feed URLs</label>
+                    <textarea asp-for="RssFeedUrls" class="form-control" rows="4" placeholder="https://example.com/feed&#10;https://blog.example.org/rss"></textarea>
+                    <small>Enter one URL per line (up to 10 feeds). No account needed.</small>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="source-group-title">Needs a token or API key</h2>
+        <p class="source-group-hint">
+            These need an OAuth access token or API key from the provider. Skip them unless you already have one.
+        </p>
+
+        <div class="sources-form-grid">
             <!-- Google -->
             <div class="source-form-card google-card">
                 <div class="source-form-header">
@@ -225,19 +275,6 @@
                 </div>
             </div>
 
-            <!-- RSS/Blogs -->
-            <div class="source-form-card rss-card">
-                <div class="source-form-header">
-                    <span class="source-icon">📰</span>
-                    <h3>RSS / Blogs</h3>
-                </div>
-                <div class="form-group">
-                    <label>Feed URLs</label>
-                    <textarea asp-for="RssFeedUrls" class="form-control" rows="4" placeholder="https://example.com/feed&#10;https://blog.example.org/rss"></textarea>
-                    <small>Enter one URL per line (up to 10 feeds). No account needed.</small>
-                </div>
-            </div>
-
             <!-- SoundCloud -->
             <div class="source-form-card soundcloud-card">
                 <div class="source-form-header">
@@ -278,7 +315,8 @@
         </div>
 
         <div class="form-submit">
-            <button type="submit" class="btn btn-primary btn-large">Generate My Fingerprint 🔒</button>
+            <button type="submit" class="btn btn-primary btn-lg">Generate My Fingerprint 🔒</button>
         </div>
     </form>
+  </div>
 </div>

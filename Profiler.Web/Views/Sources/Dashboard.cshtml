@@ -1,34 +1,186 @@
 @{
     ViewBag.Title = "Dashboard";
     bool hasFingerprint = ViewBag.HasFingerprint ?? false;
-    var sources = ViewBag.Sources as List<string> ?? new List<string>();
-    var username = Context.Session.GetString("Username") ?? "";
+    var sources = ViewBag.Sources as List<Profiler.Web.ViewModels.SourceStatusViewModel> ?? new();
+    var username = User.Identity?.Name ?? "";
+    var bio = ViewBag.Bio as string;
+    var contact = ViewBag.Contact as string;
+    bool hasProfile = !string.IsNullOrWhiteSpace(bio) || !string.IsNullOrWhiteSpace(contact);
+    int totalSignals = sources.Sum(s => s.FeatureCount);
+    // A fingerprint built from few signals gives noisy matches; nudge the user to enrich it.
+    bool thinFingerprint = sources.Count > 0 && totalSignals < 15;
+    bool isDiscoverable = ViewBag.IsDiscoverable ?? true;
+    bool hasStaleSource = sources.Any(s => s.IsStale);
 }
 
-<div class="dashboard-container">
-    <div class="dashboard-header">
-        <h1>👋 Welcome back, <span class="gradient-text">@username</span></h1>
-        <p class="dashboard-subtitle">Your privacy-preserving social profile</p>
-    </div>
-
-    <div class="status-grid">
-        <div class="status-card @(hasFingerprint ? "status-active" : "status-inactive")">
-            <div class="status-icon">@(hasFingerprint ? "✅" : "⏳")</div>
-            <h3>Fingerprint</h3>
-            <p>@(hasFingerprint ? "Generated" : "Not yet generated")</p>
+<div class="page-wrap">
+    <div class="container">
+        <div class="page-header">
+            <h1>👋 Welcome back, @username</h1>
+            <p>Your privacy-preserving social profile</p>
         </div>
-        <div class="status-card @(sources.Count > 0 ? "status-active" : "status-inactive")">
-            <div class="status-icon">@(sources.Count > 0 ? "🔌" : "❌")</div>
-            <h3>Sources Connected</h3>
-            <p>@(sources.Count > 0 ? string.Join(", ", sources) : "None yet")</p>
-        </div>
-    </div>
 
-    <div class="dashboard-actions">
-        <a href="/sources/connect" class="btn btn-primary">@(hasFingerprint ? "Update Sources" : "Connect Sources")</a>
-        @if (hasFingerprint)
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-header indigo">
+                    Connected Sources
+                    <span class="badge badge-light">@(hasFingerprint ? "Active" : "Not set up")</span>
+                </div>
+                <div class="card-body">
+                    @if (sources.Count > 0)
+                    {
+                        <p class="fw-semibold mb-1">✅ Fingerprint generated — @totalSignals interest signal@(totalSignals == 1 ? "" : "s")</p>
+                        <p class="text-muted mb-3">Signals are the interests we extracted, then discarded — only the anonymous MinHash signature is stored. Add or remove sources any time; the rest are unaffected.</p>
+                        <ul class="action-list">
+                            @foreach (var s in sources)
+                            {
+                                <li class="source-row">
+                                    <span class="source-badge">@s.Source</span>
+                                    <span class="signal-count">@s.FeatureCount signal@(s.FeatureCount == 1 ? "" : "s")</span>
+                                    @if (s.IsStale)
+                                    {
+                                        <span class="stale-badge" title="Reconnect this source to refresh it">stale</span>
+                                    }
+                                    <small class="text-muted">updated @s.UpdatedAt.ToString("MMM d, yyyy HH:mm") UTC</small>
+                                    <form asp-action="Disconnect" asp-controller="Sources" method="post" class="ms-auto" style="display:inline">
+                                        <input type="hidden" name="source" value="@s.Source" />
+                                        <button type="submit" class="btn btn-outline btn-sm">Disconnect</button>
+                                    </form>
+                                </li>
+                            }
+                        </ul>
+                        @if (thinFingerprint)
+                        {
+                            <div class="alert alert-warning mt-3">
+                                <span class="alert-icon">💡</span>
+                                <span>Your fingerprint is still thin. Connecting another source gives a sharper, more reliable match.</span>
+                            </div>
+                        }
+                        @if (hasStaleSource)
+                        {
+                            <div class="alert alert-info mt-3">
+                                <span class="alert-icon">🕗</span>
+                                <span>
+                                    Some sources haven't been refreshed in over @Profiler.Web.ViewModels.SourceStatusViewModel.StaleAfterDays days,
+                                    so you may be matched on out-of-date interests.
+                                    <a href="/sources/connect">Reconnect them</a> to bring your fingerprint up to date.
+                                </span>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="fw-semibold mb-1">⏳ No fingerprint yet</p>
+                        <p class="text-muted">Connect at least one source to generate your fingerprint.</p>
+                    }
+
+                    @if (hasFingerprint)
+                    {
+                        <div class="visibility-row">
+                            <div>
+                                <strong>@(isDiscoverable ? "👁️ You're discoverable" : "🙈 You're hidden")</strong>
+                                <small class="text-muted">@(isDiscoverable
+                                    ? "Other people can find you in their matches."
+                                    : "You won't appear in anyone else's matches. You can still see yours.")</small>
+                            </div>
+                            <form asp-action="Visibility" asp-controller="Account" method="post" class="ms-auto">
+                                <input type="hidden" name="discoverable" value="@((!isDiscoverable).ToString().ToLower())" />
+                                <button type="submit" class="btn @(isDiscoverable ? "btn-outline" : "btn-primary") btn-sm">
+                                    @(isDiscoverable ? "Hide me" : "Make me discoverable")
+                                </button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card quick-actions">
+                <div class="card-header dark">Quick Actions</div>
+                <div class="card-body">
+                    <ul class="action-list">
+                        <li>
+                            <a href="/sources/connect" class="action-item">
+                                <span class="action-icon purple">🔌</span>
+                                <span class="action-item-text">
+                                    <strong>@(hasFingerprint ? "Add or update sources" : "Connect your sources")</strong>
+                                    <small>@(hasFingerprint ? "Each source is refreshed independently" : "Link accounts to build your fingerprint")</small>
+                                </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/matches" class="action-item @(hasFingerprint ? "" : "disabled")">
+                                <span class="action-icon red">🤝</span>
+                                <span class="action-item-text">
+                                    <strong>View your matches</strong>
+                                    <small>@(hasFingerprint ? "See who shares your interests" : "Available once your fingerprint exists")</small>
+                                </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/account/profile" class="action-item">
+                                <span class="action-icon purple">✏️</span>
+                                <span class="action-item-text">
+                                    <strong>@(hasProfile ? "Edit your public profile" : "Add a public profile")</strong>
+                                    <small>@(hasProfile ? "Shown to people you match with" : "Optional — let matches know who you are and how to reach you")</small>
+                                </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/account/password" class="action-item">
+                                <span class="action-icon purple">🔑</span>
+                                <span class="action-item-text">
+                                    <strong>Change your password</strong>
+                                    <small>Update your sign-in credentials</small>
+                                </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/account/data" class="action-item">
+                                <span class="action-icon purple">🗂️</span>
+                                <span class="action-item-text">
+                                    <strong>See your data</strong>
+                                    <small>Exactly what we store — and what we don't</small>
+                                </span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        @if (hasProfile)
         {
-            <a href="/matches" class="btn btn-secondary">View Matches</a>
+            <div class="card mt-4">
+                <div class="card-header teal">
+                    Public profile
+                    <span class="badge badge-light">Visible to matches</span>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrWhiteSpace(bio))
+                    {
+                        <p class="mb-2">@bio</p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(contact))
+                    {
+                        <p class="text-muted mb-0">📮 @contact</p>
+                    }
+                </div>
+            </div>
         }
+
+        <details class="danger-zone mt-4">
+            <summary>Delete my account</summary>
+            <div class="danger-zone-body">
+                <p class="text-muted mb-2">
+                    Permanently deletes your account, your fingerprint, and all per-source signatures.
+                    This cannot be undone.
+                </p>
+                <form asp-action="Delete" asp-controller="Account" method="post" class="flex items-center gap-3">
+                    <input type="password" name="password" class="form-control" placeholder="Confirm your password"
+                           autocomplete="current-password" required style="max-width: 280px" />
+                    <button type="submit" class="btn btn-danger">Delete account</button>
+                </form>
+            </div>
+        </details>
     </div>
 </div>
