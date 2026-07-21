@@ -1,0 +1,73 @@
+@model Profiler.Web.ViewModels.DataExportViewModel
+@{
+    ViewBag.Title = "Your Data";
+}
+
+<div class="page-wrap">
+    <div class="container">
+        <div class="page-header">
+            <h1>🗂️ Your Data</h1>
+            <p>Everything Profiler stores about you — and, just as importantly, what it doesn't.</p>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header indigo">
+                Account
+                <a href="/account/data.json" class="badge badge-light" download>⬇ Download JSON</a>
+            </div>
+            <div class="card-body">
+                <dl class="data-list">
+                    <dt>Username</dt><dd>@Model.Username</dd>
+                    <dt>Joined</dt><dd>@Model.CreatedAt.ToString("MMMM d, yyyy") UTC</dd>
+                    <dt>Discoverable</dt><dd>@(Model.IsDiscoverable ? "Yes — you appear in others' matches" : "No — you're hidden")</dd>
+                    <dt>Bio</dt><dd>@(string.IsNullOrWhiteSpace(Model.Bio) ? "— (not set)" : Model.Bio)</dd>
+                    <dt>Contact</dt><dd>@(string.IsNullOrWhiteSpace(Model.Contact) ? "— (not set)" : Model.Contact)</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header teal">Your fingerprint</div>
+            <div class="card-body">
+                @if (Model.FingerprintDimensions > 0)
+                {
+                    <p class="mb-2">
+                        Stored as a <strong>@Model.FingerprintDimensions-number MinHash signature</strong> — an anonymized
+                        summary used only to compare similarity. It cannot be turned back into your interests.
+                    </p>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">No fingerprint yet — connect a source to generate one.</p>
+                }
+                @if (Model.Sources.Any())
+                {
+                    <ul class="action-list mt-2">
+                        @foreach (var s in Model.Sources)
+                        {
+                            <li class="source-row">
+                                <span class="source-badge">@s.Source</span>
+                                <span class="signal-count">@s.SignalCount signal@(s.SignalCount == 1 ? "" : "s")</span>
+                                <small class="text-muted ms-auto">updated @s.UpdatedAt.ToString("MMM d, yyyy") UTC</small>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header green">What we never store</div>
+            <div class="card-body">
+                <p class="mb-0">
+                    ❌ Your raw interests (repos, books, films, songs, follows) — they are used once to build the
+                    fingerprint and then discarded.<br>
+                    ❌ Your access tokens or API keys — used once to fetch data, never saved.<br>
+                    ❌ Any way to reverse the fingerprint back into your activity.
+                </p>
+            </div>
+        </div>
+
+        <p class="mt-4"><a href="/sources/dashboard" class="btn btn-outline">← Back to dashboard</a></p>
+    </div>
+</div>

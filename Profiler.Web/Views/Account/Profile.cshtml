@@ -1,0 +1,38 @@
+@model Profiler.Web.ViewModels.ProfileViewModel
+@{
+    ViewBag.Title = "Edit Profile";
+}
+
+<div class="auth-wrap">
+    <div class="auth-card">
+        <h2>✏️ Your Profile</h2>
+        <p class="text-center text-muted mb-4">
+            Optional. Anything you add here is shown to people you match with — and to no one else.
+            Leave a field blank to keep it private.
+        </p>
+        <form asp-action="Profile" asp-controller="Account" method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <div class="form-group">
+                <label asp-for="Bio" class="form-label">Bio</label>
+                <textarea asp-for="Bio" class="form-control" rows="3"
+                          placeholder="A sentence or two about what you're into"></textarea>
+                <span asp-validation-for="Bio" class="field-error"></span>
+                <small class="help-text">Up to 280 characters. Shown as plain text.</small>
+            </div>
+            <div class="form-group">
+                <label asp-for="Contact" class="form-label">How people can reach you</label>
+                <input asp-for="Contact" class="form-control"
+                       placeholder="e.g. @@me on Mastodon, or hi@example.com" />
+                <span asp-validation-for="Contact" class="field-error"></span>
+                <small class="help-text">
+                    Optional. Displayed exactly as text — never turned into a clickable link, for everyone's safety.
+                </small>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Save profile</button>
+        </form>
+        <hr class="auth-divider" />
+        <div class="auth-footer">
+            <p><a href="/sources/dashboard">← Back to dashboard</a></p>
+        </div>
+    </div>
+</div>
