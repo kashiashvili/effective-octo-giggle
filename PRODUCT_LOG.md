@@ -102,7 +102,14 @@ and the two CSV uploads need no account credentials.
   noise).
 - Results use **qualitative tiers** — "Strong match", "Good match", "Some overlap" — with
   the percentage shown as approximate (`~N% shared`), never as false precision.
-- Up to 20 matches, ranked. Each card shows the **source types you have in common**.
+- Up to 20 matches, ranked. Each card shows the **source types you have in common** and names the
+  one you overlap on most ("Closest on RSS/Blogs, ~45% there"), computed by comparing the stored
+  per-source signatures. A category, never an interest.
+- Each card also shows **how fresh the other person's fingerprint is**, coarsely, and flags anything
+  past the same 90-day staleness threshold used for your own sources.
+- **The combined fingerprint is a union**, so a wide-ranging profile scores lower against everyone
+  even where two people are identical on a source they share. The per-source line is what makes that
+  legible; a test pins the effect.
 - Empty state distinguishes "you're the first user" from "others exist but none are close
   enough yet".
 
@@ -270,6 +277,17 @@ dotnet test                           # 155 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **Matches now say what kind of overlap they are, not just how much** — a card gave a single number
+  and the source types in common, so two people were told they were a "Strong match" with no idea
+  what they actually shared, which is the main reason a match never becomes a message. The per-source
+  signatures needed to answer that were already stored and had never been compared to anything. Cards
+  name the strongest shared source and its own overlap ("Closest on RSS/Blogs, ~45% there") beside
+  the overall figure. This also explains a number the combined fingerprint deflates: that fingerprint
+  is the *union* of every source, so a wide-ranging profile scores lower against everyone even where
+  the two people are identical on what they share. Ranking is unchanged — Jaccard of the union is a
+  defensible definition of overall similarity, and the per-source line is what makes it legible
+  rather than mysterious. Verified live: two accounts sharing feeds but not repos read ~25% overall,
+  "Closest on RSS/Blogs (~45% there)".
 - **A forgotten password is no longer fatal** — there was no reset path, and because deletion is
   password-confirmed, a locked-out user could not even remove themselves: their fingerprint stayed in
   everyone else's match pool forever and their username stayed squatted. No email address is
