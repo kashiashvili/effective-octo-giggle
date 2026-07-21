@@ -136,11 +136,16 @@ and the two CSV uploads need no account credentials.
   hung source is reported instead of holding the whole POST until a gateway kills it.
 - A fingerprint is **never saved from zero features**; a partial failure keeps the
   sources that succeeded and leaves your existing data intact.
+- An oversized connect submission (over the 25 MB pipeline cap) gets a styled "upload too large"
+  page with next steps, instead of a raw framework error or the generic error page — checked against
+  the endpoint's own size limit before any body reading is attempted, so it fires reliably under
+  both Kestrel and the test host.
 
 ### Security hardening
 - Passwords hashed with **BCrypt**, screened against common passwords / username containment /
   near-single-character strings. Usernames, bios and contact lines reject invisible and
-  bidirectional-override characters. **Antiforgery** tokens on every POST (asserted by a reflection test).
+  bidirectional-override characters, and a **username must use a single writing system** so a
+  Cyrillic lookalike cannot shadow an existing Latin name. **Antiforgery** tokens on every POST (asserted by a reflection test).
 - **Login rate limiting** (5 attempts/min per IP, configurable).
 - **15s timeout** on all connector HTTP calls; **10 MB cap** per CSV upload, plus a 25 MB
   `RequestSizeLimit` on the connect endpoint so oversized bodies are rejected before buffering.
@@ -277,6 +282,14 @@ dotnet test                           # 155 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **Usernames may no longer mix alphabets** — the earlier text rules caught invisible and
+  direction-flipping characters, but a Cyrillic "а" is simply indistinguishable from a Latin one, so
+  `аdmin` could register and sit next to `admin` on a match card with nothing to tell them apart. The
+  username is the only thing a stranger sees before deciding whether to make contact, so it now has
+  to be written in a single writing system. Wholly Cyrillic, Greek, Japanese or any other single-
+  script name is unaffected; kanji and kana count as one system, since ordinary Japanese names use
+  both. Not yet closed: a name written *entirely* in lookalikes (`сор` vs `cop`) — that needs a
+  confusable-skeleton column with a unique index, and is recorded in the backlog.
 - **Matches now say what kind of overlap they are, not just how much** — a card gave a single number
   and the source types in common, so two people were told they were a "Strong match" with no idea
   what they actually shared, which is the main reason a match never becomes a message. The per-source
