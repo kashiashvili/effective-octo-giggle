@@ -95,6 +95,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 | `RateLimiting:RegisterPermitLimit` | `5`                | Allowed registrations per IP per hour                |
 | `RateLimiting:ConnectPermitLimit`  | `10`               | Allowed source-connect submits per IP per minute      |
 | `DataProtection:KeyPath`         | `<contentRoot>/keys` | Where the auth-cookie key ring is persisted          |
+| `Fingerprint:Pepper`             | — (**required**)     | Secret mixed into every fingerprint hash             |
 | `ForwardedHeaders:Enabled`       | `false`              | Believe `X-Forwarded-For`/`-Proto` (set this behind a proxy) |
 | `ForwardedHeaders:KnownProxies`  | —                    | Proxy IPs to trust, comma-separated. Required when enabled |
 | `ForwardedHeaders:KnownNetworks` | —                    | Proxy networks to trust in CIDR form, e.g. `10.0.0.0/8` |
@@ -115,6 +116,11 @@ All settings can be supplied via `appsettings.json` or environment variables.
   it without naming anything is refused at startup: the headers are attacker-supplied, and
   trusting them from any caller lets anyone forge a fresh client address per request and
   walk straight past the limiters. This also gives HTTPS redirection the original scheme.
+- **Set `Fingerprint:Pepper` and keep it.** The app refuses to start without one outside
+  Development. It is what stops a stolen database being tested against a list of guessed
+  interests — the fingerprint scheme is otherwise entirely public, and interest labels come from
+  a small vocabulary. Changing it invalidates every stored signature: the app detects that at
+  startup, clears them, and everyone has to reconnect their sources.
 - **Persist the key ring.** Auth cookies are protected by the Data Protection key
   ring at `DataProtection:KeyPath`. Mount this on a persistent volume (or point it
   at shared storage for multi-instance deploys) so cookies survive restarts and
@@ -133,7 +139,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 dotnet test
 ```
 
-The suite (168 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (182 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 

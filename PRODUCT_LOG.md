@@ -70,7 +70,10 @@ fingerprint; the underlying interests are discarded after the fingerprint is bui
 - Register (with auto sign-in), login, logout.
 - **Persistent cookie authentication** (30-day sliding expiry) — you stay signed in
   across server restarts and redeploys.
-- **Change password** (verifies current password, requires a different new one).
+- **Change password** (verifies current password, requires a different new one). Doing so **ends
+  every other session**, which is the point of changing it; the session doing the change stays in.
+- **Sign out on every other device** — same cutoff, without changing the password, for a borrowed
+  laptop rather than a compromised secret.
 - **Recovery code** — the substitute for a password-reset email, since no email address is
   collected. 100 bits in Crockford base32, shown once at registration, stored as a BCrypt hash
   only. Single-use, and using it issues a replacement. Regenerate from the dashboard
@@ -121,7 +124,9 @@ and the two CSV uploads need no account credentials.
 
 ### Privacy controls
 - **Discoverability toggle** — "Hide me from matches" keeps your fingerprint and your own
-  match view, but removes you from everyone else's results. Defaults to discoverable.
+  match view, but removes you from everyone else's results. Defaults to discoverable. It is
+  **reciprocal for personal details**: while you are hidden, other people's bios and contact lines
+  are withheld from you, so an invisible account cannot harvest them.
 - **Data transparency** — `/account/data` shows exactly what is stored about you, including the
   people you have hidden, with a "what we never store" section and a JSON download
   (`/account/data.json`). Who hid *you* is deliberately not shown, to either party.
@@ -191,9 +196,10 @@ to `MatchViewModel` (adding the matched user's bio/contact and shared source typ
 
 | Entity | Key fields | Notes |
 |--------|-----------|-------|
-| `AppUser` | Id, Username, PasswordHash, CreatedAt, Bio?, Contact?, IsDiscoverable, RecoveryCodeHash? | Username is case-insensitive unique (NOCASE); Bio/Contact are the opt-in public profile |
+| `AppUser` | Id, Username, PasswordHash, CreatedAt, Bio?, Contact?, IsDiscoverable, RecoveryCodeHash?, SessionsValidFrom | Username is case-insensitive unique (NOCASE); Bio/Contact are the opt-in public profile |
 | `FingerprintRecord` | UserId (PK), FingerprintJson, SourcesJson, UpdatedAt | The **combined** (truncated) signature used for matching |
 | `SourceFingerprintRecord` | Id, UserId, Source, RawSignatureJson, FeatureCount, UpdatedAt | One per (user, source); **raw 64-bit** signature; unique index on (UserId, Source) |
+| `FingerprintScheme` | Id, Verifier, UpdatedAt | One row. Records which pepper the stored signatures were built under, so a rotation is noticed instead of silently breaking every comparison |
 | `UserBlock` | Id, BlockerId, BlockedId, CreatedAt | One person hiding another; unique on (Blocker, Blocked). Cascades from **both** ends, so a block cannot outlive either party's account deletion |
 
 Schema changes are made with EF migrations and applied on startup via
@@ -205,7 +211,9 @@ Schema changes are made with EF migrations and applied on startup via
 
 1. Each interest is a short string (e.g. `language:python`, `genre:sci-fi`).
 2. Strings are hashed (SHA-256) and reduced to a **128-dimension MinHash signature**.
-3. **Only the signature is stored. The raw interest strings are discarded.**
+3. **Only the signature is stored. The raw interest strings are discarded.** Every hash is
+   HMAC-keyed with a per-deployment secret (`Fingerprint:Pepper`), so a copy of the database on its
+   own cannot be tested against a list of guessed interests to find out which were yours.
 4. Access tokens / API keys are used once to fetch data and **never persisted**.
 5. Signal counts are aggregate numbers only — not the underlying interests.
 6. Other users only ever see your **username, a match tier/approximate %, the source
@@ -227,6 +235,7 @@ All settings come from `appsettings.json` or environment variables.
 | `RateLimiting:RegisterPermitLimit` | `5` | Registrations per IP per hour |
 | `RateLimiting:ConnectPermitLimit` | `10` | Source-connect submits per IP per minute |
 | `DataProtection:KeyPath` | `<contentRoot>/keys` | Where the auth-cookie key ring is stored (git-ignored secret) |
+| `Fingerprint:Pepper` | — (**required outside Development**) | Secret mixed into every fingerprint hash. Without it, a stolen database can be tested against guessed interests. Changing it invalidates every signature |
 | `ForwardedHeaders:Enabled` | `false` | Believe `X-Forwarded-For`/`-Proto`. **Required behind a proxy**, or every visitor shares one rate-limit bucket |
 | `ForwardedHeaders:KnownProxies` | — | Proxy IPs to trust, comma-separated. Enabling without this (or KnownNetworks) is refused at startup |
 | `ForwardedHeaders:KnownNetworks` | — | Proxy networks to trust, CIDR form (`10.0.0.0/8`) |
@@ -237,7 +246,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 168 tests, fully offline
+dotnet test                           # 182 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -282,6 +291,43 @@ dotnet test                           # 168 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **The stored fingerprint was reversible by anyone holding the database; it no longer is.** The
+  product tells people their interests cannot be read back out of what is stored, and against a
+  database thief that was untrue: the MinHash parameters came from a published constant, features
+  were hashed with unsalted SHA-256, and the per-source signatures are stored full-width — so since
+  interest labels come from a small guessable vocabulary (`language:python`, `genre:sci-fi`), an
+  attacker could hash each guess and look for it in a stored slot. A test now runs exactly that
+  attack: it recovers **20 of 20** interests when the attacker knows the secret and **none** when
+  they don't, so the protection is asserted rather than assumed. Every hash, including the
+  derivation of the hash family itself, is now HMAC-keyed with a per-deployment
+  **`Fingerprint:Pepper`**; outside Development the app refuses to start without one, or with the
+  published development value. Because rotating it would silently invalidate every signature
+  (they would compare against nothing, forever, with no error), a one-row `FingerprintSchemes`
+  table records a verifier derived from the pepper, and a mismatch clears the fingerprints so
+  users are asked to reconnect. Verified live: the dev database's pre-pepper signature was
+  detected and cleared on first boot, and matching works afterwards.
+- **Changing your password now ends every other session.** Cookies are persistent for 30 days and
+  the only per-request check was "does this user still exist", so a stolen session survived a
+  password change and a recovery reset alike — the one remediation offered to a compromised user
+  did nothing. Sign-in now stamps the ticket with its issue time and `AppUser` carries a cutoff
+  that password changes and recovery both move; the session doing the change is re-issued so the
+  person who asked stays signed in. Adds an explicit **"sign out on every other device"** for the
+  borrowed-laptop case, where the password is not the problem.
+- **Discoverability is reciprocal for personal details.** It was enforced one way only: an account
+  could stay permanently invisible, read up to twenty bios and contact lines on every refresh, and
+  never be hidden in return — hiding someone requires seeing their card first. Contact lines and
+  bios are now withheld while you are hidden. Similarity and shared sources still show; only the
+  personal half is reciprocal.
+- **Connecting a source is now one transaction.** The per-source rows and the combined fingerprint
+  were two separate commits, so a failure between them left the dashboard showing a freshly
+  connected source while matching kept using the old signature — permanently, since nothing else
+  recomputes it.
+- **The 429 page tells the right people apart.** One handler served all three limiters with login's
+  wording, so someone rate-limited after filling in the longest form in the product was told their
+  sign-in attempts were paused and offered a link to sign in. Each policy now has its own wording
+  and its own way back.
+- **Username length is measured after trimming**, so `"  a  "` no longer satisfies the
+  three-character minimum and then get stored as `a`.
 - **An oversized upload is now explained rather than dumped** — `[RequestSizeLimit]` fires while the
   request body is read, long before the action and its friendly per-file check, so a too-large CSV
   produced a raw framework error page and the user lost everything typed into the form (file inputs
