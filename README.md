@@ -94,6 +94,9 @@ All settings can be supplied via `appsettings.json` or environment variables.
 | `RateLimiting:RegisterPermitLimit` | `5`                | Allowed registrations per IP per hour                |
 | `RateLimiting:ConnectPermitLimit`  | `10`               | Allowed source-connect submits per IP per minute      |
 | `DataProtection:KeyPath`         | `<contentRoot>/keys` | Where the auth-cookie key ring is persisted          |
+| `ForwardedHeaders:Enabled`       | `false`              | Believe `X-Forwarded-For`/`-Proto` (set this behind a proxy) |
+| `ForwardedHeaders:KnownProxies`  | —                    | Proxy IPs to trust, comma-separated. Required when enabled |
+| `ForwardedHeaders:KnownNetworks` | —                    | Proxy networks to trust in CIDR form, e.g. `10.0.0.0/8` |
 
 ## Deployment notes
 
@@ -103,6 +106,14 @@ All settings can be supplied via `appsettings.json` or environment variables.
   the HTTPS port**. If TLS is terminated by a proxy, set `ASPNETCORE_HTTPS_PORT` (or
   configure forwarded headers) — otherwise requests will simply be served over HTTP
   with no redirect and no warning.
+- **Behind a proxy, configure forwarded headers.** Every rate limiter partitions on the
+  connecting IP. Behind a TLS-terminating proxy that address is the *proxy's* for every
+  visitor, so all of them share one bucket and the login limit becomes five attempts per
+  minute for the whole site rather than per person. Set `ForwardedHeaders:Enabled=true`
+  **and** name the proxies in `ForwardedHeaders:KnownProxies` / `:KnownNetworks`. Enabling
+  it without naming anything is refused at startup: the headers are attacker-supplied, and
+  trusting them from any caller lets anyone forge a fresh client address per request and
+  walk straight past the limiters. This also gives HTTPS redirection the original scheme.
 - **Persist the key ring.** Auth cookies are protected by the Data Protection key
   ring at `DataProtection:KeyPath`. Mount this on a persistent volume (or point it
   at shared storage for multi-instance deploys) so cookies survive restarts and

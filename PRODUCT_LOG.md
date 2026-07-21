@@ -209,6 +209,9 @@ All settings come from `appsettings.json` or environment variables.
 | `RateLimiting:RegisterPermitLimit` | `5` | Registrations per IP per hour |
 | `RateLimiting:ConnectPermitLimit` | `10` | Source-connect submits per IP per minute |
 | `DataProtection:KeyPath` | `<contentRoot>/keys` | Where the auth-cookie key ring is stored (git-ignored secret) |
+| `ForwardedHeaders:Enabled` | `false` | Believe `X-Forwarded-For`/`-Proto`. **Required behind a proxy**, or every visitor shares one rate-limit bucket |
+| `ForwardedHeaders:KnownProxies` | — | Proxy IPs to trust, comma-separated. Enabling without this (or KnownNetworks) is refused at startup |
+| `ForwardedHeaders:KnownNetworks` | — | Proxy networks to trust, CIDR form (`10.0.0.0/8`) |
 
 ---
 
@@ -216,10 +219,12 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 116 tests, fully offline
+dotnet test                           # 135 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
+- **Behind a proxy, set `ForwardedHeaders:Enabled` and name the trusted proxies** — otherwise
+  every visitor arrives as the proxy's IP and shares a single rate-limit bucket.
 - **Persist the key ring** (`DataProtection:KeyPath`) on a volume so cookies survive
   redeploys; point it at shared storage for multi-instance deployments.
 - **Schema changes** ship as EF migrations and apply automatically on startup.
@@ -258,6 +263,15 @@ dotnet test                           # 116 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **Rate limiting now survives a reverse proxy** — every limiter partitions on the connecting IP, and
+  behind the TLS-terminating proxy the deployment notes describe, that address is the *proxy's* for
+  every visitor. All of them shared one bucket, so the login limit was five attempts per minute for
+  the entire site rather than per person — a self-inflicted outage waiting for the first busy hour.
+  `ForwardedHeaders:Enabled` plus `KnownProxies`/`KnownNetworks` makes the app read the real client
+  address (and the original scheme, which also fixes the HTTPS-redirect trap noted below). It is off
+  by default and **enabling it without naming trusted proxies is refused at startup**: the headers
+  are attacker-supplied, so trusting them from any caller would let anyone forge a fresh client
+  address per request and bypass the limiters entirely — worse than the problem being fixed.
 - **Registration and connect are rate-limited too** — only login was metered. Unlimited registration
   lets one person flood the matching pool with sybil accounts, which degrades match quality for real
   users and is the enabling step for harvesting the contact lines matches expose; an unmetered

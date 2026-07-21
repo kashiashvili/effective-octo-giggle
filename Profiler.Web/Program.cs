@@ -174,7 +174,15 @@ builder.Services.AddHttpClient("rss-connector", client =>
     }
 });
 
+// Off unless configured; see ProxyTrust for why believing these headers is opt-in and why enabling
+// them without naming trusted proxies is refused outright.
+var forwardedHeaders = Profiler.Web.Security.ProxyTrust.Build(builder.Configuration);
+
 var app = builder.Build();
+
+// Must run before anything reads the client address or scheme — the rate limiters partition on the
+// former and HTTPS redirection depends on the latter.
+if (forwardedHeaders != null) app.UseForwardedHeaders(forwardedHeaders);
 
 using (var scope = app.Services.CreateScope())
 {
