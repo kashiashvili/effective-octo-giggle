@@ -250,6 +250,12 @@ dotnet test                           # 90 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-21
+- **Mobile layout checked and fixed** — the app had never been viewed at phone width. The
+  dashboard's source and discoverability rows were flex rows that assumed desktop width, so at
+  375px the Disconnect and "Hide me" buttons were clipped off the card edge. They wrap now.
+  Everything else held up: no horizontal overflow, working nav toggle, single-column collapse.
+- **Duplication cleanup** — the user-id claim lookup (twelve copies) and the "user vanished
+  mid-request" handling (seven copies) each now live in one place.
 - **DNS-rebinding window closed** — the SSRF guard validated a hostname and then let `HttpClient`
   resolve it again to open the socket, leaving room for the answer to change in between. The RSS
   client now resolves, validates, and connects to those exact addresses via
