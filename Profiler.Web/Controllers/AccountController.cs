@@ -222,6 +222,12 @@ public class AccountController : Controller
             .Select(s => new DataExportSource { Source = s.Source, SignalCount = s.FeatureCount, UpdatedAt = s.UpdatedAt })
             .ToListAsync();
 
+        var hidden = await _db.UserBlocks
+            .Where(b => b.BlockerId == userId)
+            .Join(_db.Users, b => b.BlockedId, u => u.Id, (b, u) => u.Username)
+            .OrderBy(u => u)
+            .ToListAsync();
+
         return new DataExportViewModel
         {
             Username = user.Username,
@@ -230,7 +236,8 @@ public class AccountController : Controller
             Bio = user.Bio,
             Contact = user.Contact,
             FingerprintDimensions = dimensions,
-            Sources = sources
+            Sources = sources,
+            HiddenPeople = hidden
         };
     }
 
@@ -302,6 +309,10 @@ public class AccountController : Controller
 
         _db.SourceFingerprints.RemoveRange(_db.SourceFingerprints.Where(s => s.UserId == user.Id));
         _db.Fingerprints.RemoveRange(_db.Fingerprints.Where(f => f.UserId == user.Id));
+        // Blocks point both ways: the people you hid, and the people who hid you. The schema cascades
+        // these, but doing it here too keeps the promise independent of whether the provider enforces
+        // foreign keys.
+        _db.UserBlocks.RemoveRange(_db.UserBlocks.Where(b => b.BlockerId == user.Id || b.BlockedId == user.Id));
         _db.Users.Remove(user);
         await _db.SaveChangesAsync();
 

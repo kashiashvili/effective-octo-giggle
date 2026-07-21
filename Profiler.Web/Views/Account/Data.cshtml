@@ -56,6 +56,30 @@
             </div>
         </div>
 
+        <div class="card mb-4">
+            <div class="card-header indigo">People you've hidden</div>
+            <div class="card-body">
+                @if (Model.HiddenPeople.Any())
+                {
+                    <p class="mb-2">
+                        Neither of you appears in the other's matches. This is the only social fact stored
+                        about you, and it is visible to nobody else.
+                    </p>
+                    <ul class="action-list">
+                        @foreach (var person in Model.HiddenPeople)
+                        {
+                            <li class="source-row"><span class="source-badge">@person</span></li>
+                        }
+                    </ul>
+                    <p class="mb-0 mt-2"><a href="/matches/hidden">Manage hidden people →</a></p>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">You haven't hidden anyone.</p>
+                }
+            </div>
+        </div>
+
         <div class="card">
             <div class="card-header green">What we never store</div>
             <div class="card-body">

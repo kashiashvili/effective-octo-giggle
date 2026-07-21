@@ -41,6 +41,18 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<UserBlock>(entity =>
         {
             entity.HasIndex(e => new { e.BlockerId, e.BlockedId }).IsUnique();
+
+            // A block is a fact about two people, so it must not outlive either of them: deleting an
+            // account promises to remove all of that person's data. Cascades on both ends make that
+            // structural rather than something the delete path has to remember.
+            entity.HasOne<AppUser>()
+                  .WithMany()
+                  .HasForeignKey(e => e.BlockerId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<AppUser>()
+                  .WithMany()
+                  .HasForeignKey(e => e.BlockedId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

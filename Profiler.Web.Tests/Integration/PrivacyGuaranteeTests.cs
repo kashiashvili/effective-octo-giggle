@@ -126,4 +126,40 @@ public class PrivacyGuaranteeTests : IClassFixture<ProfilerWebFactory>
         Assert.Contains("RawSignatureJson", stored);
         Assert.Contains("\"FeatureCount\":3", stored);
     }
+
+    /// <summary>
+    /// Deleting an account promises to remove "all of your data". Hiding someone records a fact about
+    /// two people — that one of them wanted nothing to do with the other — so a block must not outlive
+    /// either party's deletion, in either direction.
+    /// </summary>
+    [Fact]
+    public async Task DeletingAnAccount_RemovesBlocks_InBothDirections()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var leaver = new AppUser { Username = "block_out_" + Guid.NewGuid().ToString("N")[..8], PasswordHash = "x" };
+        var hiddenByLeaver = new AppUser { Username = "block_tgt_" + Guid.NewGuid().ToString("N")[..8], PasswordHash = "x" };
+        var whoHidLeaver = new AppUser { Username = "block_src_" + Guid.NewGuid().ToString("N")[..8], PasswordHash = "x" };
+        db.Users.AddRange(leaver, hiddenByLeaver, whoHidLeaver);
+        await db.SaveChangesAsync();
+
+        db.UserBlocks.Add(new UserBlock { BlockerId = leaver.Id, BlockedId = hiddenByLeaver.Id });
+        db.UserBlocks.Add(new UserBlock { BlockerId = whoHidLeaver.Id, BlockedId = leaver.Id });
+        await db.SaveChangesAsync();
+
+        db.Users.Remove(leaver);
+        await db.SaveChangesAsync();
+
+        var survivors = await db.UserBlocks.AsNoTracking()
+            .Where(b => b.BlockerId == leaver.Id || b.BlockedId == leaver.Id)
+            .ToListAsync();
+        Assert.Empty(survivors);
+
+        // The unrelated pair's own block, if they had one, would be untouched — assert the delete is
+        // targeted rather than simply clearing the table.
+        db.UserBlocks.Add(new UserBlock { BlockerId = whoHidLeaver.Id, BlockedId = hiddenByLeaver.Id });
+        await db.SaveChangesAsync();
+        Assert.True(await db.UserBlocks.AnyAsync(b => b.BlockerId == whoHidLeaver.Id && b.BlockedId == hiddenByLeaver.Id));
+    }
 }

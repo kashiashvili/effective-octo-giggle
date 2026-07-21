@@ -14,6 +14,12 @@ public class DataExportViewModel
 
     public List<DataExportSource> Sources { get; set; } = new();
 
+    /// <summary>
+    /// The people you have hidden. Only your own outgoing hides — who hid *you* is deliberately not
+    /// listed, because telling someone they were hidden would defeat the point of the control.
+    /// </summary>
+    public List<string> HiddenPeople { get; set; } = new();
+
     /// <summary>Always true — stated explicitly so the export makes the privacy guarantee legible.</summary>
     public bool RawInterestsStored => false;
 }
