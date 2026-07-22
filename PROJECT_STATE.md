@@ -84,14 +84,30 @@ DNS-rebinding pinning on RSS, 5 MB response cap, 10 MB CSV cap, HSTS/HTTPS outsi
 Development, persistent Data Protection key ring, text policy rejecting invisible and
 bidirectional characters in usernames/bios/contact lines.
 
-Known standing limitations (documented in `PRODUCT_LOG.md` §10): no auto-refresh of sources
-(intentional — tokens are never stored), no in-app messaging, **no password reset /
-account recovery**, matches are capped at 20 with no pagination or filtering, and matching
-is O(all users) in memory (needs LSH banding past a few thousand users).
+Account recovery now exists (one-time code, no email). Known standing limitations
+(documented in `PRODUCT_LOG.md` §10): no auto-refresh of sources (intentional — tokens are
+never stored), no in-app messaging, matches capped at 20 with no pagination, and matching is
+O(all users) in memory (needs LSH banding past a few thousand users).
 
 ## Current Phase
 
-Developer — working the second independent review's findings; connector cancellation in flight.
+Product Owner review. Completion gate (a fresh *independent* review) is blocked — see below.
+
+## Completion Gate Status — blocked by an external resource limit
+
+The mission's formal completion criterion is "a fresh independent product review finds no
+additional meaningful work." Two independent (subagent) reviews were run this run and each
+found a real defect the previous missed — the second a **P0** (reversible fingerprints). All
+their findings are shipped. A **third** independent review was commissioned as the gate and
+**failed to run: the account hit its monthly spend limit**, which also prevents launching
+further review subagents. Per `CLAUDE.md`, an external resource limit preventing further work
+is a legitimate stopping condition.
+
+In place of the blocked independent review, an **inline** review of the newest, least-scrutinised
+code was performed (pepper + scheme purge, session cutoff, cancellation threading, reciprocal
+discoverability, the connect transaction). It found no P0/P1/P2. This is *not* a substitute for
+an independent review — it is the same author checking their own work — so the gate is recorded
+as **blocked, not satisfied**.
 
 ## Previous Active Task (complete)
 
@@ -119,13 +135,14 @@ Baseline command set:
 
 ```bash
 dotnet build            # expect 0 warnings, 0 errors
-dotnet test             # expect 135/135 passing, ~4s, fully offline
+dotnet test             # expect 185/185 passing, ~6s, fully offline
 dotnet run --project Profiler.Web   # http://localhost:5000
 ```
 
 Working branch: `rebuild/dotnet-profiler`. Commit continuously in focused units.
-QA server config: `.claude/launch.json` → `profiler-web-qa` on port 5241 (port 5240 belongs to
-another session).
+QA server config: `.claude/launch.json` → `profiler-web-qa` on port 5241, pinned to the
+Development environment so the app boots without a production `Fingerprint:Pepper`. Port 5240
+belongs to another session.
 
 ## Backlog
 
@@ -137,27 +154,32 @@ another session).
 
 - **Contact is broadcast to every match with no mutual consent.** A contact line goes to up to
   20 strangers at once with no per-person choice. Proposed: a mutual "connect request" — either
-  side can request, contacts are exchanged only when both accept. (The smaller half — saying
-  when a match has no contact, and nudging users who set none — is done.) Judged the largest
-  remaining product bet; it is a design change, not a defect, since the field is opt-in and
-  labelled.
+  side can request, contacts are exchanged only when both accept. The largest remaining product
+  bet, and a design change rather than a defect (the field is opt-in, labelled, and now reciprocal
+  with discoverability). **Not started** — it is a genuine product decision worth an owner's steer
+  before building, and it touches the data model and the matching view materially, so it is the
+  kind of consequential change that should have independent review, which is currently blocked.
 
 ### P2 — Quality / Reliability / UX
 
-- Connectors cannot be cancelled (`IConnector.FetchAsync` takes no `CancellationToken`), so the
-  30s budget abandons rather than aborts and outbound work outlives the response. **In flight.**
+- None open. (Connector cancellation shipped — commit `ed42817`.)
 
-### P3 — Enhancement
+### P3 — Enhancement (all reviewed; each deferred with a reason)
 
-- Consider containment-based scoring so a wide-ranging profile is not diluted by the union.
-  Reviewed and deliberately deferred: Jaccard of the union is a defensible definition of overall
-  similarity, and the new per-source line makes the effect legible rather than mysterious.
-- Username uniqueness folds case only for ASCII (SQLite `NOCASE`), so `André` and `ANDRÉ` are two
-  accounts that read as one person. Same fix as the confusable-skeleton item below — a normalised
-  username column with a unique index and a backfill — so take them together.
-- Pure-lookalike usernames (a name written *entirely* in Cyrillic that reads as Latin, e.g.
-  `сор` vs `cop`) are still possible now that mixed-alphabet names are refused.
-- Match list pagination / filtering beyond the top 20.
+- **Username uniqueness folds case only for ASCII** (SQLite `NOCASE`), so `André` and `ANDRÉ` are
+  two accounts that read as one. The correct fix is a normalised-username column with a unique
+  index and a backfill — a **data migration**, and shipping a consequential data-integrity
+  migration while independent review is unavailable is exactly what should wait for a review. Low
+  severity meanwhile (both are real names; invisible-character and mixed-alphabet impersonation,
+  the sharp cases, are already blocked). Take together with the confusable-skeleton item below.
+- **Pure-lookalike usernames** (a name written *entirely* in Cyrillic that reads as Latin, e.g.
+  `сор` vs `cop`) remain possible. Same normalised/skeleton column, same reason to defer.
+- **Containment-based scoring** so a wide-ranging profile is not diluted by the union. Jaccard of
+  the union is a defensible definition of overall similarity, and the per-source line already
+  makes the dilution legible — deferred as a judgement call, not a defect.
+- **Match list pagination** beyond the top 20. Genuinely low value at current scale (matching is
+  already O(all users); pagination matters only once there are far more than 20 plausible matches,
+  which is the same regime that needs the P4 LSH work first).
 
 ### P4 — Polish / Optional
 
@@ -178,48 +200,41 @@ another session).
 
 ## Last Completed Iteration
 
-**Iteration:** 8 (this session)
+**Iteration:** 9 (this session)
 
-**Completed, in order:** baseline re-established and the state file reconstructed from the
-repository; blocks no longer outlive a deleted account (schema cascade + migration purge, and
-the transparency page now lists who you hid); connectors and RSS feeds fan out concurrently
-under a 30s budget; match cards state when there is no way to reach someone; registration and
-connect rate-limited; rate limiting made proxy-aware (`ForwardedHeaders`, refused if enabled
-without a trust list); match cards show fingerprint freshness; **account recovery codes**;
-per-source overlap on match cards ("Closest on RSS/Blogs"); usernames may no longer mix
-alphabets.
+**Completed:** connector cancellation (commit `ed42817`) — `IConnector.FetchAsync` takes a
+`CancellationToken`, the aggregator links the 30s budget with the caller's `RequestAborted`, every
+connector and the SSRF DNS lookup forward it, and cancellation is not swallowed by the catch-alls.
+Followed by an inline review of the newest code and coverage for the scheme verifier
+(commit `02d1525`).
 
-**Validation:** `dotnet build` 0 warnings; `dotnet test` 158/158 passing. All 7 migrations apply
-cleanly to a fresh database. Core journey verified end to end against a running server at each
-step — register → recovery code shown once → connect GitHub/RSS (real network) → fingerprint 128
-dims with raw interests absent from every table → matched pair with bio/contact and per-source
-overlap → hide, symmetric → data export → password reset by recovery code, old password dead →
-password-confirmed deletion with cascade confirmed in SQLite.
+Earlier in the session (iterations 1–8): baseline re-established and the state file reconstructed;
+blocks no longer outlive a deleted account; concurrent connector fan-out under a 30s budget;
+match cards state a missing contact, fingerprint freshness, and the strongest shared source;
+registration/connect rate-limited and proxy-aware; account recovery codes; usernames may not mix
+alphabets; the reversible-fingerprint **P0** fixed with a per-deployment pepper + scheme-change
+purge; session invalidation on password change/recovery plus "sign out everywhere"; reciprocal
+discoverability; atomic connect; per-policy 429 wording; trimmed-username length; friendly
+oversized-upload page.
 
-**Result:** Every P0–P3 finding from the first independent review is either shipped or explicitly
-deferred with a reason.
+**Validation:** `dotnet build` 0 warnings; `dotnet test` **185/185** passing, stable across three
+consecutive runs. All 9 migrations apply cleanly to a fresh database, and to the dev database
+(the pre-pepper signature was detected and cleared on first boot). Full core journey re-verified
+end to end against the running server this iteration — register → one-time recovery code →
+connect real GitHub → 128-dim fingerprint, no raw interests in any table → matched pair, contact
+visible → symmetric hide → password change signs out the other device but not the acting one →
+password-confirmed delete leaves no orphan blocks.
 
-## Iteration 9 (in progress)
-
-A second independent review, run against the current code rather than against this file, found a
-**P0 the first one missed**: the stored fingerprint was reversible. The MinHash parameters came
-from a published constant and features were hashed with unsalted SHA-256, so anyone holding the
-database could hash guessed interest labels and see which appeared in a stored signature — the
-attack recovers 20 of 20 interests, and is now a test. Fixed by HMAC-keying every hash with a
-per-deployment pepper, with a startup refusal when it is missing and a scheme verifier so a
-rotation clears the now-meaningless signatures instead of silently breaking every comparison.
-
-Also shipped from that review: session invalidation on password change and recovery, plus an
-explicit "sign out everywhere"; reciprocal discoverability for bios and contact lines; the connect
-path made atomic; per-policy 429 wording; username length measured after trimming.
-
-Reviewed and found clean by that review, worth not re-deriving: credentials do not reach logs
-(.NET redacts query strings by default, verified with a probe); the concurrent fan-out is
-thread-safe across all 18 connectors; `RecoveryCode`, `ProxyTrust`, the `UserBlock` cascade and
-the per-source overlap all do what the changelog claims.
+**Result:** Every P0–P2 finding from all three review attempts is shipped. Remaining backlog is
+P1 (mutual-contact-consent — a product bet needing an owner's steer) and P3s, each deferred with a
+recorded reason. See the completion-gate note above: the formal independent-review gate is blocked
+by the account's monthly spend limit.
 
 ## Next Mandatory Action
 
-Land connector cancellation, re-run validation, then commission a third independent review. Judge
-completion against the criteria above — two reviews in a row have each found a defect the previous
-one missed, so a clean review is the evidence to wait for, not a finished task list.
+The independent-review completion gate cannot be run until the account spend limit is lifted
+(raise at claude.ai settings, or resume the failed review agent once budget is available). When it
+is: run a fresh independent review; if clean, the mission's criteria are met. Until then there is
+no P0/P1/P2 defect work outstanding, and the remaining P1/P3 items are consequential or
+product-judgement calls deliberately held for review/owner input rather than shipped blind. The
+repository is in a coherent, fully green state at commit `02d1525`.
