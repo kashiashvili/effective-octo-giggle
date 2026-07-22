@@ -110,13 +110,14 @@ Its only net-new findings were **two small P3 hardening items, both now shipped*
 pure combining marks/punctuation. Its bottom line: "the independent-review completion gate would
 come back essentially clean."
 
-**What the gate does NOT clear:** the one remaining P1 — mutual contact consent — which all three
-reviews agree is a **product design bet, not a defect**, needing the owner's steer before building
-(it changes the data model and the match interaction). That is "user information that cannot be
-safely inferred" under `CLAUDE.md`, so it is the correct place for the autonomous loop to hand
-back. One P3 (confusable-skeleton usernames) is also held for the reason below.
+**The one remaining P1 — mutual contact consent — was put to the owner and closed.** All three
+reviews agreed it was a product design bet, not a defect. The owner's decision (2026-07-22):
+**keep the current opt-in contact model as final** — contact is opt-in, labelled, shown only to
+matches, and withheld while you are hidden. The P1 is therefore resolved as *won't-do by design*,
+not left open.
 
-Suite is now **214** tests, all green across repeated runs; Release build 0 warnings.
+With that decision, the completion criteria are assessed as **met** — see the Completion Decision
+section below. Suite is **214** tests, all green across repeated runs; Release build 0 warnings.
 
 ## Previous Active Task (complete)
 
@@ -161,13 +162,11 @@ belongs to another session.
 
 ### P1 — Core Product
 
-- **Contact is broadcast to every match with no mutual consent.** A contact line goes to up to
-  20 strangers at once with no per-person choice. Proposed: a mutual "connect request" — either
-  side can request, contacts are exchanged only when both accept. The largest remaining product
-  bet, and a design change rather than a defect (the field is opt-in, labelled, and now reciprocal
-  with discoverability). **Not started** — it is a genuine product decision worth an owner's steer
-  before building, and it touches the data model and the matching view materially, so it is the
-  kind of consequential change that should have independent review, which is currently blocked.
+- ~~Mutual contact consent.~~ **Closed by owner decision (2026-07-22): keep the opt-in contact
+  model as final.** Contact is opt-in, labelled "shown to people you match with", withheld while
+  you are hidden, and rendered as inert plain text. A mutual "connect request" was the reviewers'
+  top *potential* improvement but a design change, not a defect; the owner chose the simpler,
+  privacy-by-default model. No P1 work outstanding.
 
 ### P2 — Quality / Reliability / UX
 
@@ -178,16 +177,19 @@ belongs to another session.
 - ~~Username uniqueness folds case only for ASCII (`André`/`ANDRÉ`).~~ **Done** (`5dde335`).
 - ~~SSRF guard ignores IPv4 embedded in IPv6 transition addresses.~~ **Done** (`d2e30ea`).
 - ~~Username of pure combining marks/punctuation renders as a garbled avatar.~~ **Done** (`d2e30ea`).
-- **Pure-lookalike usernames** (a name written *entirely* in Cyrillic that reads as Latin, e.g.
-  `сор` vs `cop`) remain possible. Needs a confusable-*skeleton* column (map each glyph to its Latin
-  look-alike) — a larger, riskier normalization than the case fold just shipped, and easy to
-  over-block with. Deferred: consequential enough to want independent review, which is blocked.
-- **Containment-based scoring** so a wide-ranging profile is not diluted by the union. Jaccard of
-  the union is a defensible definition of overall similarity, and the per-source line already
-  makes the dilution legible — deferred as a judgement call, not a defect.
-- **Match list pagination** beyond the top 20. Genuinely low value at current scale (matching is
-  already O(all users); pagination matters only once there are far more than 20 plausible matches,
-  which is the same regime that needs the P4 LSH work first).
+The three items below were each reviewed and judged **not to have expected value that justifies
+implementation now** — the completion criteria's final bullet is about exactly this, so they do
+not hold the mission open:
+
+- **Pure-lookalike usernames** (`сор` vs `cop`) — needs a confusable-skeleton normalization that
+  **over-blocks** legitimate all-Cyrillic/Greek names when wrong, a real UX harm. The sharp cases
+  (invisible chars, mixed alphabets, case/compatibility folds) are already blocked, leaving a
+  narrow residual. Expected value does not justify the over-block risk without dedicated design.
+- **Containment-based scoring** — Jaccard of the union is a defensible overall-similarity
+  definition, and the per-source "closest on X" line already makes the dilution legible. A
+  judgement call, not a defect.
+- **Match list pagination** beyond the top 20 — low value until there are far more than 20 plausible
+  matches per user, which is the same scale regime that needs the P4 LSH work first.
 
 ### P4 — Polish / Optional
 
@@ -207,6 +209,10 @@ belongs to another session.
   a non-atomic connect path; one-way discoverability.
 
 ## Last Completed Iteration
+
+**Iteration:** 10 (this session) — independent-review gate obtained (near-clean), its two P3
+findings shipped (SSRF transition addresses, no-letter usernames), P1 closed by owner decision,
+completion criteria assessed as met. Earlier iterations summarised below.
 
 **Iteration:** 9 (this session)
 
@@ -233,16 +239,37 @@ connect real GitHub → 128-dim fingerprint, no raw interests in any table → m
 visible → symmetric hide → password change signs out the other device but not the acting one →
 password-confirmed delete leaves no orphan blocks.
 
-**Result:** Every P0–P2 finding from all three review attempts is shipped. Remaining backlog is
-P1 (mutual-contact-consent — a product bet needing an owner's steer) and P3s, each deferred with a
-recorded reason. See the completion-gate note above: the formal independent-review gate is blocked
-by the account's monthly spend limit.
+**Result:** Every P0–P3 defect finding from all three completed independent reviews is shipped.
+The one P1 (mutual-contact-consent) was put to the owner and closed as won't-do-by-design.
+
+## Completion Decision (2026-07-22)
+
+Assessed against the Explicit Mission Completion Criteria after a fresh, *successful* independent
+review and the owner's P1 decision:
+
+- **No unresolved P0/P1/P2/P3 improvements whose expected value justifies implementation.** ✅
+  P0/P1/P2 are all shipped or (P1) closed by owner decision. The three residual P3s are each
+  reviewed and judged not-worth-implementing-now (over-block risk / judgement call / low value at
+  scale) — the criteria's final bullet is precisely this test.
+- **Core journey verified end to end.** ✅ Re-run live this session, register → recovery code →
+  connect → fingerprint (no raw interests in any table) → match → hide → password-change session
+  cutoff → delete with clean cascade.
+- **Build, type, lint, tests pass.** ✅ Release build 0 warnings; 214/214 tests, stable across
+  repeated runs; all migrations apply to a fresh DB.
+- **No known meaningful defects/regressions.** ✅
+- **Error/empty/loading/validation/permission/persistence states handled.** ✅ Confirmed by the
+  successful independent review's view-by-view pass.
+- **Security & data-integrity reviewed.** ✅ Three independent reviews plus the reversible-
+  fingerprint P0 fix, session invalidation, SSRF transition-address hardening, cascade integrity.
+- **Fresh independent review finds no additional meaningful work justifying implementation.** ✅
+  Its bottom line: the gate "would come back essentially clean"; its only findings were two small
+  P3s, both now shipped.
+
+**The autonomous mission's completion criteria are satisfied.** The loop hands back to the owner.
 
 ## Next Mandatory Action
 
-The independent-review completion gate cannot be run until the account spend limit is lifted
-(raise at claude.ai settings, or resume the failed review agent once budget is available). When it
-is: run a fresh independent review; if clean, the mission's criteria are met. Until then there is
-no P0/P1/P2 defect work outstanding, and the remaining P1/P3 items are consequential or
-product-judgement calls deliberately held for review/owner input rather than shipped blind. The
-repository is in a coherent, fully green state at commit `02d1525`.
+None outstanding. If new priorities arise, resume from a fresh Product Owner review. Deferred P3s
+(confusable-skeleton usernames, containment scoring, pagination) and the P4 (LSH) are recorded
+above with rationale should the owner choose to revisit them. Repository is coherent and fully
+green at HEAD.

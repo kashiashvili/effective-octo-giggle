@@ -295,6 +295,12 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-22
+- **Product decision — contact model kept opt-in (owner, 2026-07-22).** Independent review flagged a
+  mutual "connect request" (contacts exchanged only when both accept) as the top *potential*
+  improvement. Weighed as a design change, not a defect: the current model is opt-in, labelled
+  "shown to people you match with", withheld while you are hidden, and inert plain text. The owner
+  chose to keep the simpler privacy-by-default model as final rather than build the consent flow.
+  Recorded so the decision, and the alternative, are not silently revisited.
 - **Two hardening gaps from an independent review** — (1) the SSRF guard judged an IPv6 *transition*
   address (6to4 `2002::/16`, NAT64 `64:ff9b::/96`, Teredo `2001:0::/32`) by its outer public prefix,
   so a wrapped `127.0.0.1` or `169.254.169.254` slipped past on a host with the matching egress path;
