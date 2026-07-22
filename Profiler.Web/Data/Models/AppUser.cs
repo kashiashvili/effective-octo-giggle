@@ -39,5 +39,12 @@ public class AppUser
     /// </summary>
     public DateTime SessionsValidFrom { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// When the user last opened their matches. Null until the first visit. Used only to tell them
+    /// how many matches have refreshed since — a reason to come back, without collecting an email to
+    /// notify them out of band.
+    /// </summary>
+    public DateTime? LastMatchesViewedAt { get; set; }
+
     public FingerprintRecord? Fingerprint { get; set; }
 }

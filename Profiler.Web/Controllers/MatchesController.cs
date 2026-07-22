@@ -130,11 +130,25 @@ public class MatchesController : Controller
         // Lets the empty state distinguish "you are the only user" from "others exist, none close yet".
         ViewBag.OthersExist = matcher.CandidateCount(userId.ToString()) > 0;
 
+        var me = allFps.FirstOrDefault(f => f.UserId == userId)?.User;
+
         // Reaching out is the point of the whole product, and it only works if at least one side
         // published a way to be reached. Someone who left their own contact blank sees a list of
         // people who cannot answer them, with nothing explaining why.
-        ViewBag.HasOwnContact = !string.IsNullOrWhiteSpace(
-            allFps.FirstOrDefault(f => f.UserId == userId)?.User.Contact);
+        ViewBag.HasOwnContact = !string.IsNullOrWhiteSpace(me?.Contact);
+
+        // A reason to come back: how many of these matches have refreshed their interests since the
+        // last time this person looked. Suppressed on the very first visit (nothing to compare to)
+        // and when there is nothing new. The read updates the marker, so "since last visit" always
+        // means since the previous load.
+        if (me != null)
+        {
+            if (me.LastMatchesViewedAt is { } since)
+                ViewBag.NewSinceLastVisit = viewModels.Count(m => m.UpdatedAt > since);
+            me.LastMatchesViewedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
+
         return View(viewModels);
     }
 

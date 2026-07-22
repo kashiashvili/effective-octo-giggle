@@ -115,6 +115,9 @@ and the two CSV uploads need no account credentials.
   legible; a test pins the effect.
 - Empty state distinguishes "you're the first user" from "others exist but none are close
   enough yet".
+- **Interest lens on connect:** immediately after a source is connected, a themed, count-only
+  summary of what was found ("Programming & tech 5, Music 3") is shown once, giving a brand-new user
+  standalone value before anyone has matched them. Themes/counts only — raw features are discarded.
 
 ### Public profile (opt-in)
 - Optional **bio** (≤ 280 chars) and **contact** line (≤ 120 chars) shown to people
@@ -295,6 +298,13 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-22
+- **Onboarding: a "what we found" interest lens** — the product's biggest weakness was cold-start,
+  not a defect: a new user connected, hit an empty match list, and had no reason to stay. The moment
+  the fingerprint is built, the raw features are now summarised into a themed count-only breakdown
+  ("Programming & tech 5, Music 3") and shown once on the matches page, so even a first user with
+  zero matches sees something about themselves — and the privacy promise becomes concrete (here is
+  what we saw, now discarded). Only theme names and counts travel (TempData); the raw features are
+  never stored and never placed in the cookie. `InterestLens`, 6 unit tests, verified live.
 - **Product decision — contact model kept opt-in (owner, 2026-07-22).** Independent review flagged a
   mutual "connect request" (contacts exchanged only when both accept) as the top *potential*
   improvement. Weighed as a design change, not a defect: the current model is opt-in, labelled

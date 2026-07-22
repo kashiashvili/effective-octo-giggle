@@ -7,6 +7,7 @@
     bool hasOwnContact = ViewBag.HasOwnContact ?? true;
     var lens = ViewBag.InterestLens as List<Profiler.Web.Profile.InterestTheme>;
     int lensTotal = ViewBag.InterestLensTotal ?? 0;
+    int newSinceLastVisit = ViewBag.NewSinceLastVisit ?? 0;
 }
 
 <div class="page-wrap">
@@ -15,6 +16,14 @@
             <h1>🤝 Your Top Matches</h1>
             <p class="matches-meta">People whose interests overlap with yours, estimated privately from MinHash fingerprints</p>
         </div>
+
+        @if (newSinceLastVisit > 0)
+        {
+            <div class="alert alert-info">
+                <span class="alert-icon">✨</span>
+                <span><strong>@newSinceLastVisit</strong> of your matches @(newSinceLastVisit == 1 ? "has" : "have") refreshed their interests since your last visit.</span>
+            </div>
+        }
 
         @if (lens != null && lens.Any())
         {
