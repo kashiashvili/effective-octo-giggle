@@ -21,6 +21,12 @@ public class AppDbContext : DbContext
             // NOCASE collation makes "=" comparisons and the unique index case-insensitive.
             entity.Property(u => u.Username).UseCollation("NOCASE");
             entity.HasIndex(u => u.Username).IsUnique();
+
+            // Non-unique on purpose. NOCASE already hard-blocks the ASCII-identical case; this index
+            // just makes the registration-time lookalike check (which folds beyond ASCII) an indexed
+            // lookup rather than a scan. It is not unique because a UNIQUE constraint would fail to
+            // create on any existing database that already holds an accidental lookalike pair.
+            entity.HasIndex(u => u.NormalizedUsername);
         });
 
         modelBuilder.Entity<FingerprintRecord>(entity =>

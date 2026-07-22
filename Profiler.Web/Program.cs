@@ -230,6 +230,18 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 
+    // Backfill the normalized username for rows that predate the column. The migration can only
+    // default it to "" (SQLite cannot compute a Unicode compatibility-fold in SQL), so the real
+    // value is computed here once. A valid username is at least three characters, so "" reliably
+    // means "not yet backfilled" rather than a legitimate empty value.
+    var unbackfilled = db.Users.Where(u => u.NormalizedUsername == "" && u.Username != "").ToList();
+    if (unbackfilled.Count > 0)
+    {
+        foreach (var u in unbackfilled)
+            u.NormalizedUsername = Profiler.Web.Security.TextPolicy.NormalizeForUniqueness(u.Username);
+        db.SaveChanges();
+    }
+
     // Signatures built under a different pepper belong to a different hash family and can no longer
     // be compared with anything. Left in place they would not error, they would simply match nobody
     // against anybody, forever and silently. Clearing them puts everyone back to "connect a source",

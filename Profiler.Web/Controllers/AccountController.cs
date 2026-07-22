@@ -61,10 +61,23 @@ public class AccountController : Controller
             return View(vm);
         }
 
+        // Beyond the ASCII case NOCASE already covers: reject a name that reduces to the same thing
+        // as an existing one once case and compatibility differences are folded, so a stranger can't
+        // register a lookalike of someone's name. A concurrent double-insert here is a narrow race
+        // (the NOCASE unique index still blocks the ASCII-identical case); the non-unique index just
+        // keeps this lookup cheap.
+        var normalized = Security.TextPolicy.NormalizeForUniqueness(username);
+        if (await _db.Users.AnyAsync(u => u.NormalizedUsername == normalized))
+        {
+            ModelState.AddModelError(nameof(vm.Username), "That username is too close to an existing one. Please choose another.");
+            return View(vm);
+        }
+
         var recoveryCode = RecoveryCode.Generate();
         var user = new AppUser
         {
             Username = username,
+            NormalizedUsername = normalized,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(vm.Password),
             RecoveryCodeHash = RecoveryCode.Hash(recoveryCode)
         };

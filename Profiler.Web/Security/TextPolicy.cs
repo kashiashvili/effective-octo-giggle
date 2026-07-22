@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 
 namespace Profiler.Web.Security;
 
@@ -78,6 +79,15 @@ public static class TextPolicy
         }
         return false;
     }
+
+    /// <summary>
+    /// The form two usernames are compared in to decide whether they are "the same person": trimmed,
+    /// compatibility-folded (so ligatures and full-width variants collapse) and lower-cased (so case
+    /// folds beyond the ASCII that SQLite's NOCASE covers). Accents are deliberately kept — "André"
+    /// and "Andre" are different names — this only removes differences that are not really there.
+    /// </summary>
+    public static string NormalizeForUniqueness(string? username) =>
+        (username ?? "").Trim().Normalize(NormalizationForm.FormKC).ToLowerInvariant();
 
     /// <summary>Returns an error message if the username is unacceptable, or null if it is fine.</summary>
     public static string? ValidateUsername(string? username)

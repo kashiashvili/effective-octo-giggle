@@ -4,6 +4,15 @@ public class AppUser
 {
     public int Id { get; set; }
     public string Username { get; set; } = "";
+
+    /// <summary>
+    /// The username reduced to a comparison form (compatibility-folded and lower-cased), so two names
+    /// that read as the same person cannot both register. SQLite's NOCASE index only folds ASCII, so
+    /// on its own it would let "André" and "ANDRÉ" coexist. The display casing lives in
+    /// <see cref="Username"/>; this is only ever compared, never shown.
+    /// </summary>
+    public string NormalizedUsername { get; set; } = "";
+
     public string PasswordHash { get; set; } = "";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
