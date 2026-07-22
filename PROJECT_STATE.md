@@ -91,17 +91,30 @@ O(all users) in memory (needs LSH banding past a few thousand users).
 
 ## Current Phase
 
-Developer — loop **reopened by owner (2026-07-22)** to pursue product growth beyond the
-defect-clean state. Now working the cold-start problem, the product's biggest weakness against
-its vision (a new user connects, finds no matches, and never returns).
+Product Owner review — the reopened **growth loop shipped its top three cold-start fixes**; further
+ideas are marginal/scale-gated (see backlog). Handed back to the owner for the next priority.
+
+Loop was **reopened by owner (2026-07-22)** to pursue product growth beyond the defect-clean state.
+It targeted the cold-start problem — the product's biggest weakness against its vision (a new user
+connects, finds no matches, and never returns).
 
 **Growth backlog (fresh Product Owner review, ranked by value to the target user):**
 
 - ~~**Immediate value on connect** — an interest lens ("here's what we found").~~ **Done** (`d7f16ae`).
 - ~~**A reason to return** — "N matches refreshed since your last visit".~~ **Done** (`db5bbb8`).
-- **Grow the network** — a frictionless invite affordance on the empty-matches state and dashboard.
-  The empty state already *says* "invite friends" but provides no mechanism. **Next / in progress.**
-- (Lower) Richer onboarding guidance; match-quality signals (mostly shipped: overlap, freshness).
+- ~~**Grow the network** — an invite link on the empty-matches state.~~ **Done** (`e73aa60`).
+
+The three cold-start levers — immediate value, a reason to return, a way to grow the network — are
+all shipped. **Remaining growth ideas are marginal or scale-gated pre-network** and are recorded
+below for the owner rather than built blind:
+- *Referral tracking / credited invites* — more data + complexity; little value until there is a
+  real user base to attribute.
+- *Richer onboarding guidance, more match-quality signals* — the high-value ones (per-source
+  overlap, freshness, no-contact nudge, thin-fingerprint nudge) already ship; further additions are
+  polish.
+- *Match-list pagination, LSH banding (P4)* — only matter far past current scale.
+
+Diminishing returns reached for this loop; handing back to the owner for the next priority.
 
 ## Prior Phase — completion gate (from the pre-reopen run)
 

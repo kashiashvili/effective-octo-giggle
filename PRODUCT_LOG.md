@@ -298,6 +298,12 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-22
+- **Growth: an invite link on the empty-matches state** — the empty state told users to "invite
+  friends" but gave no mechanism. It now shows a shareable sign-up link (built from the request, so
+  correct behind a proxy) with a copy-to-clipboard button, progressive-enhancement (the link is a
+  visible selectable field without JS). No referral tracking, no new data — "we never see who you
+  invited" is literally true. Closes the third cold-start lever (grow the network); the first two
+  (immediate value, a reason to return) shipped alongside.
 - **Retention: "new since your last visit"** — the product collects no email, so it can't notify
   anyone out of band; the only reason to return has to arrive when they do. The matches page now
   records when you last looked and, next visit, tells you how many matches have refreshed their
