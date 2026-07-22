@@ -140,7 +140,7 @@ Baseline command set:
 
 ```bash
 dotnet build            # expect 0 warnings, 0 errors
-dotnet test             # expect 194/194 passing, ~6s, fully offline
+dotnet test             # expect 203/203 passing, ~6s, fully offline
 dotnet run --project Profiler.Web   # http://localhost:5000
 ```
 
@@ -169,16 +169,16 @@ belongs to another session.
 
 - None open. (Connector cancellation shipped — commit `ed42817`.)
 
-### P3 — Enhancement (all reviewed; each deferred with a reason)
+### P3 — Enhancement (all reviewed)
 
-- **Username uniqueness folds case only for ASCII** (SQLite `NOCASE`), so `André` and `ANDRÉ` are
-  two accounts that read as one. The correct fix is a normalised-username column with a unique
-  index and a backfill — a **data migration**, and shipping a consequential data-integrity
-  migration while independent review is unavailable is exactly what should wait for a review. Low
-  severity meanwhile (both are real names; invisible-character and mixed-alphabet impersonation,
-  the sharp cases, are already blocked). Take together with the confusable-skeleton item below.
+- ~~Username uniqueness folds case only for ASCII (`André`/`ANDRÉ`).~~ **Done** (commit `5dde335`) —
+  a `NormalizedUsername` column with a non-unique index and a startup backfill, checked at
+  registration. Shipped inline because the safe design (additive column, non-unique index) carries
+  none of the migration-collision risk that a unique index would.
 - **Pure-lookalike usernames** (a name written *entirely* in Cyrillic that reads as Latin, e.g.
-  `сор` vs `cop`) remain possible. Same normalised/skeleton column, same reason to defer.
+  `сор` vs `cop`) remain possible. Needs a confusable-*skeleton* column (map each glyph to its Latin
+  look-alike) — a larger, riskier normalization than the case fold just shipped, and easy to
+  over-block with. Deferred: consequential enough to want independent review, which is blocked.
 - **Containment-based scoring** so a wide-ranging profile is not diluted by the union. Jaccard of
   the union is a defensible definition of overall similarity, and the per-source line already
   makes the dilution legible — deferred as a judgement call, not a defect.

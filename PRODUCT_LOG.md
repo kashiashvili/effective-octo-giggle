@@ -11,7 +11,7 @@
 > revise the relevant section above it. Keep it truthful and current. This is not
 > optional; it is how the owner stays in control.
 
-_Last updated: 2026-07-21_
+_Last updated: 2026-07-22_
 
 ---
 
@@ -151,8 +151,9 @@ and the two CSV uploads need no account credentials.
 ### Security hardening
 - Passwords hashed with **BCrypt**, screened against common passwords / username containment /
   near-single-character strings. Usernames, bios and contact lines reject invisible and
-  bidirectional-override characters, and a **username must use a single writing system** so a
-  Cyrillic lookalike cannot shadow an existing Latin name. **Antiforgery** tokens on every POST (asserted by a reflection test).
+  bidirectional-override characters, a **username must use a single writing system** so a Cyrillic
+  lookalike cannot shadow an existing Latin name, and a username that folds to the same form as an
+  existing one (case + Unicode compatibility, beyond the ASCII SQLite's NOCASE covers) is refused. **Antiforgery** tokens on every POST (asserted by a reflection test).
 - **Login rate limiting** (5 attempts/min per IP, configurable).
 - **15s timeout** on all connector HTTP calls; **10 MB cap** per CSV upload, plus a 25 MB
   `RequestSizeLimit` on the connect endpoint so oversized bodies are rejected before buffering.
@@ -198,7 +199,7 @@ to `MatchViewModel` (adding the matched user's bio/contact and shared source typ
 
 | Entity | Key fields | Notes |
 |--------|-----------|-------|
-| `AppUser` | Id, Username, PasswordHash, CreatedAt, Bio?, Contact?, IsDiscoverable, RecoveryCodeHash?, SessionsValidFrom | Username is case-insensitive unique (NOCASE); Bio/Contact are the opt-in public profile |
+| `AppUser` | Id, Username, NormalizedUsername, PasswordHash, CreatedAt, Bio?, Contact?, IsDiscoverable, RecoveryCodeHash?, SessionsValidFrom | `NormalizedUsername` is the compatibility-folded, lower-cased comparison form (non-unique index); display casing stays in `Username` | Username is case-insensitive unique (NOCASE); Bio/Contact are the opt-in public profile |
 | `FingerprintRecord` | UserId (PK), FingerprintJson, SourcesJson, UpdatedAt | The **combined** (truncated) signature used for matching |
 | `SourceFingerprintRecord` | Id, UserId, Source, RawSignatureJson, FeatureCount, UpdatedAt | One per (user, source); **raw 64-bit** signature; unique index on (UserId, Source) |
 | `FingerprintScheme` | Id, Verifier, UpdatedAt | One row. Records which pepper the stored signatures were built under, so a rotation is noticed instead of silently breaking every comparison |
@@ -248,7 +249,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 183 tests, fully offline
+dotnet test                           # 203 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -291,6 +292,19 @@ dotnet test                           # 183 tests, fully offline
 ## 11. Changelog (newest first)
 
 Each entry: what changed and why it mattered.
+
+### 2026-07-22
+- **A username that reads as an existing one is refused** — SQLite's `NOCASE` index folds only ASCII,
+  so `André` and `ANDRÉ` could both register and read as the same person on a match card. A
+  `NormalizedUsername` column (compatibility-folded and lower-cased, accents kept — `André` and
+  `Andre` stay distinct) is stored beside the display name and checked at registration. The column is
+  additive with a **non-unique** index (a `UNIQUE` one would fail to create on any existing database
+  already holding an accidental lookalike pair), and pre-existing rows are backfilled once at startup
+  since SQLite cannot compute a Unicode fold in SQL. Residual: a narrow concurrent-double-insert race
+  on the accented case; the ASCII-identical case stays hard-blocked by the `NOCASE` unique index.
+- **Two security-branch coverage gaps closed** — the pepper-rotation purge (a data-destroying startup
+  path, previously only manually checked) and the session cutoff's fail-closed branch (a missing or
+  unreadable issue-time claim must reject) both have direct tests now.
 
 ### 2026-07-21
 - **Outbound work is now aborted rather than abandoned** — the 30s budget could only stop *waiting*,
