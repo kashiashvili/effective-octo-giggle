@@ -20,4 +20,27 @@
       }
     }, 0);
   });
+
+  // Copy-to-clipboard for the invite link. Without JS the link stays visible and selectable, so
+  // nothing is lost — this just saves a manual select-and-copy.
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-copy]");
+    if (!button) return;
+
+    var text = button.getAttribute("data-copy");
+    var restore = function () {
+      button.textContent = "Copy link";
+    };
+    var done = function () {
+      button.textContent = "Copied ✓";
+      window.setTimeout(restore, 1500);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, restore);
+    } else {
+      var input = button.parentElement.querySelector(".invite-input");
+      if (input) { input.select(); try { document.execCommand("copy"); done(); } catch (e) { restore(); } }
+    }
+  });
 })();

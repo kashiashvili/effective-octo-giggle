@@ -696,6 +696,16 @@ footer {
   color: var(--gray-500);
   overflow-wrap: anywhere;
 }
+.invite-box {
+  max-width: 460px;
+  margin: 1.25rem auto 0;
+  text-align: left;
+}
+.invite-label { display: block; font-size: .8rem; font-weight: 600; color: var(--gray-600); margin-bottom: .35rem; }
+.invite-row { display: flex; gap: .5rem; }
+.invite-input { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; }
+.invite-box small { display: block; margin-top: .4rem; }
+
 .lens-card {
   background: var(--white);
   border: 1px solid var(--gray-100);

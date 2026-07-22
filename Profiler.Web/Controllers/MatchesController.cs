@@ -36,6 +36,10 @@ public class MatchesController : Controller
                 ? themes.Sum(t => t.Count) : 0;
         }
 
+        // Where a friend would sign up. Built from the current request so it is correct behind a
+        // proxy (forwarded headers, when configured, have already rewritten scheme/host by here).
+        ViewBag.InviteUrl = $"{Request.Scheme}://{Request.Host}/account/register";
+
         var myFp = await _db.Fingerprints.FirstOrDefaultAsync(f => f.UserId == userId);
         if (myFp == null)
         {

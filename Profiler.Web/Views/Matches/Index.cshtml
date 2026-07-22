@@ -93,8 +93,18 @@
                 else
                 {
                     <h4>You're the first one here</h4>
-                    <p>No one else has a fingerprint yet. Invite friends so you have people to match with!</p>
+                    <p>No one else has a fingerprint yet. Invite people who'd want to match with you — Profiler only works once your people are here too.</p>
                 }
+
+                <div class="invite-box">
+                    <label class="invite-label">Share this link</label>
+                    <div class="invite-row">
+                        <input type="text" class="form-control invite-input" value="@ViewBag.InviteUrl" readonly aria-label="Invite link" />
+                        <button type="button" class="btn btn-primary" data-copy="@ViewBag.InviteUrl" data-no-busy>Copy link</button>
+                    </div>
+                    <small class="text-muted">Anyone with the link can join. We never see who you invited.</small>
+                </div>
+
                 <p class="mt-4"><a href="/sources/connect" class="btn btn-outline">Add more sources</a></p>
             </div>
         }
