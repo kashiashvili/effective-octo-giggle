@@ -298,6 +298,11 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-22
+- **Retention: "new since your last visit"** — the product collects no email, so it can't notify
+  anyone out of band; the only reason to return has to arrive when they do. The matches page now
+  records when you last looked and, next visit, tells you how many matches have refreshed their
+  interests since — suppressed on the first visit and when nothing is new. Just a per-user timestamp
+  (`LastMatchesViewedAt`), no new personal data. Two integration tests.
 - **Onboarding: a "what we found" interest lens** — the product's biggest weakness was cold-start,
   not a defect: a new user connected, hit an empty match list, and had no reason to stay. The moment
   the fingerprint is built, the raw features are now summarised into a themed count-only breakdown
