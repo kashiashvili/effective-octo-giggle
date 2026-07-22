@@ -97,6 +97,12 @@ public static class TextPolicy
         if (FindDeceptiveCharacter(username, allowNewlines: false) is { } problem)
             return $"Usernames {problem}.";
 
+        // A name has to have something a stranger can actually read. Length alone is not enough:
+        // three combining marks or three pieces of punctuation clear the minimum yet render as an
+        // empty or garbled avatar, which is no identity at all.
+        if (!username.Any(char.IsLetterOrDigit))
+            return "Usernames need at least one letter or number.";
+
         if (MixesScripts(username))
             return "Usernames can't mix alphabets — pick one writing system, so nobody can register a lookalike of your name.";
 
