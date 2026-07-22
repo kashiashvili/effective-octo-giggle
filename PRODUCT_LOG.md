@@ -162,7 +162,8 @@ and the two CSV uploads need no account credentials.
 - **Persistent Data Protection key ring** so auth cookies survive restarts/redeploys.
 - **SSRF protection** on user-supplied RSS feed URLs: hosts resolving to loopback, private,
   link-local (incl. cloud metadata), CGNAT, unique-local, multicast or reserved addresses are
-  refused before any request is made (`SsrfGuard`, fail-closed). RSS uses a dedicated client with
+  refused before any request is made (`SsrfGuard`, fail-closed) — including internal IPv4 hidden
+  inside 6to4/NAT64/Teredo IPv6 transition addresses. RSS uses a dedicated client with
   auto-redirect disabled and follows redirects manually (max 3), re-validating each hop, and its
   connections are **pinned to the addresses just validated** (`SocketsHttpHandler.ConnectCallback`),
   which closes the DNS-rebinding window between checking a name and connecting to it.
@@ -249,7 +250,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 203 tests, fully offline
+dotnet test                           # 214 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -294,6 +295,13 @@ dotnet test                           # 203 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-22
+- **Two hardening gaps from an independent review** — (1) the SSRF guard judged an IPv6 *transition*
+  address (6to4 `2002::/16`, NAT64 `64:ff9b::/96`, Teredo `2001:0::/32`) by its outer public prefix,
+  so a wrapped `127.0.0.1` or `169.254.169.254` slipped past on a host with the matching egress path;
+  the embedded IPv4 is now extracted and re-checked, while a transition address to a genuinely public
+  host still passes. (2) A username of pure combining marks or punctuation cleared the length minimum
+  but rendered as an empty/garbled avatar — a name now needs at least one letter or digit. Both
+  covered by tests with positive controls.
 - **A username that reads as an existing one is refused** — SQLite's `NOCASE` index folds only ASCII,
   so `André` and `ANDRÉ` could both register and read as the same person on a match card. A
   `NormalizedUsername` column (compatibility-folded and lower-cased, accents kept — `André` and

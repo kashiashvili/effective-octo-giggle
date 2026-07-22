@@ -91,32 +91,32 @@ O(all users) in memory (needs LSH banding past a few thousand users).
 
 ## Current Phase
 
-Product Owner review. Completion gate (a fresh *independent* review) is blocked — see below.
+Product Owner review — the independent-review completion gate **ran and came back essentially
+clean**. See below.
 
-## Completion Gate Status — blocked by an external resource limit
+## Completion Gate Status — independent review obtained; near-clean
 
-The mission's formal completion criterion is "a fresh independent product review finds no
-additional meaningful work." Two independent (subagent) reviews were run this run and each
-found a real defect the previous missed — the second a **P0** (reversible fingerprints). All
-their findings are shipped. A **third** independent review was commissioned as the gate and
-**failed to run: the account hit its monthly spend limit**, which also prevents launching
-further review subagents. Per `CLAUDE.md`, an external resource limit preventing further work
-is a legitimate stopping condition.
+The mission's formal criterion is "a fresh independent product review finds no additional
+meaningful work." **Three independent (subagent) reviews were completed this run.** The first
+two each found a real defect the previous missed — the second a **P0** (reversible fingerprints);
+all shipped. A fourth attempt (the "third review") failed once on a transient monthly-spend-limit
+error, then a **retry succeeded**.
 
-In place of the blocked independent review, an **inline** review of the newest, least-scrutinised
-code was performed (pepper + scheme purge, session cutoff, cancellation threading, reciprocal
-discoverability, the connect transaction). It found no P0/P1/P2. This is *not* a substitute for
-an independent review — it is the same author checking their own work — so the gate is recorded
-as **blocked, not satisfied**.
+**The successful third review found no P0/P1/P2 defect or regression** in the code — it verified
+the newest work against the code (not the changelog), confirmed every empty/error/permission/
+loading state in the views is handled, and confirmed the crown-jewel privacy test is non-vacuous.
+Its only net-new findings were **two small P3 hardening items, both now shipped** (commit
+`d2e30ea`): the SSRF guard missing IPv4 embedded in IPv6 transition addresses, and usernames of
+pure combining marks/punctuation. Its bottom line: "the independent-review completion gate would
+come back essentially clean."
 
-The inline pass did surface two genuine **test-coverage** gaps in the recent security work — both
-now closed (commits `280cdbb`, `f39be5b`): the pepper-rotation purge (a *data-destroying* startup
-path, previously verified only by one manual boot) and the session cutoff's fail-closed branch (a
-missing/unreadable issue-time claim must reject).
+**What the gate does NOT clear:** the one remaining P1 — mutual contact consent — which all three
+reviews agree is a **product design bet, not a defect**, needing the owner's steer before building
+(it changes the data model and the match interaction). That is "user information that cannot be
+safely inferred" under `CLAUDE.md`, so it is the correct place for the autonomous loop to hand
+back. One P3 (confusable-skeleton usernames) is also held for the reason below.
 
-While the gate stayed blocked, the safe P3 work that does **not** need a data migration or a
-product decision was cleared: the username-lookalike fold (`5dde335`). What remains is genuinely
-review-or-owner-gated (see backlog). Suite is now **203** tests, all green across repeated runs.
+Suite is now **214** tests, all green across repeated runs; Release build 0 warnings.
 
 ## Previous Active Task (complete)
 
@@ -144,7 +144,7 @@ Baseline command set:
 
 ```bash
 dotnet build            # expect 0 warnings, 0 errors
-dotnet test             # expect 203/203 passing, ~6s, fully offline
+dotnet test             # expect 214/214 passing, ~6s, fully offline
 dotnet run --project Profiler.Web   # http://localhost:5000
 ```
 
@@ -175,10 +175,9 @@ belongs to another session.
 
 ### P3 — Enhancement (all reviewed)
 
-- ~~Username uniqueness folds case only for ASCII (`André`/`ANDRÉ`).~~ **Done** (commit `5dde335`) —
-  a `NormalizedUsername` column with a non-unique index and a startup backfill, checked at
-  registration. Shipped inline because the safe design (additive column, non-unique index) carries
-  none of the migration-collision risk that a unique index would.
+- ~~Username uniqueness folds case only for ASCII (`André`/`ANDRÉ`).~~ **Done** (`5dde335`).
+- ~~SSRF guard ignores IPv4 embedded in IPv6 transition addresses.~~ **Done** (`d2e30ea`).
+- ~~Username of pure combining marks/punctuation renders as a garbled avatar.~~ **Done** (`d2e30ea`).
 - **Pure-lookalike usernames** (a name written *entirely* in Cyrillic that reads as Latin, e.g.
   `сор` vs `cop`) remain possible. Needs a confusable-*skeleton* column (map each glyph to its Latin
   look-alike) — a larger, riskier normalization than the case fold just shipped, and easy to
