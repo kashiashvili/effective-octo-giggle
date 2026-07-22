@@ -27,6 +27,15 @@ public class MatchesController : Controller
     {
         var userId = User.GetUserId();
 
+        // A themed summary of what a just-connected source contained, carried once via TempData.
+        // Surfaced here so a brand-new user with no matches yet still lands on something about them.
+        if (TempData["InterestLens"] is string lensJson)
+        {
+            ViewBag.InterestLens = JsonSerializer.Deserialize<List<InterestTheme>>(lensJson);
+            ViewBag.InterestLensTotal = ViewBag.InterestLens is List<InterestTheme> themes
+                ? themes.Sum(t => t.Count) : 0;
+        }
+
         var myFp = await _db.Fingerprints.FirstOrDefaultAsync(f => f.UserId == userId);
         if (myFp == null)
         {

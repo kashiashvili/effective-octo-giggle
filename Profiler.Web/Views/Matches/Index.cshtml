@@ -5,6 +5,8 @@
     bool othersExist = ViewBag.OthersExist ?? false;
     bool isDiscoverable = ViewBag.IsDiscoverable ?? true;
     bool hasOwnContact = ViewBag.HasOwnContact ?? true;
+    var lens = ViewBag.InterestLens as List<Profiler.Web.Profile.InterestTheme>;
+    int lensTotal = ViewBag.InterestLensTotal ?? 0;
 }
 
 <div class="page-wrap">
@@ -13,6 +15,34 @@
             <h1>🤝 Your Top Matches</h1>
             <p class="matches-meta">People whose interests overlap with yours, estimated privately from MinHash fingerprints</p>
         </div>
+
+        @if (lens != null && lens.Any())
+        {
+            <div class="lens-card">
+                <div class="lens-head">
+                    <span class="lens-icon">✨</span>
+                    <div>
+                        <strong>Here's what we found in your sources</strong>
+                        <span class="lens-sub">@lensTotal signal@(lensTotal == 1 ? "" : "s") — then discarded. Only your anonymous fingerprint is kept.</span>
+                    </div>
+                </div>
+                <div class="lens-themes">
+                    @{ var lensMax = lens.Max(t => t.Count); }
+                    @foreach (var theme in lens)
+                    {
+                        <div class="lens-theme">
+                            <div class="lens-theme-row">
+                                <span class="lens-theme-name">@theme.Name</span>
+                                <span class="lens-theme-count">@theme.Count</span>
+                            </div>
+                            <div class="lens-bar-track">
+                                <div class="lens-bar" style="width: @(Math.Max(6, theme.Count * 100 / lensMax))%"></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
 
         @if (!noFingerprint && !isDiscoverable)
         {

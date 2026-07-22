@@ -215,6 +215,13 @@ public class SourcesController : Controller
             TempData["Error"] = "Some sources could not be fetched and were left out — " +
                 string.Join("; ", result.Failures.Select(f => $"{f.Source}: {f.Message}"));
 
+        // A themed summary of what was just found, so the person sees something the instant they
+        // connect — even before anyone has matched them. Only theme names and counts are carried, in
+        // TempData (a cookie), and shown once; the raw features themselves are discarded with the
+        // rest of this request, never stored, and never placed in the cookie.
+        var lens = InterestLens.Summarize(result.Features);
+        TempData["InterestLens"] = JsonSerializer.Serialize(lens);
+
         return RedirectToAction("Index", "Matches");
     }
 
