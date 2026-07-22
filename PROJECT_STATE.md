@@ -109,6 +109,11 @@ discoverability, the connect transaction). It found no P0/P1/P2. This is *not* a
 an independent review — it is the same author checking their own work — so the gate is recorded
 as **blocked, not satisfied**.
 
+The inline pass did surface two genuine **test-coverage** gaps in the recent security work — both
+now closed (commits `280cdbb`, `f39be5b`): the pepper-rotation purge (a *data-destroying* startup
+path, previously verified only by one manual boot) and the session cutoff's fail-closed branch (a
+missing/unreadable issue-time claim must reject). Suite is now **194** tests.
+
 ## Previous Active Task (complete)
 
 **Account recovery without email.** A forgotten password permanently locks the account *and*
@@ -135,7 +140,7 @@ Baseline command set:
 
 ```bash
 dotnet build            # expect 0 warnings, 0 errors
-dotnet test             # expect 185/185 passing, ~6s, fully offline
+dotnet test             # expect 194/194 passing, ~6s, fully offline
 dotnet run --project Profiler.Web   # http://localhost:5000
 ```
 
