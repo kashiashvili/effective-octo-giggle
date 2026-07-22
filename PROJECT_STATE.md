@@ -112,7 +112,11 @@ as **blocked, not satisfied**.
 The inline pass did surface two genuine **test-coverage** gaps in the recent security work — both
 now closed (commits `280cdbb`, `f39be5b`): the pepper-rotation purge (a *data-destroying* startup
 path, previously verified only by one manual boot) and the session cutoff's fail-closed branch (a
-missing/unreadable issue-time claim must reject). Suite is now **194** tests.
+missing/unreadable issue-time claim must reject).
+
+While the gate stayed blocked, the safe P3 work that does **not** need a data migration or a
+product decision was cleared: the username-lookalike fold (`5dde335`). What remains is genuinely
+review-or-owner-gated (see backlog). Suite is now **203** tests, all green across repeated runs.
 
 ## Previous Active Task (complete)
 
