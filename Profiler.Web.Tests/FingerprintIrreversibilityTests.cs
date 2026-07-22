@@ -61,6 +61,35 @@ public class FingerprintIrreversibilityTests
     /// The attack itself has to be shown to work, or the assertion above could pass for the wrong
     /// reason — a typo in the dictionary would look identical to real protection.
     /// </summary>
+    /// <summary>
+    /// The scheme verifier is what the app checks on startup to notice a pepper change and clear the
+    /// signatures that are now meaningless. It has to move when the secret moves, and stay put
+    /// otherwise, or the safeguard either never fires or fires on every boot. And it must not be the
+    /// secret in disguise.
+    /// </summary>
+    [Fact]
+    public void SchemeVerifier_TracksThePepper_WithoutBeingIt()
+    {
+        var a1 = new FingerprintGenerator(pepper: "pepper-one").SchemeVerifier;
+        var a2 = new FingerprintGenerator(pepper: "pepper-one").SchemeVerifier;
+        var b = new FingerprintGenerator(pepper: "pepper-two").SchemeVerifier;
+
+        Assert.Equal(a1, a2);                        // same secret, same verifier — no boot-time churn
+        Assert.NotEqual(a1, b);                       // different secret, different verifier
+        Assert.DoesNotContain("pepper-one", a1);      // and it does not carry the secret
+    }
+
+    [Fact]
+    public void SchemeVerifier_AlsoMovesWithTheSignatureWidth()
+    {
+        // A different number of hashes is a different scheme too: signatures of one width cannot be
+        // compared with another, so a width change must invalidate the stored ones just as a pepper
+        // change does.
+        Assert.NotEqual(
+            new FingerprintGenerator(numHashes: 128, pepper: "p").SchemeVerifier,
+            new FingerprintGenerator(numHashes: 64, pepper: "p").SchemeVerifier);
+    }
+
     [Fact]
     public void TheAttackReallyWorks_WhenTheAttackerKnowsTheSecret()
     {
