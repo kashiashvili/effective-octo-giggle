@@ -76,8 +76,8 @@ public class ValuesQuestionnaireTests
     }
 
     [Theory]
-    [InlineData(2, 2, "Similar outlook")]
-    [InlineData(2, 1, "Similar outlook")]
+    [InlineData(2, 2, "Similar outlook")]              // exact match only
+    [InlineData(2, 1, "Some overlap in outlook")]      // one step apart is no longer "similar"
     [InlineData(2, 0, "Some overlap in outlook")]
     [InlineData(2, -1, "Different outlook")]
     [InlineData(-2, 2, "Different outlook")]

@@ -68,16 +68,20 @@ public static class ValuesQuestionnaire
         a is null || b is null ? int.MaxValue : Math.Abs(a.Value - b.Value);
 
     /// <summary>
-    /// Coarse, wordy alignment between two buckets — never a number. Distance 0–1 reads as close,
-    /// 2 as partial, 3–4 as far apart. Null if either side has no values signal.
+    /// Coarse, wordy alignment between two buckets — never a number. Thresholds are calibrated so the
+    /// label actually discriminates: averaging four items is a central-tendency machine (see
+    /// ValuesSignalResolutionTests — 95% of profiles land in −1..+1), so a generous "within one"
+    /// rule labelled ~78% of random pairs "similar", saying almost nothing. "Similar" now means an
+    /// exact match; one step apart is "some overlap"; further is "different". Null if either side has
+    /// no values signal.
     /// </summary>
     public static string? AlignmentLabel(int? a, int? b)
     {
         if (a is null || b is null) return null;
         return Math.Abs(a.Value - b.Value) switch
         {
-            <= 1 => "Similar outlook",
-            2 => "Some overlap in outlook",
+            0 => "Similar outlook",
+            1 or 2 => "Some overlap in outlook",
             _ => "Different outlook",
         };
     }
