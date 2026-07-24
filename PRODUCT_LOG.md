@@ -302,6 +302,13 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-24
+- **Matches: user-controlled sort by shared intent or values.** The intent and values signals were
+  displayed but changed nothing about matching. The matches page now offers an explicit, user-chosen
+  ordering — "Best match" (default), "Same intent first", "Similar outlook first" — a stable
+  secondary sort, never a hidden blended score: interest similarity stays the ranking within each
+  group and the default/tiebreaker. Options appear only when the viewer set the relevant signal, and
+  compose with the source filter. Gives the multi-signal work its payoff (signals now affect what you
+  see, on your terms). Integration-tested.
 - **Measurement: token-gated aggregate adoption metrics.** So the owner can see whether the
   compatibility signals are used before investing in more, a `GET /metrics` endpoint reports counts
   and distributions from existing columns only (total users, connected, intent by type, values by

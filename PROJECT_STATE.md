@@ -373,11 +373,23 @@ Help people find unusually compatible relationships using multiple consented, ex
 
 ## Resume Point (2026-07-24)
 
-**Signals 1 (connection intent) and 2 (values/worldview) are both COMPLETE and committed** (HEAD
-`7f86add`). Baseline: **260 tests, build 0 warnings, 13 migrations clean on a fresh DB.** Nothing
-uncommitted. Values signal shipped end to end: consent-gated `/account/values` → derive coarse
-bucket → discard raw (DB-asserted) → coarse alignment on match cards → export + delete → dashboard
-entry. Both signals stay separate/explainable; interest ranking unchanged; no blended score.
+**Multi-signal compatibility is now a working, measured, actionable system.** HEAD `1c4e912`.
+Baseline: **265 tests, build 0 warnings, 13 migrations clean on a fresh DB.** Nothing uncommitted.
+Shipped: signal 1 (connection intent, mutual highlight), signal 2 (values/worldview — consent →
+derive → discard-raw, DB-asserted → coarse alignment), token-gated aggregate **/metrics**, and
+**user-controlled sort** (Best match / Same intent first / Similar outlook first — stable secondary
+sort, no blended score). Signals now affect what the user sees, on their terms.
+
+### Opportunity Critic bets (2026-07-24) — remaining, ranked
+1. ~~Signals don't affect ranking.~~ **Done** — user-controlled sort (`1c4e912`).
+2. **Match without any connected source** (values+intent-only profile) — removes the connect barrier
+   for privacy-maximalists, but 2 coarse signals give weak match quality; **needs more signal first**
+   (gated behind measurement evidence + possibly the 2nd values axis).
+3. **Persistent "how you appear to matches" self-view** — consolidate interest themes + intent +
+   values. Adjacent need (self-articulation). Small–med, privacy-safe. **Good next small bet.**
+4. **Per-match "why you matched" breakdown** with user weights — strongest differentiation; larger.
+5. **Match-card hierarchy redesign** — the card is dense (tier, %, sources, closest-on, freshness,
+   bio, values, intent, contact). Simplification/redesign; low risk. **Good next small bet.**
 
 ### Product Owner decision (2026-07-24): measurement gates further signal expansion
 
