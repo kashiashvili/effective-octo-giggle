@@ -122,6 +122,10 @@ and the two CSV uploads need no account credentials.
 ### Public profile (opt-in)
 - Optional **bio** (≤ 280 chars) and **contact** line (≤ 120 chars) shown to people
   you match with, and previewed on your own dashboard.
+- Optional **connection intent** — a small closed set (friends / collaborators / discussion /
+  open) saying what kind of connection you want. The first **non-interest compatibility signal**:
+  shown to matches as a separate explainable line ("🎯 Here for: …"), never blended into the
+  similarity score. Blank stays private; in export; cleared via profile; removed on deletion.
 - Rendered as **plain text** (HTML-escaped by Razor, verified XSS-safe) and **never as a
   clickable link**, to avoid phishing/open-redirect. Blank fields stay private.
 
@@ -298,6 +302,17 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-22
+- **Multi-signal compatibility — slice 1: optional connection intent.** Product Opportunity Discovery
+  evaluated an optional values/worldview questionnaire and decided to expand toward privacy-preserving
+  *multi-signal* compatibility **incrementally, lowest-risk signal first** — deferring the values
+  questionnaire (Schwartz-grounded; licensing + sensitivity) and rejecting Big Five (clinical
+  overclaim), political/moral items (filter-bubble risk), verbatim licensed instruments, and any
+  blended "compatibility %". The first signal is **connection intent**: an optional closed-set field
+  (friends / collaborators / discussion / open) for what kind of connection you want. Sharing
+  interests is not the same as wanting the same thing; this closes that gap. Follows the opt-in
+  profile pattern (blank private, shown to matches as a separate explainable line, withheld while
+  hidden, in export, cleared via profile, removed on deletion); never re-ranks matches. `AppUser.
+  ConnectionIntent` (migration `AddConnectionIntent`), unit + integration tests, verified live.
 - **Discovery: filter matches by shared interest area** — the vision is niche interests, so "show me
   the people I share Music with" is a core move. The matches page now shows a chip row of the source
   types you share with your matches; clicking one narrows the list. Filtering is view-only — the
