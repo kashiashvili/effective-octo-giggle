@@ -380,6 +380,20 @@ derive → discard-raw, DB-asserted → coarse alignment), token-gated aggregate
 **user-controlled sort** (Best match / Same intent first / Similar outlook first — stable secondary
 sort, no blended score). Signals now affect what the user sees, on their terms.
 
+### Assumption test result (2026-07-24) — values signal resolution
+
+Ran a synthetic-profile simulation (`ValuesSignalResolutionTests`, no real users) to test whether
+one coarse openness axis discriminates. **Finding:** averaging four 5-point items concentrates 95%
+of profiles into buckets −1..+1 (central-limit clumping), and the original "within one = similar"
+label read 77.6% of random pairs as "Similar outlook" — nearly uninformative. **Acted on it:**
+recalibrated the label (exact match = "Similar", ±1–2 = "Some overlap", further = "Different"),
+dropping "Similar" to 31% of random pairs so it now carries information (commit `182b3e1`).
+**Standing evidence for the deferred decision:** a single averaged axis has limited spread (most
+pairs land in the middle tier), so values differentiation should be **broadened (second Schwartz
+axis or finer scoring) before being relied on**, not left as the only values dimension. This is now
+evidence-backed, not a guess — but adding the axis still increases sensitivity, so it remains gated
+on real adoption evidence (`/metrics`) + owner intent.
+
 ### Active: pre-release reviews of the multi-signal expansion
 
 - **User-flow review (done, 2026-07-24):** walked the changed surfaces live — fully-populated match

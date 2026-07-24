@@ -302,6 +302,13 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-24
+- **Assumption test → recalibrated values alignment.** A synthetic-profile simulation (no real
+  users) showed averaging four items clumps 95% of people into the middle buckets, so the old
+  "within one = similar" label read 77.6% of random pairs as "Similar outlook" — nearly meaningless.
+  Recalibrated so an exact match is "Similar" (now 31% of random pairs), one–two steps "Some
+  overlap", further "Different". Recorded finding: one averaged axis discriminates weakly, so a
+  second axis / finer scoring is the right way to strengthen values matching — evidence for that
+  deferred decision rather than a guess.
 - **Release audit of the multi-signal expansion (independent) — clean, five P3s fixed.** No
   P0/P1/P2. Fixes: the "new since last visit" marker now advances only on the plain matches view (a
   sort/filter click no longer zeroes it); `/metrics` withholds the per-category intent/values
