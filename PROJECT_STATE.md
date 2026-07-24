@@ -153,16 +153,17 @@ Do not blend into one opaque score. Interest ranking is unchanged for now; new s
 
 ## Active Task
 
-**Slice 2: mutual connection-intent highlight.** Slice 1 (below) shipped at commit `2c20033` —
-intent is displayed on match cards. Slice 2 makes it an actual *compatibility* signal: when a match
-is here for the **same** thing as the viewer, emphasise it ("🎯 You're both here for collaboration").
-Still a separate explainable line, no score, no re-ranking. Then slice 3 (recorded): filter matches
-by intent, reusing the chip pattern.
+**Product Owner review after slices 1–2.** Connection intent now exists (slice 1, `2c20033`) and is
+a mutual, emphasised compatibility signal (slice 2, `a308506`). Next candidate increments, to be
+prioritised: (a) **filter matches by intent** (reuse the shared-source chip pattern) — small; (b)
+begin the **values/worldview** signal behind the same infrastructure (Schwartz 2-axis, own items,
+discard raw) — larger, higher-sensitivity; (c) surface intent on the **dashboard** self-preview and
+nudge users to set it. Baseline before next change: **241 tests, build 0 warnings.**
 
-### Slice 2 Definition of Done
-- MatchesController passes the viewer's own intent; MatchViewModel exposes whether the match shares it.
-- Card shows an emphasised mutual line when intents match, the plain "Here for" line otherwise.
-- Withheld while hidden (same as other personal fields). Test the mutual vs one-sided cases.
+## Completed — Slice 2: mutual connection-intent highlight (`a308506`)
+
+Match cards emphasise a shared intent ("You're both here for: X") and show the plain line otherwise.
+Separate explainable line; no score; no re-ranking; withheld while hidden. Integration-tested.
 
 ## Completed — Slice 1 of multi-signal compatibility: optional "connection intent."
 

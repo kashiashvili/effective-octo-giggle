@@ -302,6 +302,10 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-22
+- **Multi-signal compatibility — slice 2: mutual intent highlight.** Intent only signals
+  compatibility when it is shared, so a match who is here for the same thing as the viewer is now
+  emphasised ("You're both here for: collaboration") instead of just showing their choice. Still a
+  separate explainable line; no score; no re-ranking; withheld while hidden.
 - **Multi-signal compatibility — slice 1: optional connection intent.** Product Opportunity Discovery
   evaluated an optional values/worldview questionnaire and decided to expand toward privacy-preserving
   *multi-signal* compatibility **incrementally, lowest-risk signal first** — deferring the values
