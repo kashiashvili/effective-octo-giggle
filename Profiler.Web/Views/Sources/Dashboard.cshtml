@@ -5,7 +5,8 @@
     var username = User.Identity?.Name ?? "";
     var bio = ViewBag.Bio as string;
     var contact = ViewBag.Contact as string;
-    bool hasProfile = !string.IsNullOrWhiteSpace(bio) || !string.IsNullOrWhiteSpace(contact);
+    var intentLabel = ViewBag.ConnectionIntentLabel as string;
+    bool hasProfile = !string.IsNullOrWhiteSpace(bio) || !string.IsNullOrWhiteSpace(contact) || !string.IsNullOrWhiteSpace(intentLabel);
     int totalSignals = sources.Sum(s => s.FeatureCount);
     // A fingerprint built from few signals gives noisy matches; nudge the user to enrich it.
     bool thinFingerprint = sources.Count > 0 && totalSignals < 15;
@@ -201,7 +202,11 @@
                     }
                     @if (!string.IsNullOrWhiteSpace(contact))
                     {
-                        <p class="text-muted mb-0">📮 @contact</p>
+                        <p class="text-muted mb-2">📮 @contact</p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(intentLabel))
+                    {
+                        <p class="text-muted mb-0">🎯 Here for: @intentLabel</p>
                     }
                 </div>
             </div>
