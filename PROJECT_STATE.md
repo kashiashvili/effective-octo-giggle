@@ -151,14 +151,36 @@ Keep dimensions **separate and explainable** ("Strong on interests · Both here 
 Do not blend into one opaque score. Interest ranking is unchanged for now; new signals are displayed
 (and optionally filterable) dimensions, not a hidden re-ranking.
 
-## Active Task
+## Signal 1 (connection intent) — COMPLETE
 
-**Product Owner review after slices 1–2.** Connection intent now exists (slice 1, `2c20033`) and is
-a mutual, emphasised compatibility signal (slice 2, `a308506`). Next candidate increments, to be
-prioritised: (a) **filter matches by intent** (reuse the shared-source chip pattern) — small; (b)
-begin the **values/worldview** signal behind the same infrastructure (Schwartz 2-axis, own items,
-discard raw) — larger, higher-sensitivity; (c) surface intent on the **dashboard** self-preview and
-nudge users to set it. Baseline before next change: **241 tests, build 0 warnings.**
+Shipped as a coherent feature across: field + closed-set validation (`2c20033`), mutual-shared
+highlight (`a308506`), dashboard self-preview (`6b3d73a`), adoption nudge (`49a7199`). Opt-in,
+shown to matches as a separate explainable line, mutual emphasis, withheld while hidden, in export,
+cleared via profile, removed on deletion, never re-ranks or blends into a score. **242 tests, build
+0 warnings.** (Deferred, low value now: filter-by-intent — the mutual highlight already surfaces
+same-intent matches, and filtering only matters at scale like the source filter.)
+
+## Active Task — Signal 2: optional values/worldview (the next real bet)
+
+The intent pattern validated the infrastructure; now build the higher-differentiation signal behind
+the same model. **Decided constraints (see Discovery Decision):** Schwartz's public 2-axis structure,
+**our own plainly-worded items** (no licensed instrument), **discard raw answers** after deriving a
+small vector (retake = re-answer), opt-in/skippable/hideable/deletable, in export, shown as **coarse
+alignment** on match cards (never raw answers, never a blended score, not a hard filter → avoid
+filter bubbles). Reject Big Five and political/moral items.
+
+### Smallest useful validated increment (start here)
+1. Pick ONE axis first: **openness-to-change ↔ conservation** (least sensitive of the Schwartz axes).
+2. Author 3–4 own Likert items for it; derive to a single signed bucket (e.g. −2..+2). Discard raw.
+3. Store `AppUser.ValuesOpenness` (nullable small int) + a version tag. Migration.
+4. Consent-gated opt-in page (`/account/values`), skippable, with clear "what this is / isn't"
+   copy (no clinical/personality claims). Retake overwrites; a delete-values control.
+5. Match card: coarse alignment line when both set ("Similar outlook" / "Different outlook"),
+   separate from interests and intent; hideable; withheld while hidden.
+6. Export includes the derived bucket; account deletion removes it.
+7. Tests: derivation buckets, opt-in/skip/retake/delete round-trip, coarse-alignment display,
+   privacy (raw answers never persisted — assert against the DB like the fingerprint test).
+8. Update `PRODUCT_LOG.md` + this file. Then evaluate adding the second axis.
 
 ## Completed — Slice 2: mutual connection-intent highlight (`a308506`)
 
@@ -336,6 +358,13 @@ Help people find unusually compatible relationships using multiple consented, ex
 - Appropriate licensing and scientific framing.
 - A clear explanation model that avoids false precision.
 - Evidence that complexity is justified compared with improving interest-only matching.
+
+## Resume Point (2026-07-24)
+
+Signal 1 (connection intent) is complete and committed (HEAD `49a7199`). Baseline: **242 tests,
+build 0 warnings, 12 migrations clean on a fresh DB.** Next: begin Signal 2 (values/worldview),
+smallest increment above — one axis (openness↔conservation), own items, discard raw. This is a
+larger slice; start it fresh. Nothing is uncommitted.
 
 ## Next Mandatory Action
 
