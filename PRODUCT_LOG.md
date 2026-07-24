@@ -302,6 +302,13 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-24
+- **Measurement: token-gated aggregate adoption metrics.** So the owner can see whether the
+  compatibility signals are used before investing in more, a `GET /metrics` endpoint reports counts
+  and distributions from existing columns only (total users, connected, intent by type, values by
+  bucket, bio/contact) — never a user id or per-user row, no new retention. Off unless `Metrics:Token`
+  is set (404s otherwise), then bearer-token gated with a constant-time compare; an ordinary session
+  does not grant access. Four integration tests. Records the PO decision that measurement gates
+  adding further signals (e.g. a second values axis) over growing sensitive-data collection blindly.
 - **Multi-signal compatibility — signal 2: optional values/worldview.** Behind the same privacy
   model as connection intent. A consent-gated opt-in questionnaire (`/account/values`) asks a few
   plain openness-vs-conservation statements (own wording, no licensed instrument, grounded in

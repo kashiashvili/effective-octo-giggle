@@ -96,6 +96,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 | `RateLimiting:ConnectPermitLimit`  | `10`               | Allowed source-connect submits per IP per minute      |
 | `DataProtection:KeyPath`         | `<contentRoot>/keys` | Where the auth-cookie key ring is persisted          |
 | `Fingerprint:Pepper`             | — (**required**)     | Secret mixed into every fingerprint hash             |
+| `Metrics:Token`                  | — (off)              | Bearer token for `GET /metrics` (aggregate adoption counts); route 404s unless set |
 | `ForwardedHeaders:Enabled`       | `false`              | Believe `X-Forwarded-For`/`-Proto` (set this behind a proxy) |
 | `ForwardedHeaders:KnownProxies`  | —                    | Proxy IPs to trust, comma-separated. Required when enabled |
 | `ForwardedHeaders:KnownNetworks` | —                    | Proxy networks to trust in CIDR form, e.g. `10.0.0.0/8` |
@@ -139,7 +140,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 dotnet test
 ```
 
-The suite (260 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (264 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 
