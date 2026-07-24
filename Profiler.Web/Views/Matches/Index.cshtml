@@ -8,6 +8,9 @@
     var lens = ViewBag.InterestLens as List<Profiler.Web.Profile.InterestTheme>;
     int lensTotal = ViewBag.InterestLensTotal ?? 0;
     int newSinceLastVisit = ViewBag.NewSinceLastVisit ?? 0;
+    var availableSources = ViewBag.AvailableSources as List<string> ?? new List<string>();
+    string? sourceFilter = ViewBag.SourceFilter as string;
+    bool hasAnyMatch = ViewBag.HasAnyMatch ?? false;
 }
 
 <div class="page-wrap">
@@ -81,6 +84,17 @@
                 <p class="mt-4"><a href="/sources/connect" class="btn btn-primary">Connect Sources</a></p>
             </div>
         }
+        else if (hasAnyMatch && !Model.Any())
+        {
+            @* A filter is active and excludes everything, but the user does have matches. *@
+            @await Html.PartialAsync("_SourceFilterChips", (availableSources, sourceFilter))
+            <div class="empty-state">
+                <div class="empty-icon">🔍</div>
+                <h4>No matches share @sourceFilter</h4>
+                <p>None of your matches has @sourceFilter in common with you. Try another interest area.</p>
+                <p class="mt-4"><a href="/matches" class="btn btn-primary">Show all matches</a></p>
+            </div>
+        }
         else if (!Model.Any())
         {
             <div class="empty-state">
@@ -110,6 +124,7 @@
         }
         else
         {
+            @await Html.PartialAsync("_SourceFilterChips", (availableSources, sourceFilter))
             <div class="matches-grid">
                 @for (var i = 0; i < Model.Count; i++)
                 {

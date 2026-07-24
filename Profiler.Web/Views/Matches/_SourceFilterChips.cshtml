@@ -1,0 +1,13 @@
+@model (System.Collections.Generic.List<string> Available, string? Selected)
+@{
+    // Only worth showing once there is more than one interest area to choose between.
+    if (Model.Available.Count < 2) { return; }
+}
+<div class="source-filter" role="group" aria-label="Filter matches by shared source">
+    <a class="filter-chip @(Model.Selected == null ? "active" : "")" href="/matches">All</a>
+    @foreach (var source in Model.Available)
+    {
+        <a class="filter-chip @(Model.Selected == source ? "active" : "")"
+           href="/matches?source=@Uri.EscapeDataString(source)">@source</a>
+    }
+</div>

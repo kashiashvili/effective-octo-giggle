@@ -23,7 +23,7 @@ public class MatchesController : Controller
     public MatchesController(AppDbContext db) => _db = db;
 
     [HttpGet("")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? source)
     {
         var userId = User.GetUserId();
 
@@ -153,7 +153,27 @@ public class MatchesController : Controller
             await _db.SaveChangesAsync();
         }
 
-        return View(viewModels);
+        // Let the person narrow to the interest area they actually came for — the vision is niche
+        // interests, so "show me the people I share Music with" is the core move. Filtering is a
+        // view concern only: the retention count and empty-state distinction above are computed on
+        // the full set, so a filter never changes what "new since last visit" means.
+        var available = viewModels
+            .SelectMany(m => m.SharedSources)
+            .Distinct()
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToList();
+        ViewBag.AvailableSources = available;
+
+        // Ignore an unknown value rather than showing an empty page for a source nobody shares.
+        var activeFilter = !string.IsNullOrWhiteSpace(source) && available.Contains(source) ? source : null;
+        ViewBag.SourceFilter = activeFilter;
+        ViewBag.HasAnyMatch = viewModels.Count > 0;
+
+        var shown = activeFilter == null
+            ? viewModels
+            : viewModels.Where(m => m.SharedSources.Contains(activeFilter)).ToList();
+
+        return View(shown);
     }
 
     // Hiding is addressed by username rather than by row id: the username is already visible on the
