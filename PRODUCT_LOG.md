@@ -302,6 +302,14 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-24
+- **Release audit of the multi-signal expansion (independent) — clean, five P3s fixed.** No
+  P0/P1/P2. Fixes: the "new since last visit" marker now advances only on the plain matches view (a
+  sort/filter click no longer zeroes it); `/metrics` withholds the per-category intent/values
+  breakdowns below a 10-user cohort to prevent re-identifying one person; the data export now
+  includes `ValuesScheme` + `LastMatchesViewedAt`; the values sort keys off a numeric rank rather
+  than a display string; the duplicate consent error is gone. Verified clean by the auditor: raw
+  questionnaire answers are discarded (DB-asserted), consent is server-enforced, `/metrics` leaks no
+  per-user data and is token-gated with a constant-time compare.
 - **Matches: user-controlled sort by shared intent or values.** The intent and values signals were
   displayed but changed nothing about matching. The matches page now offers an explicit, user-chosen
   ordering — "Best match" (default), "Same intent first", "Similar outlook first" — a stable

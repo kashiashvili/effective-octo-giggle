@@ -387,11 +387,20 @@ sort, no blended score). Signals now affect what the user sees, on their terms.
   bio+contact), sort + filter controls present, values questionnaire renders (4 items × 5-point +
   consent), and coarse values alignment is correctly withheld when only one side took it. No
   regressions or awkwardness found; no fix needed.
-- **Release Auditor (independent subagent) — IN PROGRESS.** Auditing the new privacy-sensitive code
-  (values questionnaire discard-raw path, `/metrics` token gating, sort explainability, Matches
-  controller correctness). Act on its findings when it returns; then this expansion can be treated
-  as a validated release candidate pending the owner's vision decision.
+- **Release Auditor (independent subagent) — DONE, all findings resolved (`74cd1b0`).** Found **no
+  P0/P1/P2**; verified raw answers discarded (DB-asserted), delete/export correct, consent enforced
+  server-side, `/metrics` token-safe with no per-user leak, signals withheld while hidden, sort
+  explainable and stable. Its five P3s are all fixed: retention marker only advances on the plain
+  view; `/metrics` withholds breakdowns below a 10-user cohort; export includes `ValuesScheme` +
+  `LastMatchesViewedAt`; values sort keys off a numeric rank not a display string; duplicate consent
+  error removed. **269 tests, 0 warnings.**
 - Product Opportunity Critic: done inline this session (bets recorded below).
+
+**Release status:** the multi-signal expansion is a **validated release candidate** — both mandated
+reviews done (Release Auditor clean after fixes; Opportunity Critic inline), core journey
+flow-reviewed live, privacy asserted against the DB. The remaining gate is the **owner's decision**
+to promote the vision from interest-only to multi-signal; further feature bets are evidence-gated
+(need real usage via `/metrics`). Nothing uncommitted; HEAD `74cd1b0`.
 
 ### Product Owner position (2026-07-24): further feature work is now evidence- or owner-gated
 
