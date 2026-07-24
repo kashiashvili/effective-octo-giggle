@@ -206,10 +206,7 @@
                             <div class="progress-wrap">
                                 <div class="progress-bar @match.Tier" style="width: @match.SimilarityPercent%"></div>
                             </div>
-                            @if (!string.IsNullOrWhiteSpace(match.Bio))
-                            {
-                                <p class="match-bio">@match.Bio</p>
-                            }
+                            @* Compatibility signals grouped together, right after the match strength. *@
                             @if (!string.IsNullOrWhiteSpace(match.ConnectionIntentLabel))
                             {
                                 @if (match.SharesViewerIntent)
@@ -224,6 +221,11 @@
                             @if (!string.IsNullOrWhiteSpace(match.ValuesAlignmentLabel))
                             {
                                 <p class="match-values">🧭 @match.ValuesAlignmentLabel</p>
+                            }
+                            @* Their words, then how to reach them — the personal block. *@
+                            @if (!string.IsNullOrWhiteSpace(match.Bio))
+                            {
+                                <p class="match-bio">@match.Bio</p>
                             }
                             @if (!string.IsNullOrWhiteSpace(match.Contact))
                             {
