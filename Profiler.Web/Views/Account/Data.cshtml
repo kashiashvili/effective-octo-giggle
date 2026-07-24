@@ -22,6 +22,7 @@
                     <dt>Discoverable</dt><dd>@(Model.IsDiscoverable ? "Yes — you appear in others' matches" : "No — you're hidden")</dd>
                     <dt>Bio</dt><dd>@(string.IsNullOrWhiteSpace(Model.Bio) ? "— (not set)" : Model.Bio)</dd>
                     <dt>Contact</dt><dd>@(string.IsNullOrWhiteSpace(Model.Contact) ? "— (not set)" : Model.Contact)</dd>
+                    <dt>Here for</dt><dd>@(Profiler.Web.Profile.ConnectionIntent.LabelFor(Model.ConnectionIntent) ?? "— (not set)")</dd>
                 </dl>
             </div>
         </div>

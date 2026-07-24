@@ -1,45 +1,46 @@
 # Start the Autonomous Run
 
-After placing this package in the repository and replacing the placeholders in `PROJECT_STATE.md`, start Claude Code and run the following command.
+After placing these files in the repository and updating `PROJECT_STATE.md`, start Claude Code and run:
 
 ```text
-/goal Continue autonomously executing the Product Owner → Prioritize → Plan/Architect → Delegate → Implement → Validate/QA → Product Owner Review → Repeat cycle for this product.
+/goal Continue the autonomous product-development loop for this repository.
 
-Use CLAUDE.md as persistent operating instructions and PROJECT_STATE.md as the authoritative operational memory.
+Use `CLAUDE.md` as persistent operating rules and `PROJECT_STATE.md` as authoritative execution state.
 
-The goal is NOT complete when a task, feature, milestone, sprint, implementation plan, or initial backlog is complete.
+Loop: Product Owner → Prioritize → Plan/Architect → Delegate → Implement → Validate/QA → Commit → Product Review → Opportunity Discovery → Repeat.
 
-After every completed task:
-1. Fully validate the implementation and fix failures.
-2. Update PROJECT_STATE.md with the exact current state.
-3. Return to Product Owner mode.
-4. Perform a fresh product review against the product vision and actual user needs.
-5. Identify the highest-value remaining improvement.
-6. Record it as the active task.
-7. Immediately begin the next iteration.
+Completing a task, feature, milestone, release, sprint, plan, or known backlog does not complete the overall mission.
 
-Continue automatically rather than returning control merely because one unit of work has finished.
+After every completed coherent unit:
+1. Validate it and fix relevant failures.
+2. Commit it without waiting for user review.
+3. Update `PROJECT_STATE.md`.
+4. Return to Product Owner mode.
+5. Review the product against its vision, underlying user problem, and user outcomes.
+6. Identify the highest-value next implementation, experiment, investigation, redesign, or product bet.
+7. Record it as active and begin immediately.
 
-Use subagents actively. Delegate independent work in parallel where safe. Route consequential product, planning, architecture, security, and difficult reasoning to strong models. Route well-defined mechanical execution to the most cost-effective capable models. Independently verify consequential work.
+Use subagents actively. Use strong reasoning models for product vision, strategy, architecture, security, privacy, difficult debugging, and opportunity discovery. Use cost-effective capable models for well-defined execution. Independently verify consequential work.
 
-The goal is complete only when a fresh Product Owner review confirms ALL of the following:
-- no unresolved P0, P1, P2, or P3 improvements remain;
-- the complete core user journey has been verified end to end;
-- all relevant builds, type checks, lint checks, and tests pass;
-- no known meaningful defects or regressions remain;
-- important validation, error, empty, loading, permission, and persistence states are handled;
-- relevant security and data-integrity concerns have been reviewed;
-- and a fresh independent product review identifies no additional meaningful work whose expected value justifies implementation.
+Before marking a release complete, require:
+1. A Release Auditor review of correctness, regressions, tests, security, privacy, data integrity, core journeys, and important UI states.
+2. A separate Product Opportunity Critic review that assumes the vision may be too narrow and generates at least five materially different opportunities: a core-outcome improvement, vision expansion/revision, adjacent user need, differentiation/defensibility opportunity, and simplification/removal/redesign.
 
-Finishing the currently active task is never, by itself, sufficient evidence that the goal is complete.
+Evaluate opportunities by user value, alignment, evidence, effort, risk, privacy/safety, differentiation, and learning value.
 
-If context is compacted, immediately reload CLAUDE.md and PROJECT_STATE.md and resume from the recorded active state.
+A clean release audit or empty backlog does not complete the mission. When a valuable next bet exists, update the vision if justified, reduce it to the smallest useful validated increment or experiment, record it, and begin.
 
-Continue until the completion criteria above are genuinely satisfied or an external execution/resource limit prevents further work.
+Do not invent low-value features merely to continue. When implementation is not justified, continue with product discovery, assumption testing, prototyping, measurement, research, user-flow review, simplification, or blocker removal.
+
+The run may stop only when the user explicitly says stop; an external token, context, compute, time, execution, or spending limit prevents continuation; essential access, authorization, credentials, or unavailable information blocks progress; the environment prevents further work; or a safety/policy constraint applies.
+
+Do not terminate because “all criteria are met.” Those criteria may complete a release, not the overall product mission.
+
+After context compaction, reload `CLAUDE.md` and `PROJECT_STATE.md`, inspect the worktree, and resume.
 ```
 
-## Recommended first message after `/goal`
+## Recommended first message
 
 ```text
-Read CLAUDE.md, PROJECT_STATE.md, and docs/PRODUCT_AGENT.md. Inspect the repository, establish a working baseline, update PROJECT_STATE.md, and begin autonomous execution. Do not stop after assessment or planning.
+Read CLAUDE.md, PROJECT_STATE.md, and docs/PRODUCT_AGENT.md. Inspect the repository, establish or verify the baseline, correct stale state, and resume autonomous execution. Do not stop after assessment, planning, a clean release audit, or completion of the known backlog.
 ```

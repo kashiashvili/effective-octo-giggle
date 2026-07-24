@@ -46,5 +46,12 @@ public class AppUser
     /// </summary>
     public DateTime? LastMatchesViewedAt { get; set; }
 
+    /// <summary>
+    /// Optional connection intent — the first non-interest compatibility signal. A short stable key
+    /// from a small closed set (see <see cref="Profile.ConnectionIntent"/>), or null for unspecified.
+    /// Shown to matches like bio/contact; never blended into a score.
+    /// </summary>
+    public string? ConnectionIntent { get; set; }
+
     public FingerprintRecord? Fingerprint { get; set; }
 }

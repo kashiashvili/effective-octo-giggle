@@ -28,6 +28,21 @@
                     Optional. Displayed exactly as text — never turned into a clickable link, for everyone's safety.
                 </small>
             </div>
+            <div class="form-group">
+                <label asp-for="ConnectionIntent" class="form-label">What you're here for</label>
+                <select asp-for="ConnectionIntent" class="form-control">
+                    <option value="">— Prefer not to say —</option>
+                    @foreach (var (key, label) in Profiler.Web.Profile.ConnectionIntent.All)
+                    {
+                        <option value="@key">@label</option>
+                    }
+                </select>
+                <span asp-validation-for="ConnectionIntent" class="field-error"></span>
+                <small class="help-text">
+                    Optional. Shown to your matches so they know what kind of connection you're open to.
+                    Sharing interests isn't the same as wanting the same thing — this helps close that gap.
+                </small>
+            </div>
             <button type="submit" class="btn btn-primary btn-block">Save profile</button>
         </form>
         <hr class="auth-divider" />

@@ -696,6 +696,11 @@ footer {
   color: var(--gray-500);
   overflow-wrap: anywhere;
 }
+.match-intent {
+  margin-top: .5rem;
+  font-size: .85rem;
+  color: var(--gray-600);
+}
 .source-filter {
   display: flex;
   flex-wrap: wrap;

@@ -286,7 +286,7 @@ public class AccountController : Controller
     {
         var user = await FindCurrentUserAsync();
         if (user == null) return await SignOutToHomeAsync();
-        return View(new ProfileViewModel { Bio = user.Bio, Contact = user.Contact });
+        return View(new ProfileViewModel { Bio = user.Bio, Contact = user.Contact, ConnectionIntent = user.ConnectionIntent });
     }
 
     [HttpPost("profile")]
@@ -313,8 +313,17 @@ public class AccountController : Controller
             }
         }
 
+        // Closed-set key from a selector; anyone posting something off-list is normalised to
+        // unspecified rather than rejected, since it can only come from a tampered form.
+        if (!Profiler.Web.Profile.ConnectionIntent.IsValid(vm.ConnectionIntent))
+        {
+            ModelState.AddModelError(nameof(vm.ConnectionIntent), "Please choose one of the listed options.");
+            return View(vm);
+        }
+
         user.Bio = string.IsNullOrWhiteSpace(vm.Bio) ? null : vm.Bio.Trim();
         user.Contact = string.IsNullOrWhiteSpace(vm.Contact) ? null : vm.Contact.Trim();
+        user.ConnectionIntent = Profiler.Web.Profile.ConnectionIntent.Normalize(vm.ConnectionIntent);
         await _db.SaveChangesAsync();
 
         TempData["Success"] = "Your profile has been saved.";
@@ -370,6 +379,7 @@ public class AccountController : Controller
             IsDiscoverable = user.IsDiscoverable,
             Bio = user.Bio,
             Contact = user.Contact,
+            ConnectionIntent = user.ConnectionIntent,
             FingerprintDimensions = dimensions,
             Sources = sources,
             HiddenPeople = hidden

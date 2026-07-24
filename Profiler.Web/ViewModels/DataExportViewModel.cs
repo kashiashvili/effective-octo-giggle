@@ -9,6 +9,9 @@ public class DataExportViewModel
     public string? Bio { get; set; }
     public string? Contact { get; set; }
 
+    /// <summary>The stored connection-intent key, or null if unspecified.</summary>
+    public string? ConnectionIntent { get; set; }
+
     /// <summary>Number of dimensions in the stored MinHash signature (the signature is anonymized).</summary>
     public int FingerprintDimensions { get; set; }
 

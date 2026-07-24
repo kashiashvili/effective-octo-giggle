@@ -127,6 +127,9 @@ public class MatchesController : Controller
                 SharedSourceOverlaps = overlaps,
                 Bio = iAmVisible ? matchFp?.User.Bio : null,
                 Contact = iAmVisible ? matchFp?.User.Contact : null,
+                // A separate, explainable signal shown alongside interests — never blended into the
+                // similarity score. Withheld while hidden, like the other personal fields.
+                ConnectionIntentLabel = iAmVisible ? ConnectionIntent.LabelFor(matchFp?.User.ConnectionIntent) : null,
                 UpdatedAt = matchFp?.UpdatedAt ?? DateTime.UtcNow
             };
         }).ToList();

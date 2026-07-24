@@ -24,6 +24,9 @@ public class MatchViewModel
     /// <summary>Optional contact detail the matched user chose to share. Rendered as plain text.</summary>
     public string? Contact { get; set; }
 
+    /// <summary>Human label for the matched user's connection intent, or null if unspecified/hidden.</summary>
+    public string? ConnectionIntentLabel { get; set; }
+
     /// <summary>
     /// When the matched user's fingerprint was last rebuilt. Tokens are never stored, so refreshing
     /// is manual and an abandoned profile never decays: without this, a year-old snapshot is
