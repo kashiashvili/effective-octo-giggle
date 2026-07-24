@@ -380,6 +380,22 @@ derive → discard-raw, DB-asserted → coarse alignment), token-gated aggregate
 **user-controlled sort** (Best match / Same intent first / Similar outlook first — stable secondary
 sort, no blended score). Signals now affect what the user sees, on their terms.
 
+### Product Owner position (2026-07-24): further feature work is now evidence- or owner-gated
+
+The multi-signal release is coherent and complete for what can be justified *without real usage
+data*: two optional privacy-preserving signals, measurement, user-controlled sorting, and a clean
+card. **The next real decisions require evidence this repo cannot self-generate:**
+- Whether to add the 2nd values axis, or broaden to no-connected-source matching (bet #2), depends
+  on whether the *existing* signals are adopted and help — which `/metrics` will show only once the
+  product has real users (deployment + usage, outside this environment).
+- Promoting the vision from "interests only" to multi-signal is an **owner decision**.
+
+Remaining pure-build bets are lower-value polish (self-view #3 largely overlaps the dashboard preview
++ data page; per-match weighting #4 is larger and premature before evidence). Per CLAUDE.md, do not
+invent low-value features to keep coding. **The highest-value next step is gathering usage evidence,
+which needs a real deployment.** Until then, the justified work is discovery/assumption-testing, and
+the formal two-reviewer pass (below) before declaring a multi-signal release.
+
 ### Opportunity Critic bets (2026-07-24) — remaining, ranked
 1. ~~Signals don't affect ranking.~~ **Done** — user-controlled sort (`1c4e912`).
 2. **Match without any connected source** (values+intent-only profile) — removes the connect barrier
