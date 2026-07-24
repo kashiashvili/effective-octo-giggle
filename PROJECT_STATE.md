@@ -380,6 +380,19 @@ derive → discard-raw, DB-asserted → coarse alignment), token-gated aggregate
 **user-controlled sort** (Best match / Same intent first / Similar outlook first — stable secondary
 sort, no blended score). Signals now affect what the user sees, on their terms.
 
+### Active: pre-release reviews of the multi-signal expansion
+
+- **User-flow review (done, 2026-07-24):** walked the changed surfaces live — fully-populated match
+  card renders in the intended hierarchy (identity → interest strength → intent+values grouped →
+  bio+contact), sort + filter controls present, values questionnaire renders (4 items × 5-point +
+  consent), and coarse values alignment is correctly withheld when only one side took it. No
+  regressions or awkwardness found; no fix needed.
+- **Release Auditor (independent subagent) — IN PROGRESS.** Auditing the new privacy-sensitive code
+  (values questionnaire discard-raw path, `/metrics` token gating, sort explainability, Matches
+  controller correctness). Act on its findings when it returns; then this expansion can be treated
+  as a validated release candidate pending the owner's vision decision.
+- Product Opportunity Critic: done inline this session (bets recorded below).
+
 ### Product Owner position (2026-07-24): further feature work is now evidence- or owner-gated
 
 The multi-signal release is coherent and complete for what can be justified *without real usage
