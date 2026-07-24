@@ -2,301 +2,339 @@
 
 > This file is the authoritative operational memory for the autonomous product-development loop.
 > Keep it concise, factual, and current. Update it after every meaningful iteration.
+>
+> A clean release is a milestone, not termination of the overall product mission.
 
 ## Product Idea
 
-**Profiler** — a privacy-preserving social matching web app. You connect the online
-platforms you already use; Profiler extracts your interests, reduces them to an anonymous
-MinHash fingerprint, discards the raw data, and matches you with people whose fingerprints
-are similar.
+**Profiler** — a privacy-preserving social compatibility and matching web app.
 
-Stack: ASP.NET Core MVC (.NET 9), EF Core, SQLite, Razor views, hand-written CSS. No JS
-framework. Single implementation in `Profiler.Web/` (an earlier Python prototype was removed).
+Today, users connect online platforms they already use. Profiler extracts interest signals, reduces them to an anonymous MinHash fingerprint, discards the raw data, and matches people whose fingerprints are similar.
 
-Full product handbook and changelog: `PRODUCT_LOG.md` (must be updated with every change).
+The next product-discovery phase is evaluating whether the product should evolve from **interest similarity only** toward **multi-signal compatibility**, potentially including an optional evidence-based values/worldview questionnaire while preserving the privacy north star.
 
-## Product Vision
+Stack: ASP.NET Core MVC (.NET 9), EF Core, SQLite, Razor views, hand-written CSS. No JavaScript framework. The implementation is in `Profiler.Web/`.
 
-Let people find others who genuinely share their interests **without surrendering their
-personal data**. The product only earns the right to exist if it is more private than the
-alternatives — "raw data is never stored" is the north star, not a slogan.
+Full product handbook and changelog: `PRODUCT_LOG.md`, which must be updated with every product or implementation change.
+
+## Current Product Vision
+
+Help privacy-conscious people find others who genuinely share their interests **without surrendering raw personal data**.
+
+The product earns the right to exist only if it is more private than the alternatives. “Raw data is never stored” is a product constraint, not merely a slogan.
+
+## Potential Better Vision Under Evaluation
+
+Help people find unusually compatible relationships using multiple **consented, user-controlled signals**—such as interests, values, worldview, and intent—while minimizing retained personal data and making matching understandable.
+
+This is a hypothesis, not an approved final direction.
+
+Any vision expansion must preserve:
+
+- Explicit consent
+- Data minimization
+- Clear user control
+- Explainable matching
+- No clinical or deterministic claims about personality
+- No unnecessary retention of raw activity or questionnaire responses
 
 ## Target User
 
-A privacy-conscious person who wants to meet like-minded people around niche interests
-(software, reading, music, film, gaming) but does not want to hand their data to yet
-another social network.
+A privacy-conscious person who wants to meet like-minded people around niche interests, values, or worldview but does not want to surrender raw activity or intimate profile data to another social network.
 
 ## Core Problem
 
-Interest-based matching normally requires giving a platform your raw activity. Profiler
-matches on an anonymized fingerprint, so no raw activity is retained.
+Most compatibility and interest-based matching products require users to expose raw behavior, detailed profiles, or sensitive answers.
+
+Profiler should produce useful matching while retaining only the minimum derived information needed to operate.
 
 ## Core Value Proposition
 
-"Find your people without sharing your data." Matching is computed from a MinHash
-fingerprint; the underlying interests are discarded once the fingerprint is built.
+**Find your people without surrendering your raw data.**
 
-## Core User Journey
+The current implementation matches from anonymized interest fingerprints. Product discovery is evaluating whether optional privacy-preserving compatibility signals can improve match quality and differentiation.
 
-1. Register (auto sign-in) → land on the Connect page.
-2. Connect at least one source (GitHub username, RSS URLs, or a Goodreads/Netflix CSV need
-   no credentials; the rest accept OAuth tokens / API keys).
-3. Profiler fetches interests, builds the fingerprint, discards the raw data.
-4. View ranked matches with a qualitative tier and shared source types.
-5. Read a match's optional bio/contact and reach out off-platform.
-6. Manage yourself from the dashboard: signal counts, disconnect a source, edit public
-   profile, change password, hide from matches, hide a person, export data, delete account.
+## Core User Journey — Current Release
 
-## Success Criteria
+1. Register and sign in automatically.
+2. Connect at least one source.
+3. Profiler fetches interests, builds a fingerprint, and discards raw data.
+4. View ranked matches with qualitative tiers and shared source types.
+5. Read optional bio/contact details and reach out off-platform.
+6. Manage privacy, sources, profile, password, visibility, blocks, export, and account deletion.
 
-- A new user can go from registration to a real match list without credentials they cannot
-  obtain, and without any raw interest data being persisted.
-- Every failure mode in that journey (connector failure, empty fingerprint, no matches yet,
-  rate limit, deleted account) is explained in the UI rather than surfacing as an error.
-- The privacy promise is asserted by tests against the database, not by construction.
-- Build, tests, and security posture stay green.
+## Success Criteria — Current Release
 
-## Explicit Mission Completion Criteria
+- A new user can reach a real match list without credentials they cannot reasonably obtain.
+- Raw interest data is not persisted.
+- Important connector, fingerprint, empty-match, rate-limit, auth, and deletion failures are explained in the UI.
+- Privacy claims are asserted with non-vacuous database tests.
+- Build, tests, migrations, and security posture remain healthy.
 
-The autonomous mission is complete only when a fresh Product Owner review confirms all of the following:
+## Product-Mission Continuation Rule
 
-- No unresolved P0, P1, P2, or P3 product improvements remain.
-- The complete core user journey works end to end and has been verified.
-- All relevant builds, type checks, lint checks, and tests pass.
-- No known meaningful defects or regressions remain.
-- Important error, empty, loading, validation, permission, and persistence states are handled.
-- Security and data-integrity risks relevant to the product have been reviewed.
-- A fresh independent product review finds no additional meaningful work whose expected value justifies implementation.
+The overall product mission is intentionally open-ended.
 
-Finishing a single task, feature, milestone, sprint, or initial backlog does not satisfy these criteria.
+A stable release, passing tests, completed known backlog, clean release audit, or implemented current vision establishes **release completion only**.
 
-## Current Product Assessment
+After release completion:
 
-The product is mature and the core journey is implemented end to end: accounts, 18
-connectors, per-source incremental fingerprints, matching with a noise floor and
-qualitative tiers, opt-in public profile, discoverability toggle, per-person hiding, data
-transparency + JSON export, account deletion.
+1. Run a separate Product Opportunity Critic.
+2. Challenge the current vision and assumptions.
+3. Generate and evaluate materially different product bets.
+4. Select the strongest justified next experiment or increment.
+5. Continue the autonomous loop.
 
-Security has had several passes: BCrypt + password screening, antiforgery on every POST
-(reflection-asserted), deny-by-default authorization, login rate limiting, SSRF guard with
-DNS-rebinding pinning on RSS, 5 MB response cap, 10 MB CSV cap, HSTS/HTTPS outside
-Development, persistent Data Protection key ring, text policy rejecting invisible and
-bidirectional characters in usernames/bios/contact lines.
+The run may stop only when:
 
-Account recovery now exists (one-time code, no email). Known standing limitations
-(documented in `PRODUCT_LOG.md` §10): no auto-refresh of sources (intentional — tokens are
-never stored), no in-app messaging, matches capped at 20 with no pagination, and matching is
-O(all users) in memory (needs LSH banding past a few thousand users).
+1. The user explicitly instructs it to stop.
+2. An external execution, token, context, compute, time, or spending limit prevents continued work.
+3. Progress requires unavailable credentials, access, legal authority, destructive approval, or essential information that cannot reasonably be inferred.
+4. The environment prevents further implementation, investigation, or validation.
+5. A safety or policy constraint prevents further work.
+
+## Release 1 Status
+
+**Release 1 is complete and stable based on the recorded historical reviews.**
+
+This does **not** complete the overall product mission.
+
+Recorded completed work includes:
+
+- Privacy-preserving fingerprint hardening
+- Session invalidation and account recovery
+- Reciprocal discoverability and atomic connect behavior
+- Connector cancellation and rate-limit improvements
+- Username hardening
+- SSRF transition-address hardening
+- Empty-state and cold-start improvements
+- Invite link, match-refresh messaging, and interest-lens improvements
+- Core journey and important privacy behavior reviewed end to end
+
+The opt-in contact model remains an explicit owner decision unless new evidence justifies reopening it.
 
 ## Current Phase
 
-Product Owner review — the reopened **growth loop shipped its top three cold-start fixes**; further
-ideas are marginal/scale-gated (see backlog). Handed back to the owner for the next priority.
+**Building — multi-signal compatibility, slice 1 (connection intent).** Product Opportunity
+Discovery produced a Product Owner decision (see Discovery Decision below): expand toward
+privacy-preserving multi-signal compatibility incrementally, lowest-risk signal first. Values
+questionnaire deferred behind the same infrastructure.
 
-Loop was **reopened by owner (2026-07-22)** to pursue product growth beyond the defect-clean state.
-It targeted the cold-start problem — the product's biggest weakness against its vision (a new user
-connects, finds no matches, and never returns).
+## Discovery Decision (2026-07-22) — multi-signal compatibility
 
-**Growth backlog (fresh Product Owner review, ranked by value to the target user):**
+Investigated the optional values/worldview questionnaire and ran an independent Opportunity Critic
+(≥5 bets). **Decision:**
 
-- ~~**Immediate value on connect** — an interest lens ("here's what we found").~~ **Done** (`d7f16ae`).
-- ~~**A reason to return** — "N matches refreshed since your last visit".~~ **Done** (`db5bbb8`).
-- ~~**Grow the network** — an invite link on the empty-matches state.~~ **Done** (`e73aa60`).
+- **Adopt the vision-expansion direction** (interest-only → privacy-preserving *multi-signal*
+  compatibility) **incrementally**, lowest-risk signal first.
+- **First slice: optional "connection intent"** — a user-controlled, low-sensitivity self-report of
+  what kind of connection they want. It is a recorded P1 opportunity, needs no licensed instrument,
+  works even with zero connected sources (cold-start), and targets the real gap: *sharing interests
+  is not the same as being worth reaching out to.*
+- **Defer the values/worldview questionnaire.** Schwartz's 2-axis structure is the strongest
+  evidence-based candidate, but validated item wordings carry licensing/attribution norms and the
+  signal is moderately sensitive. Build it behind the same infrastructure **after** the intent slice
+  validates the pattern and the privacy model. **Reject** Big Five (clinical/personality overclaim)
+  and Moral-Foundations/political items (filter-bubble + protected-class risk) for now.
+- **Reject** any verbatim copyrighted psychometric instrument and any single blended
+  "compatibility %". Signals stay **separate and explainable**.
 
-The three cold-start levers — immediate value, a reason to return, a way to grow the network — are
-all shipped. **Remaining growth ideas are marginal or scale-gated pre-network** and are recorded
-below for the owner rather than built blind:
-- *Referral tracking / credited invites* — more data + complexity; little value until there is a
-  real user base to attribute.
-- *Richer onboarding guidance, more match-quality signals* — the high-value ones (per-source
-  overlap, freshness, no-contact nudge, thin-fingerprint nudge) already ship; further additions are
-  polish.
-- *Match-list pagination, LSH banding (P4)* — only matter far past current scale.
+### Privacy model (applies to every added signal)
+Opt-in, skippable, independently deletable, included in export. Store only a **small fixed derived
+representation**; for a future questionnaire, discard raw answers after deriving the vector (retake =
+re-answer), matching the interest-fingerprint mental model. Never show another user your raw answers
+— only coarse alignment. A values dimension, when added, must be hideable and must not be a hard
+filter (avoid filter bubbles).
 
-Diminishing returns reached for this loop; handing back to the owner for the next priority.
+### Matching model
+Keep dimensions **separate and explainable** ("Strong on interests · Both here to collaborate").
+Do not blend into one opaque score. Interest ranking is unchanged for now; new signals are displayed
+(and optionally filterable) dimensions, not a hidden re-ranking.
 
-## Prior Phase — completion gate (from the pre-reopen run)
+## Active Task
 
-The independent-review completion gate **ran and came back essentially clean**. See below. That
-assessment still holds for defects; this reopened phase is additive product growth, not defect work.
+**Slice 1 of multi-signal compatibility: optional "connection intent."**
 
-## Completion Gate Status — independent review obtained; near-clean
+Smallest validated vertical slice, reusing the existing opt-in-profile pattern (bio/contact):
 
-The mission's formal criterion is "a fresh independent product review finds no additional
-meaningful work." **Three independent (subagent) reviews were completed this run.** The first
-two each found a real defect the previous missed — the second a **P0** (reversible fingerprints);
-all shipped. A fourth attempt (the "third review") failed once on a transient monthly-spend-limit
-error, then a **retry succeeded**.
+### Definition of Done
 
-**The successful third review found no P0/P1/P2 defect or regression** in the code — it verified
-the newest work against the code (not the changelog), confirmed every empty/error/permission/
-loading state in the views is handled, and confirmed the crown-jewel privacy test is non-vacuous.
-Its only net-new findings were **two small P3 hardening items, both now shipped** (commit
-`d2e30ea`): the SSRF guard missing IPv4 embedded in IPv6 transition addresses, and usernames of
-pure combining marks/punctuation. Its bottom line: "the independent-review completion gate would
-come back essentially clean."
+- `AppUser.ConnectionIntent` (nullable, small closed set: unspecified / friends / collaborators /
+  discussion / open). Migration.
+- Profile page: optional selector, clearly labeled optional; blank stays private.
+- Match card: show the match's intent as a separate explainable line when set (like contact); never
+  a score, never a blended tier.
+- Included in `/account/data` + JSON export; cleared via profile; removed on account deletion.
+- No change to interest ranking; no blended "compatibility score".
+- Tests: intent round-trips on profile, appears on the match card, appears in export.
+- `PRODUCT_LOG.md` + this file updated.
 
-**The one remaining P1 — mutual contact consent — was put to the owner and closed.** All three
-reviews agreed it was a product design bet, not a defect. The owner's decision (2026-07-22):
-**keep the current opt-in contact model as final** — contact is opt-in, labelled, shown only to
-matches, and withheld while you are hidden. The P1 is therefore resolved as *won't-do by design*,
-not left open.
-
-With that decision, the completion criteria are assessed as **met** — see the Completion Decision
-section below. Suite is **214** tests, all green across repeated runs; Release build 0 warnings.
-
-## Previous Active Task (complete)
-
-**Account recovery without email.** A forgotten password permanently locks the account *and*
-makes the data undeletable (deletion is password-confirmed), so the locked-out user's
-fingerprint stays in the matching pool forever and their username is squatted. This
-contradicts the "delete everything, any time" promise the product sells on.
-
-Design: a one-time recovery code generated at registration, shown once, stored BCrypt-hashed,
-single-use. It resets the password (and therefore restores the ability to delete). No email is
-collected, so the privacy stance holds.
-
-### Definition of Done — all met
-
-- Code issued at registration and shown exactly once. ✅
-- `/account/recover` (anonymous, rate-limited), single post, generic failure message. ✅
-- Single-use; using it issues a replacement. ✅
-- Signed-in users can regenerate, password-confirmed. ✅
-- Accounts with no code on file are nudged on the dashboard. ✅
-- Migration `AddRecoveryCode`; 14 tests; README and `PRODUCT_LOG.md` updated. ✅
+Follow-ups (recorded, not this slice): make intent filterable (reuse the shared-source chip
+pattern); add interaction-style preferences; then the Schwartz-grounded values vector.
 
 ## Current Execution Notes
 
-Baseline command set:
+Baseline commands recorded in the previous state:
 
 ```bash
-dotnet build            # expect 0 warnings, 0 errors
-dotnet test             # expect 214/214 passing, ~6s, fully offline
-dotnet run --project Profiler.Web   # http://localhost:5000
+dotnet build
+dotnet test
+dotnet run --project Profiler.Web
 ```
 
-Working branch: `rebuild/dotnet-profiler`. Commit continuously in focused units.
-QA server config: `.claude/launch.json` → `profiler-web-qa` on port 5241, pinned to the
-Development environment so the app boots without a production `Fingerprint:Pepper`. Port 5240
-belongs to another session.
+Baseline re-established 2026-07-22: **225 tests pass, build 0 warnings** (before slice 1). The
+match-filter feature ("filter by shared interest area") landed at commit `d67d140`.
+
+Working branch recorded previously: `rebuild/dotnet-profiler`.
+
+Commit continuously in focused logical units. Do not wait for owner review before committing coherent validated work.
 
 ## Backlog
 
 ### P0 — Critical
 
-- None identified.
+- None currently recorded. Re-establish baseline before assuming the state remains clean.
 
-### P1 — Core Product
+### P1 — Core Product / Product Bets
 
-- ~~Mutual contact consent.~~ **Closed by owner decision (2026-07-22): keep the opt-in contact
-  model as final.** Contact is opt-in, labelled "shown to people you match with", withheld while
-  you are hidden, and rendered as inert plain text. A mutual "connect request" was the reviewers'
-  top *potential* improvement but a design change, not a defect; the owner chose the simpler,
-  privacy-by-default model. No P1 work outstanding.
+- **Active:** Evaluate optional values/worldview questionnaire as a privacy-preserving compatibility signal.
+- Evaluate a hybrid matching model that keeps interest similarity and values/worldview compatibility as understandable separate dimensions.
+- Evaluate relationship intent or desired connection type as a user-controlled matching constraint.
+- Reassess whether the current vision should expand from “interest matching” to “privacy-preserving compatibility matching.”
 
 ### P2 — Quality / Reliability / UX
 
-- None open. (Connector cancellation shipped — commit `ed42817`.)
+- Re-run build, tests, migrations, and the core journey because historical test counts conflict.
+- Ensure any new questionnaire or compatibility flow has explicit consent, skip, retake, export, and deletion behavior.
+- Ensure match explanations do not overstate scientific certainty or imply clinical/personality diagnosis.
 
-### P3 — Enhancement (all reviewed)
+### P3 — Enhancement / Experiments
 
-- ~~Username uniqueness folds case only for ASCII (`André`/`ANDRÉ`).~~ **Done** (`5dde335`).
-- ~~SSRF guard ignores IPv4 embedded in IPv6 transition addresses.~~ **Done** (`d2e30ea`).
-- ~~Username of pure combining marks/punctuation renders as a garbled avatar.~~ **Done** (`d2e30ea`).
-The three items below were each reviewed and judged **not to have expected value that justifies
-implementation now** — the completion criteria's final bullet is about exactly this, so they do
-not hold the mission open:
+- Prototype an explainable match card showing separate interest and values dimensions.
+- Explore user-adjustable weighting rather than a hidden universal scoring formula.
+- Explore a short onboarding questionnaire versus a deeper optional questionnaire.
+- Explore local or ephemeral scoring approaches that minimize retained sensitive derived data.
+- Revisit referral tracking only when network scale makes attribution useful.
+- Revisit pagination and containment-based scoring when actual usage justifies them.
 
-- **Pure-lookalike usernames** (`сор` vs `cop`) — needs a confusable-skeleton normalization that
-  **over-blocks** legitimate all-Cyrillic/Greek names when wrong, a real UX harm. The sharp cases
-  (invisible chars, mixed alphabets, case/compatibility folds) are already blocked, leaving a
-  narrow residual. Expected value does not justify the over-block risk without dedicated design.
-- **Containment-based scoring** — Jaccard of the union is a defensible overall-similarity
-  definition, and the per-source "closest on X" line already makes the dilution legible. A
-  judgement call, not a defect.
-- **Match list pagination** beyond the top 20 — low value until there are far more than 20 plausible
-  matches per user, which is the same scale regime that needs the P4 LSH work first.
+### P4 — Scale / Optional
 
-### P4 — Polish / Optional
+- LSH banding when the number of users makes exhaustive comparison impractical.
+- Advanced privacy-preserving computation only if the simpler data-minimizing design becomes insufficient.
 
-- LSH banding for matching (only matters past a few thousand users).
+## Product Opportunities Under Evaluation
+
+### Core Outcome Improvements
+
+- Improve match quality by combining multiple complementary signals.
+- Keep signal dimensions separate enough that users understand why a match exists.
+- Let users express what kind of similarity matters to them.
+
+### Vision Expansion
+
+- Evolve from interest-fingerprint matching toward privacy-preserving compatibility matching.
+- Add optional values/worldview signals without requiring connected-platform data.
+- Support useful matching for users with sparse or unavailable platform history.
+
+### Adjacent User Needs
+
+- Help users articulate their own values and preferences.
+- Help users distinguish “shares my interests” from “likely compatible for friendship, collaboration, or discussion.”
+- Support different connection intents without becoming a conventional dating/social network.
+
+### Differentiation / Defensibility
+
+- Privacy-preserving multi-signal matching.
+- Explainable compatibility dimensions instead of an opaque single score.
+- User-controlled weighting and selective disclosure.
+- Data minimization as a product capability rather than only a policy statement.
+
+### Simplification / Redesign
+
+- Avoid pretending that one aggregate compatibility score is objectively correct.
+- Remove signals that add sensitivity without meaningful predictive value.
+- Prefer short, optional, progressive profiling over a mandatory long questionnaire.
+
+### Experiments and Product Bets
+
+- Prototype questionnaire completion and derived-dimension deletion behavior.
+- Test whether users understand separate interest and values match explanations.
+- Compare interest-only, values-only, and hybrid matching on synthetic or consented test profiles.
+- Evaluate whether a questionnaire improves the empty-network/cold-start experience.
+
+## Current Product Assumptions
+
+- Interest similarity is useful enough to motivate connection.
+- Privacy-conscious users will connect external sources when raw data is discarded.
+- Derived fingerprints are acceptable if they are meaningfully protected and deletable.
+- Off-platform contact is sufficient for the product’s current relationship model.
+- More matching signals will improve outcomes only if users understand and control them.
+
+## Assumptions That Should Be Challenged Next
+
+- Interest similarity alone is the best proxy for compatibility.
+- A MinHash interest fingerprint is sufficient differentiation.
+- Users prefer passive data connection over explicit self-report.
+- A single combined score is more useful than separate explainable dimensions.
+- Values/worldview questions can be added without creating excessive sensitivity, bias, or false scientific authority.
+- The product can claim better matching without a measurement strategy.
 
 ## Known Bugs / Risks
 
-- **Operational:** `Fingerprint:Pepper` is now required outside Development, and it must be kept
-  for the life of the deployment. If it is lost or changed, every stored signature becomes
-  meaningless — the app detects this at startup and clears them, so everyone must reconnect their
-  sources. The raw interests needed to rebuild them are deliberately gone.
-- Deploying the session cutoff signs everyone out once: cookies issued before it carry no
-  issue-time claim and are treated as expired.
-- Otherwise none open. Fixed this session: a stored fingerprint that could be reversed by anyone
-  holding the database; sessions surviving a password change; blocks outliving account deletion;
-  sequential connector fetches; rate limiting collapsing to one global bucket behind a proxy;
-  a non-atomic connect path; one-way discoverability.
+- `Fingerprint:Pepper` must remain stable for the lifetime of a deployment; loss or rotation invalidates stored signatures and requires reconnection.
+- Historical state records conflict on the test total. Establish the current baseline.
+- Questionnaire-derived values/worldview data may be more sensitive than interest fingerprints.
+- Psychometric content may have licensing, validity, cultural-bias, and interpretation constraints.
+- Matching on values/worldview may create filter bubbles or amplify exclusion if designed carelessly.
+- Product language must not overclaim scientific accuracy or deterministically label users.
+
+## Last Completed Release
+
+### Release 1
+
+Recorded as stable after multiple reviews and cold-start improvements.
+
+The prior statement that “the autonomous mission’s completion criteria are satisfied” is retired. It is preserved only as a historical release-completion decision, not as authorization to stop the product mission.
 
 ## Last Completed Iteration
 
-**Iteration:** 10 (this session) — independent-review gate obtained (near-clean), its two P3
-findings shipped (SSRF transition addresses, no-letter usernames), P1 closed by owner decision,
-completion criteria assessed as met. Earlier iterations summarised below.
+**Iteration:** Release 1 closeout
 
-**Iteration:** 9 (this session)
+**Completed:** Known P0–P3 delivery and defect findings recorded at the time were shipped, deferred with rationale, or closed by explicit owner decision.
 
-**Completed:** connector cancellation (commit `ed42817`) — `IConnector.FetchAsync` takes a
-`CancellationToken`, the aggregator links the 30s budget with the caller's `RequestAborted`, every
-connector and the SSRF DNS lookup forward it, and cancellation is not swallowed by the catch-alls.
-Followed by an inline review of the newest code and coverage for the scheme verifier
-(commit `02d1525`).
+**Validation:** Historical state reports a successful release build, repeated tests, migrations, privacy checks, and a live core-journey review. The exact test total is inconsistent and must be re-established.
 
-Earlier in the session (iterations 1–8): baseline re-established and the state file reconstructed;
-blocks no longer outlive a deleted account; concurrent connector fan-out under a 30s budget;
-match cards state a missing contact, fingerprint freshness, and the strongest shared source;
-registration/connect rate-limited and proxy-aware; account recovery codes; usernames may not mix
-alphabets; the reversible-fingerprint **P0** fixed with a per-deployment pepper + scheme-change
-purge; session invalidation on password change/recovery plus "sign out everywhere"; reciprocal
-discoverability; atomic connect; per-policy 429 wording; trimmed-username length; friendly
-oversized-upload page.
+**Result:** Release 1 may be treated as complete. Product Opportunity Discovery is now active.
 
-**Validation:** `dotnet build` 0 warnings; `dotnet test` **185/185** passing, stable across three
-consecutive runs. All 9 migrations apply cleanly to a fresh database, and to the dev database
-(the pre-pepper signature was detected and cleared on first boot). Full core journey re-verified
-end to end against the running server this iteration — register → one-time recovery code →
-connect real GitHub → 128-dim fingerprint, no raw interests in any table → matched pair, contact
-visible → symmetric hide → password change signs out the other device but not the acting one →
-password-confirmed delete leaves no orphan blocks.
+## Vision Evolution Log
 
-**Result:** Every P0–P3 defect finding from all three completed independent reviews is shipped.
-The one P1 (mutual-contact-consent) was put to the owner and closed as won't-do-by-design.
+### Previous Vision
 
-## Completion Decision (2026-07-22)
+Find people with similar interests from privacy-preserving fingerprints derived from connected online activity.
 
-Assessed against the Explicit Mission Completion Criteria after a fresh, *successful* independent
-review and the owner's P1 decision:
+### Potential Better Vision
 
-- **No unresolved P0/P1/P2/P3 improvements whose expected value justifies implementation.** ✅
-  P0/P1/P2 are all shipped or (P1) closed by owner decision. The three residual P3s are each
-  reviewed and judged not-worth-implementing-now (over-block risk / judgement call / low value at
-  scale) — the criteria's final bullet is precisely this test.
-- **Core journey verified end to end.** ✅ Re-run live this session, register → recovery code →
-  connect → fingerprint (no raw interests in any table) → match → hide → password-change session
-  cutoff → delete with clean cascade.
-- **Build, type, lint, tests pass.** ✅ Release build 0 warnings; 214/214 tests, stable across
-  repeated runs; all migrations apply to a fresh DB.
-- **No known meaningful defects/regressions.** ✅
-- **Error/empty/loading/validation/permission/persistence states handled.** ✅ Confirmed by the
-  successful independent review's view-by-view pass.
-- **Security & data-integrity reviewed.** ✅ Three independent reviews plus the reversible-
-  fingerprint P0 fix, session invalidation, SSRF transition-address hardening, cascade integrity.
-- **Fresh independent review finds no additional meaningful work justifying implementation.** ✅
-  Its bottom line: the gate "would come back essentially clean"; its only findings were two small
-  P3s, both now shipped.
+Help people find unusually compatible relationships using multiple consented, explainable, privacy-preserving signals such as interests, values, worldview, and connection intent.
 
-**The autonomous mission's completion criteria are satisfied.** The loop hands back to the owner.
+### Evidence Needed
+
+- Evidence that the added signal improves match usefulness or cold-start value.
+- Evidence that users understand and want the signal.
+- A data-minimizing design that does not undermine trust.
+- Appropriate licensing and scientific framing.
+- A clear explanation model that avoids false precision.
+- Evidence that complexity is justified compared with improving interest-only matching.
 
 ## Next Mandatory Action
 
-None outstanding. If new priorities arise, resume from a fresh Product Owner review. Deferred P3s
-(confusable-skeleton usernames, containment scoring, pagination) and the P4 (LSH) are recorded
-above with rationale should the owner choose to revisit them. Repository is coherent and fully
-green at HEAD.
+1. Read `CLAUDE.md` and `docs/PRODUCT_AGENT.md`.
+2. Re-run the current repository baseline and record the actual build/test state.
+3. Use a strong Product Owner/research subagent to investigate the optional values/worldview questionnaire opportunity.
+4. Use an independent Product Opportunity Critic to generate at least four additional materially different bets.
+5. Compare the bets using user value, alignment, evidence, effort, risk, privacy, differentiation, and learning value.
+6. Select the strongest justified next experiment or increment.
+7. Update this file and `PRODUCT_LOG.md`.
+8. Commit the coherent planning/discovery unit.
+9. Begin implementation or prototyping immediately if justified.
+
+Do not hand control back merely because Release 1 is clean.
