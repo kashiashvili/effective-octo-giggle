@@ -121,4 +121,40 @@ public class ConnectionIntentTests : IClassFixture<ProfilerWebFactory>
         Assert.Contains(ConnectionIntent.LabelFor("discussion")!, page); // the label, shown as text
         Assert.DoesNotContain("discussion\"", page);                     // not the raw key
     }
+
+    /// <summary>
+    /// Intent is only a compatibility signal when it is mutual. When the viewer and a match are here
+    /// for the same thing the card says so ("both here for"); when they differ it just shows theirs.
+    /// </summary>
+    [Fact]
+    public async Task WhenBothChoseTheSameIntent_TheCardCallsItMutual()
+    {
+        var meName = "mut_me_" + Guid.NewGuid().ToString("N")[..6];
+        var sameName = "mut_same_" + Guid.NewGuid().ToString("N")[..6];
+        var diffName = "mut_diff_" + Guid.NewGuid().ToString("N")[..6];
+        var fpJson = new FingerprintGenerator(128).Generate(new[] { "q:1", "q:2", "q:3" }).ToJson();
+
+        var client = NewClient();
+        await RegisterAsync(client, meName);
+        // The viewer is here for collaboration.
+        await PostFormAsync(client, "/account/profile", "/account/profile", new() { ["ConnectionIntent"] = "collaborators" });
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var me = await db.Users.FirstAsync(u => u.Username == meName);
+            var same = new AppUser { Username = sameName, PasswordHash = "x", IsDiscoverable = true, ConnectionIntent = "collaborators" };
+            var diff = new AppUser { Username = diffName, PasswordHash = "x", IsDiscoverable = true, ConnectionIntent = "discussion" };
+            db.Users.AddRange(same, diff);
+            await db.SaveChangesAsync();
+            foreach (var uid in new[] { me.Id, same.Id, diff.Id })
+                db.Fingerprints.Add(new FingerprintRecord { UserId = uid, FingerprintJson = fpJson, SourcesJson = "[\"GitHub\"]" });
+            await db.SaveChangesAsync();
+        }
+
+        var page = await (await client.GetAsync("/matches")).Content.ReadAsStringAsync();
+        Assert.Contains("You're both here for: " + ConnectionIntent.LabelFor("collaborators"), page);
+        // The one who chose differently is shown plainly, not as mutual.
+        Assert.Contains("Here for: " + ConnectionIntent.LabelFor("discussion"), page);
+    }
 }

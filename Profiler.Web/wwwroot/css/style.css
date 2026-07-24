@@ -701,6 +701,10 @@ footer {
   font-size: .85rem;
   color: var(--gray-600);
 }
+.match-intent-shared {
+  font-weight: 600;
+  color: var(--primary, #6366f1);
+}
 .source-filter {
   display: flex;
   flex-wrap: wrap;

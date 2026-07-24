@@ -69,6 +69,9 @@ public class MatchesController : Controller
 
         ViewBag.IsDiscoverable = allFps.FirstOrDefault(f => f.UserId == userId)?.User.IsDiscoverable ?? true;
 
+        // The viewer's own intent, to spot a match who is here for the same thing.
+        var myIntent = allFps.FirstOrDefault(f => f.UserId == userId)?.User.ConnectionIntent;
+
         var mySources = JsonSerializer.Deserialize<List<string>>(myFp.SourcesJson) ?? new();
 
         var matches = matcher.FindMatches(userId.ToString(), minSimilarity: MinMatchSimilarity);
@@ -130,6 +133,9 @@ public class MatchesController : Controller
                 // A separate, explainable signal shown alongside interests — never blended into the
                 // similarity score. Withheld while hidden, like the other personal fields.
                 ConnectionIntentLabel = iAmVisible ? ConnectionIntent.LabelFor(matchFp?.User.ConnectionIntent) : null,
+                SharesViewerIntent = iAmVisible
+                    && !string.IsNullOrEmpty(myIntent)
+                    && matchFp?.User.ConnectionIntent == myIntent,
                 UpdatedAt = matchFp?.UpdatedAt ?? DateTime.UtcNow
             };
         }).ToList();

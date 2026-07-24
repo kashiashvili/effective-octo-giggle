@@ -179,7 +179,14 @@
                             }
                             @if (!string.IsNullOrWhiteSpace(match.ConnectionIntentLabel))
                             {
-                                <p class="match-intent">🎯 Here for: @match.ConnectionIntentLabel</p>
+                                @if (match.SharesViewerIntent)
+                                {
+                                    <p class="match-intent match-intent-shared">🎯 You're both here for: @match.ConnectionIntentLabel</p>
+                                }
+                                else
+                                {
+                                    <p class="match-intent">🎯 Here for: @match.ConnectionIntentLabel</p>
+                                }
                             }
                             @if (!string.IsNullOrWhiteSpace(match.Contact))
                             {
