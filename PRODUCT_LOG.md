@@ -298,6 +298,13 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-22
+- **Discovery: filter matches by shared interest area** — the vision is niche interests, so "show me
+  the people I share Music with" is a core move. The matches page now shows a chip row of the source
+  types you share with your matches; clicking one narrows the list. Filtering is view-only — the
+  retention count and empty-state distinction are computed on the full set. Unknown source values are
+  ignored (no blank page), an empty filter result explains itself, and chips appear only with 2+
+  areas to choose from. Three integration tests. (First increment of the "let users express what
+  kind of similarity matters" opportunity.)
 - **Growth: an invite link on the empty-matches state** — the empty state told users to "invite
   friends" but gave no mechanism. It now shows a shareable sign-up link (built from the request, so
   correct behind a proxy) with a copy-to-clipboard button, progressive-enhancement (the link is a
