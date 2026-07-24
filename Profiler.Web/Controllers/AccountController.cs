@@ -330,6 +330,63 @@ public class AccountController : Controller
         return RedirectToAction("Dashboard", "Sources");
     }
 
+    [HttpGet("values")]
+    public async Task<IActionResult> Values()
+    {
+        var user = await FindCurrentUserAsync();
+        if (user == null) return await SignOutToHomeAsync();
+        ViewBag.HasValues = user.ValuesOpenness.HasValue;
+        return View(new ValuesViewModel());
+    }
+
+    /// <summary>
+    /// Collects the questionnaire answers, derives the coarse bucket, stores only the bucket, and
+    /// drops the answers. The raw answers exist only for the lifetime of this request — never saved,
+    /// never logged — the same promise the interest fingerprint makes.
+    /// </summary>
+    [HttpPost("values")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Values(ValuesViewModel vm)
+    {
+        var user = await FindCurrentUserAsync();
+        if (user == null) return await SignOutToHomeAsync();
+
+        if (!vm.Consent)
+            ModelState.AddModelError(nameof(vm.Consent), "Please confirm you understand before saving.");
+
+        var bucket = Profiler.Web.Profile.ValuesQuestionnaire.DeriveBucket(vm.Answers);
+        if (bucket is null)
+            ModelState.AddModelError("", "Please answer every question to save your values profile.");
+
+        if (!ModelState.IsValid)
+        {
+            ViewBag.HasValues = user.ValuesOpenness.HasValue;
+            return View(vm);
+        }
+
+        user.ValuesOpenness = bucket;
+        user.ValuesScheme = Profiler.Web.Profile.ValuesQuestionnaire.Version;
+        await _db.SaveChangesAsync();
+
+        TempData["Success"] = "Your values profile has been saved. Your answers were used to work it out and then discarded.";
+        return RedirectToAction("Dashboard", "Sources");
+    }
+
+    [HttpPost("values/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteValues()
+    {
+        var user = await FindCurrentUserAsync();
+        if (user == null) return await SignOutToHomeAsync();
+
+        user.ValuesOpenness = null;
+        user.ValuesScheme = null;
+        await _db.SaveChangesAsync();
+
+        TempData["Success"] = "Your values profile has been removed.";
+        return RedirectToAction("Dashboard", "Sources");
+    }
+
     [HttpGet("data")]
     public async Task<IActionResult> Data()
     {
@@ -380,6 +437,7 @@ public class AccountController : Controller
             Bio = user.Bio,
             Contact = user.Contact,
             ConnectionIntent = user.ConnectionIntent,
+            ValuesOpenness = user.ValuesOpenness,
             FingerprintDimensions = dimensions,
             Sources = sources,
             HiddenPeople = hidden

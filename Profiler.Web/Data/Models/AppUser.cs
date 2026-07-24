@@ -53,5 +53,15 @@ public class AppUser
     /// </summary>
     public string? ConnectionIntent { get; set; }
 
+    /// <summary>
+    /// Optional values signal: the derived openness↔conservation bucket (−2..+2), or null if not
+    /// taken. Only this coarse bucket is stored — the raw questionnaire answers are discarded after
+    /// derivation, exactly like interest features. See <see cref="Profile.ValuesQuestionnaire"/>.
+    /// </summary>
+    public int? ValuesOpenness { get; set; }
+
+    /// <summary>Scheme version the bucket was derived under, so a future item change is detectable.</summary>
+    public string? ValuesScheme { get; set; }
+
     public FingerprintRecord? Fingerprint { get; set; }
 }

@@ -12,6 +12,9 @@ public class DataExportViewModel
     /// <summary>The stored connection-intent key, or null if unspecified.</summary>
     public string? ConnectionIntent { get; set; }
 
+    /// <summary>The derived values bucket (−2..+2), or null. The raw answers are never stored.</summary>
+    public int? ValuesOpenness { get; set; }
+
     /// <summary>Number of dimensions in the stored MinHash signature (the signature is anonymized).</summary>
     public int FingerprintDimensions { get; set; }
 

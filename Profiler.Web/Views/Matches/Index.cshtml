@@ -200,6 +200,10 @@
                                     <p class="match-intent">🎯 Here for: @match.ConnectionIntentLabel</p>
                                 }
                             }
+                            @if (!string.IsNullOrWhiteSpace(match.ValuesAlignmentLabel))
+                            {
+                                <p class="match-values">🧭 @match.ValuesAlignmentLabel</p>
+                            }
                             @if (!string.IsNullOrWhiteSpace(match.Contact))
                             {
                                 <p class="match-contact">📮 @match.Contact</p>

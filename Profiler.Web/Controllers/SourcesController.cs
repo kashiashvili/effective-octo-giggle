@@ -50,6 +50,7 @@ public class SourcesController : Controller
         ViewBag.Bio = user.Bio;
         ViewBag.Contact = user.Contact;
         ViewBag.ConnectionIntentLabel = Profiler.Web.Profile.ConnectionIntent.LabelFor(user.ConnectionIntent);
+        ViewBag.HasValues = user.ValuesOpenness.HasValue;
         ViewBag.IsDiscoverable = user.IsDiscoverable;
         // Accounts predating recovery have no code on file, and a used code is not replaced if the
         // replacement was never saved. Either way the account has no way back from a lost password.

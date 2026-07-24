@@ -705,6 +705,19 @@ footer {
   font-weight: 600;
   color: var(--primary, #6366f1);
 }
+.match-values {
+  margin-top: .5rem;
+  font-size: .85rem;
+  color: var(--gray-600);
+}
+
+.likert { display: flex; gap: .5rem; justify-content: space-between; }
+.likert-option { flex: 1; text-align: center; cursor: pointer; }
+.likert-option input { display: block; margin: 0 auto .25rem; }
+.likert-num { font-size: .8rem; color: var(--gray-500); }
+.likert-scale { display: flex; justify-content: space-between; font-size: .72rem; color: var(--gray-400); margin-top: .4rem; }
+.check-inline { display: flex; gap: .5rem; align-items: flex-start; font-size: .85rem; color: var(--gray-600); }
+.check-inline input { margin-top: .2rem; }
 .source-filter {
   display: flex;
   flex-wrap: wrap;

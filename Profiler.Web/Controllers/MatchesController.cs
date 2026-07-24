@@ -71,6 +71,8 @@ public class MatchesController : Controller
 
         // The viewer's own intent, to spot a match who is here for the same thing.
         var myIntent = allFps.FirstOrDefault(f => f.UserId == userId)?.User.ConnectionIntent;
+        // The viewer's own values bucket, to show coarse alignment on cards.
+        var myValues = allFps.FirstOrDefault(f => f.UserId == userId)?.User.ValuesOpenness;
 
         var mySources = JsonSerializer.Deserialize<List<string>>(myFp.SourcesJson) ?? new();
 
@@ -136,6 +138,10 @@ public class MatchesController : Controller
                 SharesViewerIntent = iAmVisible
                     && !string.IsNullOrEmpty(myIntent)
                     && matchFp?.User.ConnectionIntent == myIntent,
+                // Coarse values alignment, only when both sides took it and the viewer is visible.
+                ValuesAlignmentLabel = iAmVisible
+                    ? ValuesQuestionnaire.AlignmentLabel(myValues, matchFp?.User.ValuesOpenness)
+                    : null,
                 UpdatedAt = matchFp?.UpdatedAt ?? DateTime.UtcNow
             };
         }).ToList();
