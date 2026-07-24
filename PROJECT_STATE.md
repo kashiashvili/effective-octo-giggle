@@ -169,10 +169,11 @@ small vector (retake = re-answer), opt-in/skippable/hideable/deletable, in expor
 alignment** on match cards (never raw answers, never a blended score, not a hard filter → avoid
 filter bubbles). Reject Big Five and political/moral items.
 
-### Smallest useful validated increment (start here)
-1. Pick ONE axis first: **openness-to-change ↔ conservation** (least sensitive of the Schwartz axes).
-2. Author 3–4 own Likert items for it; derive to a single signed bucket (e.g. −2..+2). Discard raw.
-3. Store `AppUser.ValuesOpenness` (nullable small int) + a version tag. Migration.
+### Smallest useful validated increment (in progress)
+1. ~~Pick ONE axis: **openness↔conservation**.~~ Done.
+2. ~~Own Likert items; derive to a signed bucket −2..+2; discard raw.~~ **Done** — `ValuesQuestionnaire`
+   (commit `116c837`), 15 tests, reverse-scored, coarse `AlignmentLabel`. Pure logic, no persistence.
+3. **NEXT:** store `AppUser.ValuesOpenness` (nullable small int) + scheme version tag. Migration.
 4. Consent-gated opt-in page (`/account/values`), skippable, with clear "what this is / isn't"
    copy (no clinical/personality claims). Retake overwrites; a delete-values control.
 5. Match card: coarse alignment line when both set ("Similar outlook" / "Different outlook"),
@@ -361,10 +362,13 @@ Help people find unusually compatible relationships using multiple consented, ex
 
 ## Resume Point (2026-07-24)
 
-Signal 1 (connection intent) is complete and committed (HEAD `49a7199`). Baseline: **241 tests,
-build 0 warnings, 12 migrations clean on a fresh DB.** Next: begin Signal 2 (values/worldview),
-smallest increment above — one axis (openness↔conservation), own items, discard raw. This is a
-larger slice; start it fresh. Nothing is uncommitted.
+Signal 1 (connection intent) complete. Signal 2 (values/worldview) started: the **derivation logic**
+is done and committed (`116c837`, `ValuesQuestionnaire`, 15 tests). Baseline: **256 tests, build 0
+warnings.** Nothing uncommitted. **Next sub-slice:** persist the derived bucket
+(`AppUser.ValuesOpenness` + version tag, migration), then the consent-gated opt-in page
+(`/account/values`) that collects answers → derives → stores bucket → discards raw, then coarse
+alignment on the match card (`ValuesQuestionnaire.AlignmentLabel`, hideable, withheld while hidden),
+then export + delete-values control, then a DB-asserted privacy test that raw answers never persist.
 
 ## Next Mandatory Action
 
