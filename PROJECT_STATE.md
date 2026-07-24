@@ -379,16 +379,36 @@ uncommitted. Values signal shipped end to end: consent-gated `/account/values` �
 bucket → discard raw (DB-asserted) → coarse alignment on match cards → export + delete → dashboard
 entry. Both signals stay separate/explainable; interest ranking unchanged; no blended score.
 
-**Next candidate bets (Product Owner to prioritise next iteration):**
-- Add the **second Schwartz axis** (self-enhancement ↔ self-transcendence) to the values signal, or
-  evaluate whether one axis is enough before adding sensitivity.
-- **Measurement:** the vision hypothesis ("multi-signal improves outcomes") is untested — add a
-  privacy-safe way to learn whether the new signals change who users contact/filter to.
-- **Release Auditor + Opportunity Critic** pass over the expanded product (three signals now:
-  interests, intent, values) before treating this as a release.
-- Revisit the **Current Product Vision** text in this file, which still says "interests only" — the
-  product now matches on interests + intent + values; the vision should be updated to the
-  multi-signal framing the owner recorded as the "Potential Better Vision".
+### Product Owner decision (2026-07-24): measurement gates further signal expansion
+
+Three signals now ship (interests, intent, values). The recorded assumption — *more signals improve
+outcomes only if users understand and control them* — is **untested**. Adding a second values axis
+(self-enhancement ↔ self-transcendence) would increase sensitive-data collection against the
+data-minimization north star **with no evidence it helps**, so it is **deferred until measurement
+exists**. This is the disciplined PO call, not a stopping point.
+
+**Privacy-safe measurement plan (next real increment):** the north star forbids tracking behavior,
+so measure at the aggregate/derived level only. Candidate signals, each cheap and non-identifying:
+- Adoption counts (how many users set intent / took values), from columns already present — no new
+  data.
+- Whether a card's compatibility signals correlate with the user choosing to *reveal contact* or
+  *filter* — but this needs an event we do not currently record. Design an **aggregate, per-day,
+  non-user-linked counter** (e.g. "matches viewed with vs without a shared signal") rather than
+  per-user event logs, so it cannot rebuild a behavior profile. Decide explicitly whether even this
+  is worth the retention before building.
+- Simplest first step, no new retention: an internal admin/metrics view computing adoption from
+  existing columns, behind auth, to see whether the signals are used at all before investing more.
+
+**Other next bets (owner to prioritise):**
+- **Formal two-reviewer pass** (Release Auditor + Opportunity Critic, ≥5 fresh bets) over the
+  three-signal product before calling it a release. (Inline auditor pass done this session: no
+  regressions; new `/account/values` actions authorized + antiforgery-covered; consent enforced in
+  controller; card alignment null-safe and withheld while hidden.)
+- **Promote the vision** from "interests only" to the multi-signal framing — an **owner decision**;
+  the "Potential Better Vision" is now validated in code under all its constraints.
+- Match-card **information hierarchy**: a fully-populated card can now show tier, %, sources,
+  closest-on, freshness, bio, values, intent, contact. Reviewed as acceptable (most fields optional/
+  conditional, grouped logically) but worth a real-user look if cards feel dense.
 
 ## Next Mandatory Action
 
