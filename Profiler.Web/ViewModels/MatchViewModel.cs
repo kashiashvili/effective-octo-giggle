@@ -33,6 +33,9 @@ public class MatchViewModel
     /// <summary>Coarse values alignment with the viewer ("Similar outlook"), or null if either side has none/hidden.</summary>
     public string? ValuesAlignmentLabel { get; set; }
 
+    /// <summary>Numeric closeness for the "similar outlook first" sort — smaller is closer; large when absent.</summary>
+    public int ValuesAlignmentRank { get; set; } = int.MaxValue;
+
     /// <summary>
     /// When the matched user's fingerprint was last rebuilt. Tokens are never stored, so refreshing
     /// is manual and an abandoned profile never decays: without this, a year-old snapshot is

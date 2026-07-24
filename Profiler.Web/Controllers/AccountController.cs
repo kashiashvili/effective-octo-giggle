@@ -438,6 +438,8 @@ public class AccountController : Controller
             Contact = user.Contact,
             ConnectionIntent = user.ConnectionIntent,
             ValuesOpenness = user.ValuesOpenness,
+            ValuesScheme = user.ValuesScheme,
+            LastMatchesViewedAt = user.LastMatchesViewedAt,
             FingerprintDimensions = dimensions,
             Sources = sources,
             HiddenPeople = hidden

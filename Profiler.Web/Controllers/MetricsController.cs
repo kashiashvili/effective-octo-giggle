@@ -45,30 +45,41 @@ public class MetricsController : ControllerBase
             return Unauthorized();
 
         var users = _db.Users;
+        var totalUsers = await users.CountAsync();
 
-        var intentBreakdown = await users
-            .Where(u => u.ConnectionIntent != null)
-            .GroupBy(u => u.ConnectionIntent!)
-            .Select(g => new { Key = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.Key, x => x.Count);
+        // Below this many users the per-category breakdowns can pin an individual's intent/values
+        // (e.g. one user, one bucket), so they are withheld until the cohort is large enough for the
+        // distribution to be genuinely aggregate. The plain totals stay.
+        const int MinCohortForBreakdown = 10;
+        var breakdownsShown = totalUsers >= MinCohortForBreakdown;
 
-        var valuesDistribution = await users
-            .Where(u => u.ValuesOpenness != null)
-            .GroupBy(u => u.ValuesOpenness!.Value)
-            .Select(g => new { Bucket = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.Bucket.ToString(), x => x.Count);
+        var intentBreakdown = breakdownsShown
+            ? await users.Where(u => u.ConnectionIntent != null)
+                .GroupBy(u => u.ConnectionIntent!)
+                .Select(g => new { Key = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Key, x => x.Count)
+            : null;
+
+        var valuesDistribution = breakdownsShown
+            ? await users.Where(u => u.ValuesOpenness != null)
+                .GroupBy(u => u.ValuesOpenness!.Value)
+                .Select(g => new { Bucket = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Bucket.ToString(), x => x.Count)
+            : null;
 
         return Ok(new
         {
             GeneratedAtUtc = DateTime.UtcNow,
-            TotalUsers = await users.CountAsync(),
+            TotalUsers = totalUsers,
             WithFingerprint = await _db.Fingerprints.CountAsync(),
             Discoverable = await users.CountAsync(u => u.IsDiscoverable),
             WithBio = await users.CountAsync(u => u.Bio != null),
             WithContact = await users.CountAsync(u => u.Contact != null),
             WithConnectionIntent = await users.CountAsync(u => u.ConnectionIntent != null),
-            ConnectionIntentBreakdown = intentBreakdown,
             WithValuesProfile = await users.CountAsync(u => u.ValuesOpenness != null),
+            // Withheld (null) below the small-cohort threshold to prevent re-identification.
+            BreakdownsWithheldBelowCohort = breakdownsShown ? (int?)null : MinCohortForBreakdown,
+            ConnectionIntentBreakdown = intentBreakdown,
             ValuesOpennessDistribution = valuesDistribution,
         });
     }

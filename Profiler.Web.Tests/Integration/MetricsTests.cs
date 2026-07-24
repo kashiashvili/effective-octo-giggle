@@ -76,6 +76,10 @@ public class MetricsTests : IClassFixture<ProfilerWebFactory>
         Assert.Contains("withValuesProfile", body, StringComparison.OrdinalIgnoreCase);
         // The distributions are keyed by bucket/intent, not by anyone — the username must not leak.
         Assert.DoesNotContain(username, body);
+        // With a tiny cohort the per-category breakdowns are withheld, so a single user's exact
+        // intent/values cannot be read off the distribution.
+        Assert.Contains("breakdownsWithheldBelowCohort", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"connectionIntentBreakdown\":null", body.Replace(" ", ""), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

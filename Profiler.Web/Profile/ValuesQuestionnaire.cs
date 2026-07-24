@@ -60,6 +60,14 @@ public static class ValuesQuestionnaire
     }
 
     /// <summary>
+    /// Numeric closeness for ordering — smaller is closer. <see cref="int.MaxValue"/> when either
+    /// side has no values signal, so those sort last. Sorting keys off this rather than the display
+    /// label, so rewording the label cannot silently break the sort.
+    /// </summary>
+    public static int AlignmentRank(int? a, int? b) =>
+        a is null || b is null ? int.MaxValue : Math.Abs(a.Value - b.Value);
+
+    /// <summary>
     /// Coarse, wordy alignment between two buckets — never a number. Distance 0–1 reads as close,
     /// 2 as partial, 3–4 as far apart. Null if either side has no values signal.
     /// </summary>

@@ -15,6 +15,12 @@ public class DataExportViewModel
     /// <summary>The derived values bucket (−2..+2), or null. The raw answers are never stored.</summary>
     public int? ValuesOpenness { get; set; }
 
+    /// <summary>The scheme version the values bucket was derived under, or null.</summary>
+    public string? ValuesScheme { get; set; }
+
+    /// <summary>When the user last opened their matches (drives the "new since last visit" count).</summary>
+    public DateTime? LastMatchesViewedAt { get; set; }
+
     /// <summary>Number of dimensions in the stored MinHash signature (the signature is anonymized).</summary>
     public int FingerprintDimensions { get; set; }
 

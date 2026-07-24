@@ -93,4 +93,22 @@ public class ValuesQuestionnaireTests
         Assert.Null(ValuesQuestionnaire.AlignmentLabel(1, null));
         Assert.Null(ValuesQuestionnaire.AlignmentLabel(null, null));
     }
+
+    [Theory]
+    [InlineData(2, 2, 0)]
+    [InlineData(2, -2, 4)]
+    [InlineData(-1, 1, 2)]
+    public void AlignmentRank_IsTheDistance_SmallerIsCloser(int a, int b, int expected)
+    {
+        Assert.Equal(expected, ValuesQuestionnaire.AlignmentRank(a, b));
+    }
+
+    [Fact]
+    public void AlignmentRank_SortsAbsentSignalsLast()
+    {
+        // The sort keys off this, not the display label, so a missing signal must rank worst.
+        Assert.Equal(int.MaxValue, ValuesQuestionnaire.AlignmentRank(null, 2));
+        Assert.Equal(int.MaxValue, ValuesQuestionnaire.AlignmentRank(2, null));
+        Assert.True(ValuesQuestionnaire.AlignmentRank(2, -2) < ValuesQuestionnaire.AlignmentRank(2, null));
+    }
 }

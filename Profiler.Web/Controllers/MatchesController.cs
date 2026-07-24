@@ -142,6 +142,9 @@ public class MatchesController : Controller
                 ValuesAlignmentLabel = iAmVisible
                     ? ValuesQuestionnaire.AlignmentLabel(myValues, matchFp?.User.ValuesOpenness)
                     : null,
+                ValuesAlignmentRank = iAmVisible
+                    ? ValuesQuestionnaire.AlignmentRank(myValues, matchFp?.User.ValuesOpenness)
+                    : int.MaxValue,
                 UpdatedAt = matchFp?.UpdatedAt ?? DateTime.UtcNow
             };
         }).ToList();
@@ -168,8 +171,15 @@ public class MatchesController : Controller
         {
             if (me.LastMatchesViewedAt is { } since)
                 ViewBag.NewSinceLastVisit = viewModels.Count(m => m.UpdatedAt > since);
-            me.LastMatchesViewedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
+
+            // Advance the "last visited" marker only on the plain view. Re-stamping it on every load
+            // — a sort/filter click, a second tab, a link prefetch — would immediately zero the "new
+            // since last visit" count the marker exists to produce.
+            if (string.IsNullOrEmpty(source) && string.IsNullOrEmpty(sort))
+            {
+                me.LastMatchesViewedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
         }
 
         // Let the person narrow to the interest area they actually came for — the vision is niche
@@ -211,7 +221,7 @@ public class MatchesController : Controller
         var ordered = sortMode switch
         {
             "intent" => shown.OrderByDescending(m => m.SharesViewerIntent).ToList(),
-            "values" => shown.OrderByDescending(m => m.ValuesAlignmentLabel == "Similar outlook").ToList(),
+            "values" => shown.OrderBy(m => m.ValuesAlignmentRank).ToList(),
             _ => shown,
         };
 
