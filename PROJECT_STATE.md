@@ -59,9 +59,20 @@ The current implementation matches from anonymized interest fingerprints. Produc
 1. Register and sign in automatically.
 2. Connect at least one source.
 3. Profiler fetches interests, builds a fingerprint, and discards raw data.
-4. View ranked matches with qualitative tiers and shared source types.
-5. Read optional bio/contact details and reach out off-platform.
-6. Manage privacy, sources, profile, password, visibility, blocks, export, and account deletion.
+4. View ranked matches with qualitative tiers and shared source types, filterable by shared
+   interest area, plus **separate explainable compatibility signals**: shared connection intent
+   ("both here for …") and coarse values alignment ("similar / different outlook"). Signals are
+   displayed, never blended into a score; interest similarity still drives ranking.
+5. Optionally add **connection intent** and take the optional **values questionnaire** (consent-
+   gated; answers discarded after deriving a coarse bucket) so matches carry more than interests.
+6. Read optional bio/contact details and reach out off-platform.
+7. Manage privacy, sources, profile, password, visibility, blocks, the two compatibility signals
+   (edit/remove), export, and account deletion.
+
+> Note: signals 1–2 (intent, values) are shipped and validate the owner's recorded "Potential
+> Better Vision" (multi-signal compatibility) under all its constraints — consent, data
+> minimization, user control, explainability, no clinical claims, no raw retention. Formally
+> promoting that hypothesis to the Current Product Vision remains an owner decision.
 
 ## Success Criteria — Current Release
 
