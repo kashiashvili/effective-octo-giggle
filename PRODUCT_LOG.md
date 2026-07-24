@@ -301,6 +301,18 @@ dotnet test                           # 214 tests, fully offline
 
 Each entry: what changed and why it mattered.
 
+### 2026-07-24
+- **Multi-signal compatibility — signal 2: optional values/worldview.** Behind the same privacy
+  model as connection intent. A consent-gated opt-in questionnaire (`/account/values`) asks a few
+  plain openness-vs-conservation statements (own wording, no licensed instrument, grounded in
+  Schwartz's public two-axis structure), derives a single coarse bucket (−2..+2), stores only that
+  plus a scheme version, and **discards the raw answers** — asserted against the database. Shown to
+  matches as coarse alignment only ("🧭 Similar / Different outlook"), never the answers, never a
+  number, never a blended score, withheld while hidden. In the export as the derived bucket;
+  removable any time; removed on deletion. Framed as optional and non-clinical. `ValuesQuestionnaire`
+  derivation (reverse-scored, 15 tests) + `AppUser.ValuesOpenness`/`ValuesScheme`
+  (migration `AddValuesOpenness`) + 4 integration tests. Verified live.
+
 ### 2026-07-22
 - **Multi-signal compatibility — slice 2: mutual intent highlight.** Intent only signals
   compatibility when it is shared, so a match who is here for the same thing as the viewer is now

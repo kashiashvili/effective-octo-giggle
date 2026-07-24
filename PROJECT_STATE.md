@@ -362,13 +362,22 @@ Help people find unusually compatible relationships using multiple consented, ex
 
 ## Resume Point (2026-07-24)
 
-Signal 1 (connection intent) complete. Signal 2 (values/worldview) started: the **derivation logic**
-is done and committed (`116c837`, `ValuesQuestionnaire`, 15 tests). Baseline: **256 tests, build 0
-warnings.** Nothing uncommitted. **Next sub-slice:** persist the derived bucket
-(`AppUser.ValuesOpenness` + version tag, migration), then the consent-gated opt-in page
-(`/account/values`) that collects answers → derives → stores bucket → discards raw, then coarse
-alignment on the match card (`ValuesQuestionnaire.AlignmentLabel`, hideable, withheld while hidden),
-then export + delete-values control, then a DB-asserted privacy test that raw answers never persist.
+**Signals 1 (connection intent) and 2 (values/worldview) are both COMPLETE and committed** (HEAD
+`7f86add`). Baseline: **260 tests, build 0 warnings, 13 migrations clean on a fresh DB.** Nothing
+uncommitted. Values signal shipped end to end: consent-gated `/account/values` → derive coarse
+bucket → discard raw (DB-asserted) → coarse alignment on match cards → export + delete → dashboard
+entry. Both signals stay separate/explainable; interest ranking unchanged; no blended score.
+
+**Next candidate bets (Product Owner to prioritise next iteration):**
+- Add the **second Schwartz axis** (self-enhancement ↔ self-transcendence) to the values signal, or
+  evaluate whether one axis is enough before adding sensitivity.
+- **Measurement:** the vision hypothesis ("multi-signal improves outcomes") is untested — add a
+  privacy-safe way to learn whether the new signals change who users contact/filter to.
+- **Release Auditor + Opportunity Critic** pass over the expanded product (three signals now:
+  interests, intent, values) before treating this as a release.
+- Revisit the **Current Product Vision** text in this file, which still says "interests only" — the
+  product now matches on interests + intent + values; the vision should be updated to the
+  multi-signal framing the owner recorded as the "Potential Better Vision".
 
 ## Next Mandatory Action
 
