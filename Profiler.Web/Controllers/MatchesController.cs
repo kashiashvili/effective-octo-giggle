@@ -150,6 +150,10 @@ public class MatchesController : Controller
         // people who cannot answer them, with nothing explaining why.
         ViewBag.HasOwnContact = !string.IsNullOrWhiteSpace(me?.Contact);
 
+        // Adoption nudge for the new signal: a viewer who hasn't said what they're here for is told
+        // once, so matches can see it and the mutual highlight has something to work with.
+        ViewBag.HasOwnIntent = !string.IsNullOrWhiteSpace(me?.ConnectionIntent);
+
         // A reason to come back: how many of these matches have refreshed their interests since the
         // last time this person looked. Suppressed on the very first visit (nothing to compare to)
         // and when there is nothing new. The read updates the marker, so "since last visit" always

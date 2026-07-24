@@ -120,6 +120,8 @@ public class ConnectionIntentTests : IClassFixture<ProfilerWebFactory>
         Assert.Contains(otherName, page);
         Assert.Contains(ConnectionIntent.LabelFor("discussion")!, page); // the label, shown as text
         Assert.DoesNotContain("discussion\"", page);                     // not the raw key
+        // The viewer here has not set an intent, so the adoption nudge is shown.
+        Assert.Contains("Say what you're here for", page);
     }
 
     /// <summary>
@@ -156,5 +158,7 @@ public class ConnectionIntentTests : IClassFixture<ProfilerWebFactory>
         Assert.Contains("You're both here for: " + ConnectionIntent.LabelFor("collaborators"), page);
         // The one who chose differently is shown plainly, not as mutual.
         Assert.Contains("Here for: " + ConnectionIntent.LabelFor("discussion"), page);
+        // This viewer set their intent, so the adoption nudge is not shown.
+        Assert.DoesNotContain("Say what you're here for", page);
     }
 }

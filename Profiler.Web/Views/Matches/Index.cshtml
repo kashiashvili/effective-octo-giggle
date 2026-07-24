@@ -5,6 +5,7 @@
     bool othersExist = ViewBag.OthersExist ?? false;
     bool isDiscoverable = ViewBag.IsDiscoverable ?? true;
     bool hasOwnContact = ViewBag.HasOwnContact ?? true;
+    bool hasOwnIntent = ViewBag.HasOwnIntent ?? true;
     var lens = ViewBag.InterestLens as List<Profiler.Web.Profile.InterestTheme>;
     int lensTotal = ViewBag.InterestLensTotal ?? 0;
     int newSinceLastVisit = ViewBag.NewSinceLastVisit ?? 0;
@@ -71,6 +72,17 @@
                 <span>
                     You haven't shared a way to be reached, so nobody here can answer you.
                     <a href="/account/profile">Add a contact line</a> — it's shown only to people you match with.
+                </span>
+            </div>
+        }
+
+        @if (!noFingerprint && !hasOwnIntent && Model.Any())
+        {
+            <div class="alert alert-info">
+                <span class="alert-icon">🎯</span>
+                <span>
+                    Sharing interests isn't the same as wanting the same thing.
+                    <a href="/account/profile">Say what you're here for</a> so your matches know — and so you can see who's here for it too.
                 </span>
             </div>
         }
