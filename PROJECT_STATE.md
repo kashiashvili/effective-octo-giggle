@@ -156,7 +156,7 @@ Do not blend into one opaque score. Interest ranking is unchanged for now; new s
 Shipped as a coherent feature across: field + closed-set validation (`2c20033`), mutual-shared
 highlight (`a308506`), dashboard self-preview (`6b3d73a`), adoption nudge (`49a7199`). Opt-in,
 shown to matches as a separate explainable line, mutual emphasis, withheld while hidden, in export,
-cleared via profile, removed on deletion, never re-ranks or blends into a score. **242 tests, build
+cleared via profile, removed on deletion, never re-ranks or blends into a score. **241 tests, build
 0 warnings.** (Deferred, low value now: filter-by-intent — the mutual highlight already surfaces
 same-intent matches, and filtering only matters at scale like the source filter.)
 
@@ -361,7 +361,7 @@ Help people find unusually compatible relationships using multiple consented, ex
 
 ## Resume Point (2026-07-24)
 
-Signal 1 (connection intent) is complete and committed (HEAD `49a7199`). Baseline: **242 tests,
+Signal 1 (connection intent) is complete and committed (HEAD `49a7199`). Baseline: **241 tests,
 build 0 warnings, 12 migrations clean on a fresh DB.** Next: begin Signal 2 (values/worldview),
 smallest increment above — one axis (openness↔conservation), own items, discard raw. This is a
 larger slice; start it fresh. Nothing is uncommitted.
