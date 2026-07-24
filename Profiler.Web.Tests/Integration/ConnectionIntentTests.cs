@@ -161,4 +161,50 @@ public class ConnectionIntentTests : IClassFixture<ProfilerWebFactory>
         // This viewer set their intent, so the adoption nudge is not shown.
         Assert.DoesNotContain("Say what you're here for", page);
     }
+
+    /// <summary>
+    /// The signals only pay off if they can affect what the user sees. "Same intent first" is an
+    /// explicit, user-chosen ordering that lifts same-intent matches above a stronger interest match
+    /// — without changing the underlying similarity or inventing a blended score.
+    /// </summary>
+    [Fact]
+    public async Task SortingBySameIntent_LiftsAMatchWithSharedIntent_AboveAStrongerInterestMatch()
+    {
+        var meName = "sort_me_" + Guid.NewGuid().ToString("N")[..6];
+        var strongName = "sort_strong_" + Guid.NewGuid().ToString("N")[..6];   // higher interest, different intent
+        var intentName = "sort_intent_" + Guid.NewGuid().ToString("N")[..6];   // lower interest, same intent
+
+        var meFp = new FingerprintGenerator(128).GenerateRaw(Enumerable.Range(0, 30).Select(i => $"t:{i}").ToArray());
+        // Strong: identical to me. Weak-but-shared-intent: overlaps only partly.
+        var strongFp = new FingerprintGenerator(128).GenerateRaw(Enumerable.Range(0, 30).Select(i => $"t:{i}").ToArray());
+        var weakFp = new FingerprintGenerator(128).GenerateRaw(Enumerable.Range(0, 30).Select(i => i < 12 ? $"t:{i}" : $"z:{i}").ToArray());
+
+        var client = NewClient();
+        await RegisterAsync(client, meName);
+        await PostFormAsync(client, "/account/profile", "/account/profile", new() { ["ConnectionIntent"] = "collaborators" });
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var me = await db.Users.FirstAsync(u => u.Username == meName);
+            var strong = new AppUser { Username = strongName, PasswordHash = "x", IsDiscoverable = true, ConnectionIntent = "discussion" };
+            var intent = new AppUser { Username = intentName, PasswordHash = "x", IsDiscoverable = true, ConnectionIntent = "collaborators" };
+            db.Users.AddRange(strong, intent);
+            await db.SaveChangesAsync();
+            db.Fingerprints.Add(new FingerprintRecord { UserId = me.Id, FingerprintJson = FingerprintGenerator.FromRaw(meFp).ToJson(), SourcesJson = "[\"GitHub\"]" });
+            db.Fingerprints.Add(new FingerprintRecord { UserId = strong.Id, FingerprintJson = FingerprintGenerator.FromRaw(strongFp).ToJson(), SourcesJson = "[\"GitHub\"]" });
+            db.Fingerprints.Add(new FingerprintRecord { UserId = intent.Id, FingerprintJson = FingerprintGenerator.FromRaw(weakFp).ToJson(), SourcesJson = "[\"GitHub\"]" });
+            await db.SaveChangesAsync();
+        }
+
+        // Default order: the stronger interest match comes first.
+        var def = await (await client.GetAsync("/matches")).Content.ReadAsStringAsync();
+        Assert.True(def.IndexOf(strongName, StringComparison.Ordinal) < def.IndexOf(intentName, StringComparison.Ordinal),
+            "by default the stronger interest match should rank first");
+
+        // Sorted by same intent: the shared-intent match is lifted above it.
+        var sorted = await (await client.GetAsync("/matches?sort=intent")).Content.ReadAsStringAsync();
+        Assert.True(sorted.IndexOf(intentName, StringComparison.Ordinal) < sorted.IndexOf(strongName, StringComparison.Ordinal),
+            "sort=intent should lift the same-intent match above the stronger interest match");
+    }
 }

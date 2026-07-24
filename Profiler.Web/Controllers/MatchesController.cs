@@ -23,7 +23,7 @@ public class MatchesController : Controller
     public MatchesController(AppDbContext db) => _db = db;
 
     [HttpGet("")]
-    public async Task<IActionResult> Index(string? source)
+    public async Task<IActionResult> Index(string? source, string? sort)
     {
         var userId = User.GetUserId();
 
@@ -192,7 +192,30 @@ public class MatchesController : Controller
             ? viewModels
             : viewModels.Where(m => m.SharedSources.Contains(activeFilter)).ToList();
 
-        return View(shown);
+        // An explicit, user-chosen ordering — never a hidden blended score. Interest similarity is
+        // still the default and the tiebreaker; "sort" only lifts matches that share the viewer's
+        // intent, or read as a similar outlook, to the top. OrderByDescending is stable, so within
+        // each group the interest ranking is preserved. Options are only offered (in the view) when
+        // the viewer has the matching signal set, so the sort always means something.
+        var viewerHasIntent = !string.IsNullOrEmpty(myIntent);
+        var viewerHasValues = myValues.HasValue;
+        ViewBag.HasOwnValues = viewerHasValues;
+
+        var sortMode = sort switch
+        {
+            "intent" when viewerHasIntent => "intent",
+            "values" when viewerHasValues => "values",
+            _ => null,
+        };
+        ViewBag.SortMode = sortMode;
+        var ordered = sortMode switch
+        {
+            "intent" => shown.OrderByDescending(m => m.SharesViewerIntent).ToList(),
+            "values" => shown.OrderByDescending(m => m.ValuesAlignmentLabel == "Similar outlook").ToList(),
+            _ => shown,
+        };
+
+        return View(ordered);
     }
 
     // Hiding is addressed by username rather than by row id: the username is already visible on the

@@ -735,6 +735,7 @@ footer {
   text-decoration: none;
   transition: background .12s, color .12s, border-color .12s;
 }
+.sort-label { align-self: center; font-size: .8rem; color: var(--gray-500); margin-right: .1rem; }
 .filter-chip:hover { border-color: var(--primary); color: var(--primary); }
 .filter-chip.active {
   background: var(--primary);
