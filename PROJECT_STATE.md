@@ -641,10 +641,11 @@ Release Auditor ×3 — all clean or findings fixed.
 **The clean, high-value, evidence-independent bets are now shipped.** What remains is gated on an owner
 decision, an external resource (a live deployment / a CAPTCHA provider), or is a consequential change
 that needs careful fresh design — do not rush any of these at the tail of a long context:
-1. **Op-6 completion — next buildable safety.** An admin **suspend** loop so the operator can act on the
-   reports they can now see. Prefer a *reversible soft-suspend* (a flag that excludes the user from
-   matching and rejects their login) over a token-gated hard-delete, which a leaked token could turn into
-   mass deletion. Security-sensitive: design the auth surface and reversibility deliberately.
+1. **Op-6 — COMPLETE (`ecf7fc7`).** Report → operator review (`/metrics/reports`) → reversible
+   soft-suspend (`AppUser.SuspendedAt`, `POST /metrics/suspend`): excluded from matches, session +
+   login refused, reinstatable. Soft flag, not delete (leaked-token-safe). 4 tests. **Still open before
+   real launch:** anti-sybil CAPTCHA (external provider) — the per-IP register rate limit is the interim
+   guard.
 2. **Op-5 — hide/remove the values signal. OWNER DECISION.** Strong data-minimization case (weak
    discrimination, most-sensitive data) but reverses a deliberately-shipped, vision-relevant signal.
 3. **Connector-side rarity weighting** — consequential (real fingerprint-scheme migration; design the

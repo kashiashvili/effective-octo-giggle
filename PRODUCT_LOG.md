@@ -304,6 +304,13 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-25
+- **Operator suspend loop — act on reports (reversible).** Completes the safety loop: the operator could
+  see reports but not act. `AppUser.SuspendedAt` (migration `AddUserSuspension`) is a **reversible**
+  soft-suspend — deliberately not a token-gated hard-delete, which a leaked token could turn into mass
+  account deletion. A suspended account is excluded from everyone's matches, has its session refused on
+  every request (`OnValidatePrincipal`, mirroring the deleted/pre-cutoff rejection), and cannot log in.
+  Operator action: token-gated `POST /metrics/suspend {username, suspend}` (bearer token, a flag flip);
+  `/metrics/reports` shows each reported user's suspension status. 4 tests.
 - **Report path — safety recourse beyond a silent hide.** With more now shown on cards (bio + contact +
   showable interests) and registration being username+password only, the only prior recourse was a
   silent one-sided hide — a bad actor stayed in everyone else's pool. A "Report" control on the match
