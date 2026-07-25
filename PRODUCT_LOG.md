@@ -11,7 +11,7 @@
 > revise the relevant section above it. Keep it truthful and current. This is not
 > optional; it is how the owner stays in control.
 
-_Last updated: 2026-07-22_
+_Last updated: 2026-07-25_
 
 ---
 
@@ -300,6 +300,21 @@ dotnet test                           # 214 tests, fully offline
 ## 11. Changelog (newest first)
 
 Each entry: what changed and why it mattered.
+
+### 2026-07-25
+- **Assumption test → recalibrated match tiers (the core signal).** The values axis got a
+  resolution simulation; the *core* interest signal never had, so its tier cut-offs (Strong ≥60%,
+  Good ≥30%) were unexamined guesses on a naïve 0–100 scale. A synthetic-profile simulation (no real
+  users, `InterestSignalResolutionTests`) showed MinHash Jaccard over interest *sets* runs low: even
+  two users who share a whole niche sit at **median ~0.21, P90 ~0.34, almost none above 0.50**, while
+  strangers sit at ~0. Under the old cut-offs **"Strong match" was unreachable (0% even for same-niche
+  pairs)** and only ~17% of genuine matches cleared "Good" — real matches were mislabelled "Some
+  overlap". Recalibrated to the realistic range (**Good ≥15%, Strong ≥35%**): same-niche pairs now read
+  Good-or-better **92%** of the time (Strong a rare-but-earned 8%), and strangers still read "Some
+  overlap" 100% of the time. Also confirmed the fingerprint is faithful — the 128-hash estimate tracks
+  true Jaccard within a mean absolute error of 0.006. CSS tier classes (high/medium/low) unchanged, so
+  the card styling is untouched; only the thresholds moved. The resolution test asserts against the
+  real `MatchViewModel` tiers, so it fails loudly if the calibration ever drifts again.
 
 ### 2026-07-24
 - **Assumption test → recalibrated values alignment.** A synthetic-profile simulation (no real

@@ -380,6 +380,21 @@ derive → discard-raw, DB-asserted → coarse alignment), token-gated aggregate
 **user-controlled sort** (Best match / Same intent first / Similar outlook first — stable secondary
 sort, no blended score). Signals now affect what the user sees, on their terms.
 
+### Assumption test result (2026-07-25) — core interest signal resolution + tier recalibration
+
+Applied the same synthetic-simulation discipline used on the values axis to the product's **core**
+signal, which had never been resolution-tested. New `InterestSignalResolutionTests` (no real users)
+builds community-structured synthetic profiles, fingerprints them with the real
+`FingerprintGenerator`, and measures the tier distribution against the real `MatchViewModel` tiers.
+**Findings:** (1) the fingerprint is faithful — 128-hash MinHash tracks true Jaccard within MAE
+0.006; (2) MinHash Jaccard over interest *sets* runs low — same-niche pairs sit at **median ~0.21,
+P90 ~0.34, ~none above 0.50**, strangers at ~0; (3) the old tier cut-offs (Good ≥30, Strong ≥60)
+made **"Strong match" unreachable (0%)** and left ~83% of genuine matches mislabelled "Some overlap".
+**Acted on it:** recalibrated to **Good ≥15%, Strong ≥35%** (`MatchViewModel`), so same-niche pairs
+read Good-or-better **92%** of the time (Strong a rare-but-earned 8%) while strangers stay 100% "Some
+overlap". CSS classes (high/medium/low) unchanged. The resolution test guards the real thresholds and
+fails if calibration drifts. **Baseline now: 278 tests, build 0 warnings.** HEAD after this unit.
+
 ### Assumption test result (2026-07-24) — values signal resolution
 
 Ran a synthetic-profile simulation (`ValuesSignalResolutionTests`, no real users) to test whether

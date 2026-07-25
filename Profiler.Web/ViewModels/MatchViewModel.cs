@@ -60,17 +60,28 @@ public class MatchViewModel
         }
     }
 
+    // Tier cut-offs are calibrated to how MinHash Jaccard actually behaves over interest *sets*, not
+    // to a naïve 0–100 scale. Jaccard = |A∩B| / |A∪B| runs low for real people: even two users who
+    // share a whole niche each bring their own extras, which dilute the union. A synthetic-profile
+    // simulation (InterestSignalResolutionTests) put same-niche pairs at median ~0.21 and P90 ~0.34,
+    // with essentially none above 0.50, while strangers sit at ~0. The original 30/60 cut-offs made
+    // "Strong match" unreachable (0% even for same-niche pairs) and labelled genuine matches "Some
+    // overlap". These thresholds place "Strong" around the top decile of same-niche overlap and
+    // "Good" clearly above stranger noise, so each tier carries information.
+    private const int GoodMatchPercent = 15;
+    private const int StrongMatchPercent = 35;
+
     /// <summary>CSS/severity bucket used for colour cues.</summary>
-    public string Tier => SimilarityPercent >= 60 ? "high"
-        : SimilarityPercent >= 30 ? "medium"
+    public string Tier => SimilarityPercent >= StrongMatchPercent ? "high"
+        : SimilarityPercent >= GoodMatchPercent ? "medium"
         : "low";
 
     /// <summary>
     /// Human label for the tier. MinHash gives an estimate, not an exact score, so we lead with a
     /// qualitative label and treat the percentage as approximate rather than implying false precision.
     /// </summary>
-    public string TierLabel => SimilarityPercent >= 60 ? "Strong match"
-        : SimilarityPercent >= 30 ? "Good match"
+    public string TierLabel => SimilarityPercent >= StrongMatchPercent ? "Strong match"
+        : SimilarityPercent >= GoodMatchPercent ? "Good match"
         : "Some overlap";
 }
 

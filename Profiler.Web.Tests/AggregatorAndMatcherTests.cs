@@ -341,9 +341,15 @@ public class AggregatorAndMatcherTests
     }
 
     [Theory]
+    // Cut-offs calibrated to MinHash-Jaccard reality: Strong ≥35%, Good ≥15%, Some below.
     [InlineData(0.85, "high", "Strong match")]
-    [InlineData(0.45, "medium", "Good match")]
+    [InlineData(0.40, "high", "Strong match")]   // realistic upper-niche overlap now reads "Strong"
+    [InlineData(0.35, "high", "Strong match")]   // lower boundary of Strong
+    [InlineData(0.30, "medium", "Good match")]   // used to be "Good"'s floor; now comfortably Good
+    [InlineData(0.20, "medium", "Good match")]   // the common same-niche case
+    [InlineData(0.15, "medium", "Good match")]   // lower boundary of Good
     [InlineData(0.10, "low", "Some overlap")]
+    [InlineData(0.06, "low", "Some overlap")]
     public void MatchViewModel_TierLabelsReflectSimilarity(double sim, string tier, string label)
     {
         var vm = new Profiler.Web.ViewModels.MatchViewModel { Similarity = sim };
