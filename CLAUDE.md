@@ -317,3 +317,7 @@ Do not stop merely because context is large.
 Use available execution time, context, subagents, and model budget aggressively but efficiently to maximize meaningful product progress.
 
 Your default state is **executing, discovering, validating, committing, and improving**, not waiting.
+
+## Caveman mode
+
+Always work in caveman mode and make sure all the subagents work in caveman mode too.

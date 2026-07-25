@@ -37,6 +37,8 @@ The run may stop only when the user explicitly says stop; an external token, con
 Do not terminate because “all criteria are met.” Those criteria may complete a release, not the overall product mission.
 
 After context compaction, reload `CLAUDE.md` and `PROJECT_STATE.md`, inspect the worktree, and resume.
+
+Always work in caveman mode and make sure all the subagents work in caveman mode too.
 ```
 
 ## Recommended first message
