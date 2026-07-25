@@ -123,6 +123,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 | `Metrics:Token`                  | — (off)              | Operator bearer token. Gates `GET /metrics` (aggregate adoption counts), `GET /metrics/reports` (moderation review), and `POST /metrics/suspend` (suspend/reinstate). All 404 unless set |
 | `AntiAbuse:GuardRegistration`    | `false`              | Enforce the signed single-use registration form ticket (blocks blind/replayed POSTs). Turn on for a public launch |
 | `AntiAbuse:MinFormSeconds`       | `3`                  | When the guard is on, reject a registration submitted faster than this after the form loaded |
+| `Signals:ValuesEnabled`          | `true`               | The optional values/outlook signal (questionnaire, match-card alignment line, "Similar outlook first" sort). Set `false` to hide all three — the data-minimizing default until the signal is strengthened; stored buckets are kept for a clean re-enable |
 | `ForwardedHeaders:Enabled`       | `false`              | Believe `X-Forwarded-For`/`-Proto` (set this behind a proxy) |
 | `ForwardedHeaders:KnownProxies`  | —                    | Proxy IPs to trust, comma-separated. Required when enabled |
 | `ForwardedHeaders:KnownNetworks` | —                    | Proxy networks to trust in CIDR form, e.g. `10.0.0.0/8` |

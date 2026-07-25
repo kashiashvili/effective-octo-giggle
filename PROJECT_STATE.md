@@ -718,6 +718,9 @@ that needs careful fresh design — do not rush any of these at the tail of a lo
    invisible distance. Owner's call: hide it by default (data-minimization), strengthen it (2nd Schwartz
    axis — gated on real adoption evidence), or reframe the sort control. Reverses/commits a vision-
    relevant, deliberately-shipped signal, so it stays the owner's decision — not an autonomous rip-out.
+   **Mechanism pre-built (non-overstepping):** `Signals:ValuesEnabled` (default true = no change) lets the
+   owner hide the whole values signal with one config flip; the decision is now a toggle, not a code
+   change. See `docs/OWNER_DECISIONS.md` for the full brief + recommendations on all gated decisions.
 3. **Connector-side rarity weighting** — consequential (real fingerprint-scheme migration; design the
    scheme-versioning first). **Extend the bridge to music/film** — fuzzier per-concept mapping.
 4. **Gated/latent:** Op-2 clusters (density), Op-3 return channel/Web Push (needs a pool), Op-4

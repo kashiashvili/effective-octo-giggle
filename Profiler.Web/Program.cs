@@ -41,6 +41,7 @@ builder.Services.AddDataProtection()
 // Off by default; see Security.RegistrationGuard and README.
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<Profiler.Web.Security.RegistrationGuard>();
+builder.Services.AddSingleton<Profiler.Web.Security.FeatureFlags>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(opt =>

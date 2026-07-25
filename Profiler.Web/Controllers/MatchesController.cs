@@ -19,8 +19,13 @@ public class MatchesController : Controller
     private const double MinMatchSimilarity = 0.05;
 
     private readonly AppDbContext _db;
+    private readonly Security.FeatureFlags _flags;
 
-    public MatchesController(AppDbContext db) => _db = db;
+    public MatchesController(AppDbContext db, Security.FeatureFlags flags)
+    {
+        _db = db;
+        _flags = flags;
+    }
 
     [HttpGet("")]
     public async Task<IActionResult> Index(string? source, string? sort)
@@ -72,8 +77,13 @@ public class MatchesController : Controller
 
         // The viewer's own intent, to spot a match who is here for the same thing.
         var myIntent = allFps.FirstOrDefault(f => f.UserId == userId)?.User.ConnectionIntent;
-        // The viewer's own values bucket, to show coarse alignment on cards.
-        var myValues = allFps.FirstOrDefault(f => f.UserId == userId)?.User.ValuesOpenness;
+        // The viewer's own values bucket, to show coarse alignment on cards. When the values signal is
+        // disabled at the deployment level, treat it as absent everywhere — this alone removes the card
+        // alignment line (needs both sides set) and the "Similar outlook first" sort (offered only when
+        // the viewer has values), with no other branching.
+        var myValues = _flags.ValuesSignalEnabled
+            ? allFps.FirstOrDefault(f => f.UserId == userId)?.User.ValuesOpenness
+            : null;
 
         // The viewer's own showable interests, to surface the ones a match also chose to show as shared
         // conversation hooks.

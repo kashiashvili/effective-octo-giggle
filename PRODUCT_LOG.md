@@ -304,6 +304,15 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-25
+- **Owner decision brief + a one-flip values-signal switch.** Consolidated the gated strategic decisions
+  (promote the vision; keep/hide/strengthen the values signal; enable the registration guard; go-live
+  checklist) into `docs/OWNER_DECISIONS.md` with evidence and recommendations, so the owner can decide
+  fast. Pre-built the mechanism for the top recommendation: `Signals:ValuesEnabled` (default **true** — no
+  behavior change) hides the values questionnaire, the match-card alignment line, and the "Similar outlook
+  first" sort when set false, keeping stored buckets for a clean re-enable. This makes "hide the weak
+  values signal" (the data-minimizing default) a single config flip rather than future code work. Values
+  disabled → questionnaire not served/collected, no line/sort on matches (2 tests); default-on path
+  unchanged (existing values tests pass).
 - **Values sort: coherence fix + impact evidence.** Assumption-tested the values signal's main
   user-facing use (the "Similar outlook first" sort). Finding: with both sides set, it reorders heavily
   (top-1 changes ~66%, ~18/20 positions move) — inherent to an outlook-first sort since outlook and

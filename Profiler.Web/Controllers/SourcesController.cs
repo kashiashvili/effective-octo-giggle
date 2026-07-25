@@ -27,12 +27,14 @@ public class SourcesController : Controller
     // Injected rather than constructed here: it carries the deployment's pepper, and a generator
     // built without it would write signatures nothing else could compare.
     private readonly FingerprintGenerator _generator;
+    private readonly Security.FeatureFlags _flags;
 
-    public SourcesController(AppDbContext db, IHttpClientFactory httpFactory, FingerprintGenerator generator)
+    public SourcesController(AppDbContext db, IHttpClientFactory httpFactory, FingerprintGenerator generator, Security.FeatureFlags flags)
     {
         _db = db;
         _httpFactory = httpFactory;
         _generator = generator;
+        _flags = flags;
     }
 
     private int CurrentUserId => User.GetUserId();
@@ -56,6 +58,7 @@ public class SourcesController : Controller
         ViewBag.ConnectionIntentLabel = Profiler.Web.Profile.ConnectionIntent.LabelFor(user.ConnectionIntent);
         ViewBag.ShowableInterests = Profiler.Web.Profile.ShowableInterests.Deserialize(user.ShowableInterestsJson);
         ViewBag.HasValues = user.ValuesOpenness.HasValue;
+        ViewBag.ValuesEnabled = _flags.ValuesSignalEnabled;
         ViewBag.IsDiscoverable = user.IsDiscoverable;
         // Accounts predating recovery have no code on file, and a used code is not replaced if the
         // replacement was never saved. Either way the account has no way back from a lost password.

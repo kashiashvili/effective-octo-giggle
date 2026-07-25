@@ -20,11 +20,13 @@ public class AccountController : Controller
 {
     private readonly AppDbContext _db;
     private readonly Security.RegistrationGuard _registrationGuard;
+    private readonly Security.FeatureFlags _flags;
 
-    public AccountController(AppDbContext db, Security.RegistrationGuard registrationGuard)
+    public AccountController(AppDbContext db, Security.RegistrationGuard registrationGuard, Security.FeatureFlags flags)
     {
         _db = db;
         _registrationGuard = registrationGuard;
+        _flags = flags;
     }
 
     [HttpGet("register")]
@@ -371,6 +373,8 @@ public class AccountController : Controller
     [HttpGet("values")]
     public async Task<IActionResult> Values()
     {
+        // Values signal disabled at the deployment level → the questionnaire isn't offered or collected.
+        if (!_flags.ValuesSignalEnabled) return RedirectToAction("Dashboard", "Sources");
         var user = await FindCurrentUserAsync();
         if (user == null) return await SignOutToHomeAsync();
         ViewBag.HasValues = user.ValuesOpenness.HasValue;
@@ -386,6 +390,7 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Values(ValuesViewModel vm)
     {
+        if (!_flags.ValuesSignalEnabled) return RedirectToAction("Dashboard", "Sources");
         var user = await FindCurrentUserAsync();
         if (user == null) return await SignOutToHomeAsync();
 

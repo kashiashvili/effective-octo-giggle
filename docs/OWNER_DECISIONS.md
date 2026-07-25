@@ -1,0 +1,105 @@
+# Owner Decision Brief
+
+_Prepared by the autonomous product loop, 2026-07-25._
+
+The build/validate/deploy work that can be justified **without owner strategy input or real usage
+data** is done: multi-source matching (interests + intent + values), self-described + free-text
+interests, cross-pool bridging, rarity weighting, evidence-recalibrated tiers, the shared-interest
+reveal, the full trust-&-safety loop (report → operator review → reversible suspend), privacy-preserving
+anti-sybil, token-gated measurement, and a containerized deploy pipeline on `main`. Three independent
+Release Audits and two Opportunity Critics; 347 tests, 0 warnings.
+
+What remains needs **you**. Each decision below has the evidence, the options, a recommendation, and
+what it unblocks. None require reading code — the loop can execute whichever way you decide.
+
+---
+
+## Decision 1 — Promote the vision to "privacy-preserving compatibility matching"?
+
+**Context.** The recorded vision is *interest* matching. What's shipped is multi-signal: interest
+similarity **drives ranking**, with connection intent and a values/outlook bucket shown as **separate,
+explainable** lines (never a blended score). The "Potential Better Vision" is now implemented under all
+its recorded constraints — consent, data minimization, user control, explainability, no clinical claims,
+no raw retention.
+
+**Options.** (a) Promote the framing to "compatibility matching." (b) Keep "interest matching" and treat
+intent/values as optional add-ons.
+
+**Recommendation: (a), with honesty.** The multi-signal product exists and is coherent. Promote the
+framing — but keep interest similarity as the ranking core, and don't over-sell "values" (see Decision
+2). Low risk: it's positioning that matches what's built.
+
+**Unblocks.** Landing-page/positioning copy; whether further signal investment is on-vision.
+
+---
+
+## Decision 2 — The values signal: keep · hide-by-default · strengthen?
+
+This is the most consequential call, because it's the one place the product collects **sensitive
+worldview data**, and the evidence says the signal is weak.
+
+**Evidence (from in-repo simulations, no real users):**
+- **Low resolution.** Averaging four 5-point items is a central-tendency machine: **95% of people land in
+  the −1..+1 buckets** (`ValuesSignalResolutionTests`). The coarse "Similar / Some overlap / Different"
+  label was already recalibrated so "Similar" isn't vacuous, but the axis is inherently coarse.
+- **High-impact, low-quality sort.** Its main user-facing use — the "Similar outlook first" sort —
+  **reorders the match list heavily** (≈66% of viewers get a different top match; `ValuesSortImpactTests`).
+  Because outlook and interest are independent, opting in lets a **weak signal heavily override the
+  strong interest ranking**.
+- **Cost.** It is the *most sensitive* data collected, for the *least validated* signal, which sits
+  against the data-minimization north star.
+
+**Options.** (a) Keep as-is. (b) **Hide by default** (reversible) until it earns its place. (c) Strengthen
+with a second Schwartz axis (self-enhancement ↔ self-transcendence) — but that *increases* sensitive-data
+collection and is only worth it with real adoption evidence.
+
+**Recommendation: (b) hide by default.** Don't collect worldview data speculatively. It's reversible, it
+tightens the privacy story, and it removes a sort that currently trades away interest quality for a noisy
+signal. Revisit (c) only if real usage shows people want an outlook dimension. **On your "yes" the loop can
+ship a one-setting switch** (`Signals:ValuesEnabled=false`) that hides the questionnaire, the card line,
+and the sort — keeping the code and any stored buckets for a clean re-enable.
+
+**Unblocks.** The data-minimization posture for launch; whether to build the second axis.
+
+---
+
+## Decision 3 — Turn on the registration guard for public launch?
+
+**Context.** Sign-up is username + password only. A privacy-preserving anti-sybil layer is **built and
+tested** (honeypot + signed single-use form ticket; no third-party CAPTCHA, no PII), **off by default** so
+dev/tests are undisturbed.
+
+**Recommendation: enable it for a public launch** — set `AntiAbuse:GuardRegistration=true` (optionally
+`AntiAbuse:MinFormSeconds`). The per-IP register rate limit is the always-on cap regardless. Trivial flip.
+
+**Unblocks.** Opening registration to the public.
+
+---
+
+## Decision 4 — Go live (unblocks everything data-gated)
+
+Every remaining *product* bet — connector-side rarity weighting, a second values axis, interest
+**clusters**, a return channel — is gated on **real usage evidence**, which only a live deployment with
+real users produces (surfaced privately via token-gated `/metrics`). The loop cannot generate that here.
+
+**Go-live checklist (all documented in `README.md`):**
+1. Repo → Settings → Actions → Workflow permissions → **Read and write** (so the deploy job can push to GHCR).
+2. Set a real **`Fingerprint:Pepper`** (e.g. `openssl rand -base64 32`) and keep it for the deployment's life.
+3. Run the image with a **persistent `/data` volume** (SQLite db + Data Protection keys).
+4. Set **`Metrics:Token`** (operator/moderation access) and, for public launch, **`AntiAbuse:GuardRegistration=true`**.
+5. Front it with **TLS** and set the **forwarded-headers** options so rate limiting / HTTPS see the real client.
+
+**Unblocks.** Real adoption data → the evidence Decisions 2(c) and the data-gated bets depend on.
+
+---
+
+## Recommended sequence
+
+1. **Decision 3 + Decision 4** — deploy privately (guard optional at first) to a small cohort; start
+   gathering `/metrics`.
+2. **Decision 2** — hide the values signal by default now (data-minimization); reconsider strengthening it
+   only if usage shows demand.
+3. **Decision 1** — promote the vision framing once the above settle.
+
+Reply with any single decision (or "do 2(b)", "enable the guard", etc.) and the loop will implement it
+immediately. Until then, further autonomous build would either overstep these calls or add low-value work.
