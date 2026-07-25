@@ -465,11 +465,13 @@ Independent Critic on the funnel-strong product (6 code-grounded bets). Core fin
 is now strong, but **the match card tells a stranger how-much + which category they share, never WHAT** —
 the privacy model discards the one thing that would drive an off-platform message. Plus a latent safety
 gap (username+password only, no verification, only recourse is a silent hide). Ranked bets:
-1. **Op-1 shared-interest reveal — SELECTED, building now.** Opt-in public "talk to me about…" interest
-   tags, **separate from the discarded fingerprint** (guarantee intact), shown as the intersection with
-   the viewer ("you both chose to show: sea kayaking") or the match's own list otherwise. Same opt-in
-   public-profile pattern as bio/contact. Highest value (converts a match into a message), evidence-
-   independent, S–M, no matching/scheme change.
+1. **Op-1 shared-interest reveal — SHIPPED (`58527ec`).** Opt-in public "interests to show on your card"
+   (`AppUser.ShowableInterestsJson`, migration `AddShowableInterests`), separate from the discarded
+   fingerprint (guarantee intact). Card leads with the intersection ("You both want to talk about: …")
+   else the match's own list ("Ask them about: …"); withheld while hidden; whitespace/case-folded so
+   spellings unify. Profile edit + dashboard + export + deletion parity. 10 tests. **Baseline: 329 tests,
+   0 warnings.** NOTE: Op-6 (trust & safety) is now the pre-launch gate — Op-1 makes profiles more worth
+   harvesting; a report path + minimal anti-sybil must precede real exposure.
 2. **Op-6 trust & safety — LAUNCH-GATE (record, build before any real deployment).** A `report` action
    beside `Hide` (needs a report store + an operator review surface — bigger than it looks) + minimal
    anti-sybil on registration (CAPTCHA-lite / proof-of-work + new-account velocity guard). Op-1 makes

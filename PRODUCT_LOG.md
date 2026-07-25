@@ -304,6 +304,18 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-25
+- **Opt-in shared-interest reveal — a concrete reason to reach out.** A fresh Opportunity Critic found
+  the input funnel is now strong but everything *after* the match is thin: a card told a stranger how
+  much + which category they share, never *what* — the one thing that would drive an off-platform
+  message, discarded by the privacy model. New opt-in **"interests to show on your card"**
+  (`AppUser.ShowableInterestsJson`, migration `AddShowableInterests`): a small capped list of plain-text
+  labels the user chooses to make public, **separate from the matching fingerprint** (interests used
+  for matching are still derived and discarded — the "raw interests never stored" guarantee is
+  untouched; this is voluntary disclosure, the same trust model as the bio). The match card leads with
+  the **intersection** ("🔖 You both want to talk about: sea kayaking") when both show overlapping
+  interests, else offers the match's own list as an icebreaker ("🔖 Ask them about: …"). Withheld while
+  the viewer is hidden (bio/contact reciprocity); whitespace/case-folded so different spellings unify.
+  Edited on the profile page, shown on the dashboard, in the export, removed on deletion. 10 tests.
 - **Free-text custom interests — lift the catalog ceiling on rarity.** A fixed ~140-tag list cannot hold
   the genuinely niche interest that makes the best match, and the rarity-weighting evidence shows rare
   shared interests carry the most signal — so the highest-value interests were unexpressible. The
