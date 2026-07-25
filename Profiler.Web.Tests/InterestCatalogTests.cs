@@ -78,6 +78,41 @@ public class InterestCatalogTests
     }
 
     [Fact]
+    public void Canonicalize_BridgesLanguagesToConnectorVocabulary_AndPassesOthersThrough()
+    {
+        var mapped = InterestCatalog.Canonicalize(new[]
+        {
+            "self-tech:python", "self-tech:cpp", "self-music:jazz", "self-outdoors:climbing"
+        });
+
+        // Bridged languages become the exact string GitHub emits (lowercased language:*), so a
+        // self-describer and a GitHub user land on the same feature.
+        Assert.Contains("language:python", mapped);
+        Assert.Contains("language:c++", mapped);
+        Assert.DoesNotContain("self-tech:python", mapped);
+        // Non-bridged interests are untouched — no connector has a single canonical string for them yet.
+        Assert.Contains("self-music:jazz", mapped);
+        Assert.Contains("self-outdoors:climbing", mapped);
+        // 1:1, so the count never changes (FeatureCount stays the number of picks).
+        Assert.Equal(4, mapped.Count);
+    }
+
+    [Fact]
+    public void BridgedLanguage_MatchesAConnectorFeature_ThroughTheRealPipeline()
+    {
+        // The whole point of bridging: a self-describer who picks Python must produce the same feature a
+        // GitHub connector user does, so their fingerprints actually overlap.
+        var gen = new FingerprintGenerator(128, pepper: "bridge-test");
+        var selfDescribed = gen.Generate(InterestCatalog.Expand(InterestCatalog.Canonicalize(
+            new[] { "self-tech:python", "self-tech:rust" })));
+        var githubUser = gen.Generate(new[] { "language:python", "language:rust", "language:go" });
+
+        // Without the bridge these would share nothing (self-tech:* vs language:*). With it they overlap.
+        Assert.True(selfDescribed.Similarity(githubUser) > 0,
+            "a bridged self-described language should match the connector's language feature");
+    }
+
+    [Fact]
     public void WeightedFingerprint_RanksARareSharedInterest_AboveACommonOne()
     {
         // Two people whose profiles are identical in structure — same number of personal (neutral)

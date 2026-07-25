@@ -267,10 +267,13 @@ public class SourcesController : Controller
             return View();
         }
 
-        // Weight the fingerprint by rarity before hashing (feature replication) so sharing a niche
-        // interest counts for more than sharing a popular one — see InterestCatalog.Expand. FeatureCount
-        // stays the number of interests the user actually picked, not the expanded count.
-        var raw = _generator.GenerateRaw(InterestCatalog.Expand(chosen));
+        // Bridge the unambiguous concepts (e.g. Python) into the shared connector vocabulary so a
+        // self-describer can match a connector user, not just other self-describers — then weight by
+        // rarity (feature replication) so sharing a niche counts for more than sharing a popular thing.
+        // FeatureCount stays the number of interests the user actually picked (canonicalize is 1:1;
+        // expand only affects the hashed set).
+        var canonical = InterestCatalog.Canonicalize(chosen);
+        var raw = _generator.GenerateRaw(InterestCatalog.Expand(canonical));
         var now = DateTime.UtcNow;
 
         // Same two-save-in-a-transaction shape as Connect: per-source row, then the recomputed
@@ -304,9 +307,9 @@ public class SourcesController : Controller
         await _db.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        // Same one-shot themed summary connectors show, built from the picks and then discarded with
-        // the request — only theme names and counts survive, never the tags themselves.
-        var lens = InterestLens.Summarize(chosen);
+        // Same one-shot themed summary connectors show, built from the (canonicalized) picks and then
+        // discarded with the request — only theme names and counts survive, never the tags themselves.
+        var lens = InterestLens.Summarize(canonical);
         TempData["InterestLens"] = JsonSerializer.Serialize(lens);
         TempData["Success"] = $"Saved {chosen.Count} interest{(chosen.Count == 1 ? "" : "s")}. " +
             $"Your fingerprint now covers {totalSources} source{(totalSources == 1 ? "" : "s")}.";

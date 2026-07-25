@@ -459,9 +459,14 @@ build 0 warnings.** HEAD after this unit.
     or the deferred oracle). Do NOT rush this into the core connector path; design the scheme-versioning
     first. Effort M–L.
 
-### TOP DISCOVERED BET (2026-07-25) — self-described and connector pools are DISJOINT
+### TOP DISCOVERED BET (2026-07-25) — self-described and connector pools are DISJOINT — PARTIAL BRIDGE SHIPPED
 
-Structural finding (confirmed by code inspection, not yet fixed): self-described interests emit
+**Partial canonical bridge SHIPPED** (`InterestCatalog.Canonicalize`): programming-language picks now
+emit the canonical `language:*` string instead of `self-*`, so a self-describer who picks Python matches
+a GitHub user who codes Python (integration-tested). Emit-instead-of avoids the double-count. Fuzzy
+concepts (music/film genres) still un-bridged — the remaining open work below.
+
+Structural finding (confirmed by code inspection): self-described interests emit
 `self-<theme>:<slug>` features; connectors emit `language:*`, `spotify-genre:*`, `topic:*`, etc. The two
 vocabularies **never intersect**, so a self-describer and a connector user who love the exact same thing
 (e.g. both Python) **cannot match**. The funnel unblock therefore grew a *parallel* pool instead of the

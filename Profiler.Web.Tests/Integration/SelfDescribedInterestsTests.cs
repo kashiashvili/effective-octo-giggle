@@ -128,6 +128,42 @@ public class SelfDescribedInterestsTests : IClassFixture<ProfilerWebFactory>
     }
 
     [Fact]
+    public async Task SelfDescriber_MatchesAConnectorUser_OnABridgedLanguage()
+    {
+        // The point of bridging: a self-describer who picks Python should match a GitHub user who codes
+        // Python, not just other self-describers. Seed a connector user with GitHub-shaped language
+        // features (built with the app's own generator so the pepper matches), then self-describe.
+        var selfName = "sdi_bridge_" + Guid.NewGuid().ToString("N")[..6];
+        var ghName = "gh_user_" + Guid.NewGuid().ToString("N")[..6];
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var gen = scope.ServiceProvider.GetRequiredService<Profiler.Web.Profile.FingerprintGenerator>();
+            var gh = new Profiler.Web.Data.Models.AppUser { Username = ghName, PasswordHash = "x", IsDiscoverable = true };
+            db.Users.Add(gh);
+            await db.SaveChangesAsync();
+            var ghFp = gen.Generate(new[] { "language:python", "language:rust", "language:go", "topic:web" });
+            db.Fingerprints.Add(new Profiler.Web.Data.Models.FingerprintRecord
+            {
+                UserId = gh.Id,
+                FingerprintJson = ghFp.ToJson(),
+                SourcesJson = "[\"GitHub\"]",
+                UpdatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var client = NewClient();
+        await RegisterAsync(client, selfName);
+        // Picks include Python + Rust (bridged to language:*) plus a non-bridged interest.
+        await PickAsync(client, "self-tech:python", "self-tech:rust", "self-music:jazz");
+
+        var matches = await (await client.GetAsync("/matches")).Content.ReadAsStringAsync();
+        Assert.Contains(ghName, matches); // cross-pool match on the bridged languages
+    }
+
+    [Fact]
     public async Task EmptyOrCraftedSelection_BuildsNothing()
     {
         var client = NewClient();

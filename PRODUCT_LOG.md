@@ -304,6 +304,17 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-25
+- **Cross-pool matching: bridge self-described interests into the connector vocabulary.** Self-described
+  interests live in a `self-*` namespace, so a self-describer and a GitHub user who both love Python
+  could never match — self-described had grown a *parallel* pool instead of the existing one, capping its
+  value and hurting match density. For the unambiguous 1:1 concepts (programming languages, which GitHub
+  always emits as lowercased `language:*`), the self-described build now emits the **canonical connector
+  string instead of** the `self-*` one (`self-tech:python` → `language:python`), so the interest lands in
+  the shared vocabulary and matches across sources. Emitting *instead of* (not in addition to) avoids
+  double-counting one interest, which would inflate self-to-self similarity and undo the rarity weighting.
+  Fuzzy concepts (music/film genres, where each platform uses its own vocabulary) are left un-bridged for
+  now. Verified: a self-describer who picks Python matches a seeded GitHub user with `language:python`;
+  self-to-self matching and connector-only matching unregressed; picks still discarded. 3 tests.
 - **Rarity-weighted self-described matching (no new retained data).** Sharing a rare interest predicts
   a real connection far better than sharing a popular one; a synthetic experiment measured ~6x better
   separation from weighting. Shipped it for self-described interests without a per-user frequency table

@@ -172,6 +172,36 @@ public static class InterestCatalog
         Categories.SelectMany(c => c.Tags.Select(t => (Feature: Feature(c, t), Weight: WeightOfSlug(t.Slug))))
                   .ToDictionary(x => x.Feature, x => x.Weight);
 
+    // ---- Cross-source bridging --------------------------------------------------------------------
+    //
+    // Self-described features live in their own `self-*` namespace, so without this a self-describer and
+    // a connector user who love the exact same thing (both Python) would NEVER match — the two pools are
+    // disjoint, which fragments match density (the whole reason self-described exists is to grow the
+    // matchable pool, not split it). For the concepts with an unambiguous connector equivalent we emit
+    // the *canonical* connector string INSTEAD of the self-* one, so the interest lands in the shared
+    // vocabulary and matches across sources. Emitting instead of (not in addition to) the self-* string
+    // avoids double-counting one interest, which would inflate self-to-self similarity and undo the
+    // rarity weighting. Only rock-solid 1:1 mappings live here — GitHub always emits a lowercased
+    // `language:*` for every repo. Fuzzy concepts (music/film genres, where each platform uses its own
+    // vocabulary) are deliberately left un-bridged for now.
+    private static readonly IReadOnlyDictionary<string, string> CanonicalBridge = new Dictionary<string, string>
+    {
+        ["self-tech:python"] = "language:python",
+        ["self-tech:rust"] = "language:rust",
+        ["self-tech:typescript"] = "language:typescript",
+        ["self-tech:go"] = "language:go",
+        ["self-tech:cpp"] = "language:c++",
+    };
+
+    /// <summary>
+    /// Map bridged self-described features to the canonical connector string they should match on, so
+    /// self-described and connector fingerprints can overlap. Non-bridged features pass through. 1:1, so
+    /// the count is unchanged. Bridged features are common languages, so weight 1 (their connector
+    /// counterpart is weight 1) is both correct and required for the signatures to align.
+    /// </summary>
+    public static List<string> Canonicalize(IEnumerable<string> features) =>
+        features.Select(f => CanonicalBridge.TryGetValue(f, out var canonical) ? canonical : f).ToList();
+
     /// <summary>
     /// Expand chosen features by rarity weight for weighted MinHash: a weight-w feature becomes w
     /// distinct sub-features. Unknown features (e.g. connector-derived) get weight 1 — unchanged.
