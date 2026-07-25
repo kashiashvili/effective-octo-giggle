@@ -409,6 +409,14 @@ axis or finer scoring) before being relied on**, not left as the only values dim
 evidence-backed, not a guess — but adding the axis still increases sensitivity, so it remains gated
 on real adoption evidence (`/metrics`) + owner intent.
 
+### Re-review after the tier recalibration (2026-07-25)
+
+The recalibration + bar rescale materially changed the release, so the mandated two-reviewer gate is
+re-running on the current product: an independent diff Release Auditor (commits `28bb2a8`, `f0a507b`)
+and an independent Product Opportunity Critic (≥5 materially new bets, told what is already gated).
+Integrate their findings, fix anything real, then re-confirm release-candidate status. Baseline at
+this point: **283 tests, build 0 warnings.** HEAD `f0a507b`.
+
 ### Active: pre-release reviews of the multi-signal expansion
 
 - **User-flow review (done, 2026-07-24):** walked the changed surfaces live — fully-populated match
