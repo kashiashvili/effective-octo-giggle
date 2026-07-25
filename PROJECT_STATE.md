@@ -534,16 +534,31 @@ so measure at the aggregate/derived level only. Candidate signals, each cheap an
   closest-on, freshness, bio, values, intent, contact. Reviewed as acceptable (most fields optional/
   conditional, grouped logically) but worth a real-user look if cards feel dense.
 
-## Next Mandatory Action
+## Next Mandatory Action (updated 2026-07-25)
 
-1. Read `CLAUDE.md` and `docs/PRODUCT_AGENT.md`.
-2. Re-run the current repository baseline and record the actual build/test state.
-3. Use a strong Product Owner/research subagent to investigate the optional values/worldview questionnaire opportunity.
-4. Use an independent Product Opportunity Critic to generate at least four additional materially different bets.
-5. Compare the bets using user value, alignment, evidence, effort, risk, privacy, differentiation, and learning value.
-6. Select the strongest justified next experiment or increment.
-7. Update this file and `PRODUCT_LOG.md`.
-8. Commit the coherent planning/discovery unit.
-9. Begin implementation or prototyping immediately if justified.
+**Baseline: 293 tests, build 0 warnings, clean tree. HEAD `339af8d`.** This session shipped the
+funnel unblock (self-described interests) + recalibrated the core match tiers + validated the
+rarity-weighting bet. Both mandated reviewers ran on the recalibrated release (Auditor clean; Critic
+produced 5 bets, top one shipped).
 
-Do not hand control back merely because Release 1 is clean.
+**Next iteration — build rarity/IDF-weighted matching (evidence-backed bet #2).** Start fresh and
+design carefully; the frequency oracle is privacy-sensitive (new retained state) and needs a strong-
+reasoning pass, not a rushed one. Suggested increments:
+1. **Design the frequency oracle privacy model first** (this is the crux, not the code): aggregate
+   per-feature counts only, salted/hashed feature keys, low-count flooring so a df=1 feature cannot
+   reveal "one person here likes X"; decide retention explicitly against the north star and record it
+   in `PRODUCT_LOG.md`. If the privacy cost cannot be made acceptable, **stop and keep plain matching**
+   — the experiment proves the *upside*, not that the retention is acceptable.
+2. Implement weighted MinHash (consistent weighted sampling) behind a new `FingerprintScheme` version;
+   `SchemeVerifier` already invalidates old signatures on a scheme change (near-zero users, acceptable).
+3. Maintain the oracle at fingerprint-build time (raw features still available there, discarded after).
+4. Validate with the existing synthetic harnesses (`InterestSignalResolutionTests`,
+   `InterestWeightingExperimentTests`): weighted scheme separates communities better AND common-only
+   overlap drops out, without leaking via the oracle (assert against the DB).
+5. Recheck the tier calibration under the new scheme (weighting changes the similarity distribution).
+
+**Alternative if the oracle privacy model proves unacceptable:** pursue Critic bet #3 (cull the
+paste-a-raw-token connectors — a security+honesty win, owner call) or continue discovery. Do not ship
+new retained state that erodes the north star just to improve match quality.
+
+Do not hand control back merely because the release is clean.
