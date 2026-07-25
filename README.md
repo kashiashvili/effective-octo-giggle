@@ -82,6 +82,30 @@ dotnet run --project Profiler.Web
 The SQLite database (`profiler.db`) is created and migrated automatically on first
 run (EF Core migrations in `Profiler.Web/Migrations/`).
 
+### Run with Docker
+
+Every push to `main` (or a `v*` tag, or a manual run) builds a container image and publishes it to the
+GitHub Container Registry via `.github/workflows/deploy.yml` — no external secrets required. Run it
+anywhere Docker runs:
+
+```bash
+docker run -d -p 8080:8080 \
+  -v profiler-data:/data \
+  -e Fingerprint__Pepper="$(openssl rand -base64 32)" \
+  ghcr.io/kashiashvili/effective-octo-giggle:latest
+# → http://localhost:8080
+```
+
+- **`-v profiler-data:/data`** persists the SQLite database *and* the auth-cookie key ring. Keep this
+  volume across redeploys.
+- **`Fingerprint__Pepper`** is a per-deployment secret; generate it once and keep it (see below). The
+  app refuses to start without it. Provide it via your host's secret manager, not the command line, in
+  production.
+- Put TLS in front (a reverse proxy or the platform's HTTPS) and set the forwarded-headers options
+  below so rate limiting and HTTPS redirection see the real client.
+
+To build the image yourself: `docker build -t profiler .`
+
 ---
 
 ## Configuration

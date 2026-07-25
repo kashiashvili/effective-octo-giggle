@@ -1,0 +1,21 @@
+# Build artifacts — rebuilt inside the image
+**/bin/
+**/obj/
+
+# Local dev / secrets / data that must never enter the image
+**/keys/
+*.db
+*.db-shm
+*.db-wal
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+
+# Tests are not needed in the runtime image (CI runs them separately)
+Profiler.Web.Tests/
+
+# Docs
+*.md
+docs/
