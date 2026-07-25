@@ -285,7 +285,16 @@ public class MatchesController : Controller
         if (!await _db.UserBlocks.AnyAsync(b => b.BlockerId == me && b.BlockedId == target.Id))
             _db.UserBlocks.Add(new Data.Models.UserBlock { BlockerId = me, BlockedId = target.Id });
 
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // A concurrent double-submit (double-click) races past the existence checks and hits the
+            // unique reporter→reported / blocker→blocked index. That is exactly the idempotent outcome
+            // intended — the report and block already exist — so treat it as success, not a 500.
+        }
         TempData["Success"] = "Thanks — we've recorded your report and hidden them from your matches.";
         return RedirectToAction(nameof(Index));
     }

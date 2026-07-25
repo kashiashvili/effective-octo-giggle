@@ -1,9 +1,8 @@
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Profiler.Web.Data;
+using Profiler.Web.Security;
 
 namespace Profiler.Web.Controllers;
 
@@ -17,40 +16,25 @@ namespace Profiler.Web.Controllers;
 /// constant time. Counts were deliberately hidden from ordinary users elsewhere, so this must never
 /// be reachable with a normal session — only with the operator's token.
 /// </summary>
+// Every action is operator-only. The token is checked by a resource filter that runs BEFORE model
+// binding, so an [ApiController]'s automatic 400 on a bad body can never fire first and reveal that a
+// route exists while the feature is off.
 [ApiController]
 [AllowAnonymous]
+[OperatorToken]
 [Route("metrics")]
 public class MetricsController : ControllerBase
 {
     private readonly AppDbContext _db;
-    private readonly IConfiguration _config;
 
-    public MetricsController(AppDbContext db, IConfiguration config)
-    {
-        _db = db;
-        _config = config;
-    }
+    public MetricsController(AppDbContext db) => _db = db;
 
-    public const string TokenKey = "Metrics:Token";
-
-    /// <summary>Returns a non-null result (404/401) when the caller is not the token-bearing operator.</summary>
-    private IActionResult? RequireOperatorToken()
-    {
-        var configured = _config[TokenKey];
-        // No token configured means the feature is off; do not even reveal that the route exists.
-        if (string.IsNullOrWhiteSpace(configured)) return NotFound();
-
-        var presented = ExtractBearer(Request.Headers.Authorization.ToString());
-        if (presented == null || !FixedTimeEquals(presented, configured))
-            return Unauthorized();
-        return null;
-    }
+    // Kept for tests/config references; the actual gate is OperatorTokenAttribute.
+    public const string TokenKey = OperatorTokenAttribute.TokenKey;
 
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        if (RequireOperatorToken() is { } denied) return denied;
-
         var users = _db.Users;
         var totalUsers = await users.CountAsync();
 
@@ -100,8 +84,6 @@ public class MetricsController : ControllerBase
     [HttpGet("reports")]
     public async Task<IActionResult> Reports()
     {
-        if (RequireOperatorToken() is { } denied) return denied;
-
         var reports = await _db.UserReports
             .Join(_db.Users, r => r.ReportedId, u => u.Id,
                 (r, u) => new { u.Username, u.SuspendedAt, r.Reason, r.ReporterId, r.CreatedAt })
@@ -144,7 +126,6 @@ public class MetricsController : ControllerBase
     [HttpPost("suspend")]
     public async Task<IActionResult> Suspend([FromBody] SuspendRequest body)
     {
-        if (RequireOperatorToken() is { } denied) return denied;
         if (body == null || string.IsNullOrWhiteSpace(body.Username)) return BadRequest();
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == body.Username);
@@ -155,16 +136,4 @@ public class MetricsController : ControllerBase
 
         return Ok(new { user.Username, Suspended = user.SuspendedAt != null, user.SuspendedAt });
     }
-
-    private static string? ExtractBearer(string? header)
-    {
-        if (string.IsNullOrEmpty(header)) return null;
-        const string prefix = "Bearer ";
-        return header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
-            ? header[prefix.Length..].Trim()
-            : null;
-    }
-
-    private static bool FixedTimeEquals(string a, string b) =>
-        CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(a), Encoding.UTF8.GetBytes(b));
 }

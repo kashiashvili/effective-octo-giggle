@@ -151,4 +151,20 @@ public class SuspensionTests : IClassFixture<ProfilerWebFactory>
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Null((await db.Users.AsNoTracking().FirstAsync(u => u.Username == user)).SuspendedAt);
     }
+
+    [Fact]
+    public async Task AMalformedBody_DoesNotRevealTheRoute_WhenTheFeatureIsOff()
+    {
+        // The token check runs before model binding, so a bad body with no token configured must still
+        // 404 (route hidden) rather than 400 (which would admit the route exists).
+        var client = PlainClient();
+
+        var missingField = await client.PostAsync("/metrics/suspend",
+            JsonContent.Create(new { suspend = true })); // no username
+        Assert.Equal(HttpStatusCode.NotFound, missingField.StatusCode);
+
+        var garbage = await client.PostAsync("/metrics/suspend",
+            new StringContent("not json", System.Text.Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.NotFound, garbage.StatusCode);
+    }
 }
