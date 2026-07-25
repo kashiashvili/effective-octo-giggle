@@ -459,6 +459,32 @@ build 0 warnings.** HEAD after this unit.
     or the deferred oracle). Do NOT rush this into the core connector path; design the scheme-versioning
     first. Effort M–L.
 
+### Fresh Opportunity Critic (2026-07-25) — "everything after the match is thin"
+
+Independent Critic on the funnel-strong product (6 code-grounded bets). Core finding: the input funnel
+is now strong, but **the match card tells a stranger how-much + which category they share, never WHAT** —
+the privacy model discards the one thing that would drive an off-platform message. Plus a latent safety
+gap (username+password only, no verification, only recourse is a silent hide). Ranked bets:
+1. **Op-1 shared-interest reveal — SELECTED, building now.** Opt-in public "talk to me about…" interest
+   tags, **separate from the discarded fingerprint** (guarantee intact), shown as the intersection with
+   the viewer ("you both chose to show: sea kayaking") or the match's own list otherwise. Same opt-in
+   public-profile pattern as bio/contact. Highest value (converts a match into a message), evidence-
+   independent, S–M, no matching/scheme change.
+2. **Op-6 trust & safety — LAUNCH-GATE (record, build before any real deployment).** A `report` action
+   beside `Hide` (needs a report store + an operator review surface — bigger than it looks) + minimal
+   anti-sybil on registration (CAPTCHA-lite / proof-of-work + new-account velocity guard). Op-1 makes
+   profiles more worth harvesting, so this must precede real exposure. Not urgent pre-launch (zero users)
+   but a hard gate before launch.
+3. **Op-5 remove/hide the values signal — OWNER DECISION (do not rip out autonomously).** In-repo
+   evidence shows the single openness axis discriminates weakly; it is the most sensitive data for the
+   least-validated signal, against data-minimization. Strong argument to hide-by-default, but it reverses
+   a deliberately-shipped, owner-relevant signal — flag for owner, don't unilaterally remove.
+4. Op-2 interest clusters / community formation (self-servable cousin of community-pools; density-gated; M–L).
+5. Op-3 first-mover pool-growth awareness + opt-in Web Push return channel (latent until a pool exists).
+6. Op-4 client-side fingerprinting for the self-describe path (real moat, but the pepper-on-client
+   problem makes it partial; premature). Explicit kills: 2nd values axis; Web Push now; connector
+   client-side FP.
+
 ### Free-text custom interests — SHIPPED (2026-07-25)
 
 Lifted the ~140-tag catalog ceiling: users can type their own interests (the rarest, highest-signal
