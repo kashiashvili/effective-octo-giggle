@@ -96,7 +96,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 | `RateLimiting:ConnectPermitLimit`  | `10`               | Allowed source-connect submits per IP per minute      |
 | `DataProtection:KeyPath`         | `<contentRoot>/keys` | Where the auth-cookie key ring is persisted          |
 | `Fingerprint:Pepper`             | — (**required**)     | Secret mixed into every fingerprint hash             |
-| `Metrics:Token`                  | — (off)              | Bearer token for `GET /metrics` (aggregate adoption counts); route 404s unless set |
+| `Metrics:Token`                  | — (off)              | Operator bearer token. Gates `GET /metrics` (aggregate adoption counts), `GET /metrics/reports` (moderation review), and `POST /metrics/suspend` (suspend/reinstate). All 404 unless set |
 | `ForwardedHeaders:Enabled`       | `false`              | Believe `X-Forwarded-For`/`-Proto` (set this behind a proxy) |
 | `ForwardedHeaders:KnownProxies`  | —                    | Proxy IPs to trust, comma-separated. Required when enabled |
 | `ForwardedHeaders:KnownNetworks` | —                    | Proxy networks to trust in CIDR form, e.g. `10.0.0.0/8` |
@@ -131,6 +131,19 @@ All settings can be supplied via `appsettings.json` or environment variables.
   on startup — no manual database steps.
 - **Health probe:** `GET /health` returns `200 {"status":"healthy"}` when the database
   is reachable, `503` otherwise. Anonymous, and reports nothing beyond reachability.
+- **Moderation is operator-token-gated.** Users can `Report` a match (recorded with a
+  closed-set reason, and the reported user is hidden from the reporter). To act on reports,
+  set `Metrics:Token` and call `GET /metrics/reports` (reported users ranked by distinct
+  reporters, with suspension status) and `POST /metrics/suspend` with a JSON body
+  `{"username":"…","suspend":true}` (a **reversible** flag — a suspended account is removed
+  from matches and cannot sign in; send `false` to reinstate). Deliberately not a hard-delete,
+  so a leaked token cannot destroy accounts.
+- **Before a public launch, add anti-sybil on registration.** Sign-up is username + password
+  only — no email or verification — so the current defence against fake accounts is just the
+  per-IP registration rate limit (`RateLimiting:RegisterPermitLimit`). Match cards expose an
+  opt-in bio, contact line, and "shown interests", so before opening registration to the
+  public, put a CAPTCHA (or equivalent) in front of it to stop cheap bulk sign-ups from
+  harvesting those. Tracked in `PROJECT_STATE.md`.
 
 ---
 
