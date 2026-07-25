@@ -204,7 +204,9 @@
                                 }
                             </div>
                             <div class="progress-wrap">
-                                <div class="progress-bar @match.Tier" style="width: @match.SimilarityPercent%"></div>
+                                @* Bar width is rescaled to the realistic Jaccard range (see BarPercent);
+                                   the honest estimate is the "~X% shared" text above, not the bar. *@
+                                <div class="progress-bar @match.Tier" style="width: @match.BarPercent%"></div>
                             </div>
                             @* Compatibility signals grouped together, right after the match strength. *@
                             @if (!string.IsNullOrWhiteSpace(match.ConnectionIntentLabel))

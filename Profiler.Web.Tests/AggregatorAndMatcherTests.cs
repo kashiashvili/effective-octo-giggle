@@ -357,6 +357,19 @@ public class AggregatorAndMatcherTests
         Assert.Equal(label, vm.TierLabel);
     }
 
+    [Theory]
+    // The bar rescales the realistic Jaccard range onto the full width so the fill tracks the tier,
+    // instead of drawing a top-tier match as a barely-filled bar. Full scale is 50%.
+    [InlineData(0.50, 100)] // top of the realistic range fills the bar
+    [InlineData(0.63, 100)] // beyond the range clamps, never overflows
+    [InlineData(0.35, 70)]  // Strong floor reads as clearly strong, not one-third full
+    [InlineData(0.15, 30)]  // Good floor
+    [InlineData(0.00, 3)]   // clamped to a visible sliver, never zero-width
+    public void MatchViewModel_BarPercent_RescalesToTheRealisticRange(double sim, int expected)
+    {
+        Assert.Equal(expected, new Profiler.Web.ViewModels.MatchViewModel { Similarity = sim }.BarPercent);
+    }
+
     [Fact]
     public void RawSimilarity_IsOneForIdenticalSources_AndNearZeroForUnrelatedOnes()
     {

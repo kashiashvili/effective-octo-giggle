@@ -5,6 +5,19 @@ public class MatchViewModel
     public string Username { get; set; } = "";
     public double Similarity { get; set; }
     public int SimilarityPercent => (int)Math.Round(Similarity * 100);
+
+    // The similarity bar is a visual cue, not a second number. Raw MinHash Jaccard over interest sets
+    // tops out well below 100% — a synthetic simulation (InterestSignalResolutionTests) found almost
+    // nothing above ~0.50 even for same-niche pairs — so filling the bar to the raw percent would draw
+    // a top-tier "Strong match" as a barely-third-full bar that visually contradicts its own label.
+    // Map the meaningful range [0, BarFullScalePercent] onto the full width, so the fill tracks the
+    // tier (Good floor ~30% full, Strong floor ~70% full, top of the range full). The honest estimate
+    // stays in the "~X% shared" text beside the bar; this only rescales the visual, never the number.
+    private const int BarFullScalePercent = 50;
+
+    /// <summary>Width, 3–100, for the similarity bar — rescaled to the realistic Jaccard range.</summary>
+    public int BarPercent => Math.Clamp((int)Math.Round(SimilarityPercent * 100.0 / BarFullScalePercent), 3, 100);
+
     public List<string> SharedSources { get; set; } = new();
 
     /// <summary>

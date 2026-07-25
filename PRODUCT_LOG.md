@@ -315,6 +315,12 @@ Each entry: what changed and why it mattered.
   true Jaccard within a mean absolute error of 0.006. CSS tier classes (high/medium/low) unchanged, so
   the card styling is untouched; only the thresholds moved. The resolution test asserts against the
   real `MatchViewModel` tiers, so it fails loudly if the calibration ever drifts again.
+- **Match-card similarity bar rescaled to match the new tiers.** The bar used to fill to the raw
+  percent, so after the recalibration a top-tier "Strong match" (35%+) would have drawn a barely
+  third-full bar — the visual contradicting its own label. `MatchViewModel.BarPercent` now maps the
+  realistic Jaccard range (0–50%) onto the full width, so the fill tracks the tier (Good floor ~30%
+  full, Strong floor ~70%, top of the range full), clamped to a 3–100% sliver. The honest estimate
+  stays in the "~X% shared" text beside the bar; only the visual was rescaled, never the number.
 
 ### 2026-07-24
 - **Assumption test → recalibrated values alignment.** A synthetic-profile simulation (no real
