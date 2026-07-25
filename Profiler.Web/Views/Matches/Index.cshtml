@@ -97,7 +97,7 @@
         {
             <div class="empty-state">
                 <div class="empty-icon">🔌</div>
-                <h4>No fingerprint yet</h4>
+                <h2>No fingerprint yet</h2>
                 <p>Connect your data sources to generate your fingerprint and find matches.</p>
                 <p class="mt-4"><a href="/sources/connect" class="btn btn-primary">Connect Sources</a></p>
             </div>
@@ -108,7 +108,7 @@
             @await Html.PartialAsync("_SourceFilterChips", (availableSources, sourceFilter))
             <div class="empty-state">
                 <div class="empty-icon">🔍</div>
-                <h4>No matches share @sourceFilter</h4>
+                <h2>No matches share @sourceFilter</h2>
                 <p>None of your matches has @sourceFilter in common with you. Try another interest area.</p>
                 <p class="mt-4"><a href="/matches" class="btn btn-primary">Show all matches</a></p>
             </div>
@@ -119,12 +119,12 @@
                 <div class="empty-icon">👥</div>
                 @if (othersExist)
                 {
-                    <h4>No close matches yet</h4>
+                    <h2>No close matches yet</h2>
                     <p>Other people are here, but nobody shares enough of your interests to call a match yet. Connecting more sources sharpens your fingerprint — and new members join over time.</p>
                 }
                 else
                 {
-                    <h4>You're the first one here</h4>
+                    <h2>You're the first one here</h2>
                     <p>No one else has a fingerprint yet. Invite people who'd want to match with you — Profiler only works once your people are here too.</p>
                 }
 
