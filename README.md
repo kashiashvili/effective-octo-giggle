@@ -121,6 +121,8 @@ All settings can be supplied via `appsettings.json` or environment variables.
 | `DataProtection:KeyPath`         | `<contentRoot>/keys` | Where the auth-cookie key ring is persisted          |
 | `Fingerprint:Pepper`             | — (**required**)     | Secret mixed into every fingerprint hash             |
 | `Metrics:Token`                  | — (off)              | Operator bearer token. Gates `GET /metrics` (aggregate adoption counts), `GET /metrics/reports` (moderation review), and `POST /metrics/suspend` (suspend/reinstate). All 404 unless set |
+| `AntiAbuse:GuardRegistration`    | `false`              | Enforce the signed single-use registration form ticket (blocks blind/replayed POSTs). Turn on for a public launch |
+| `AntiAbuse:MinFormSeconds`       | `3`                  | When the guard is on, reject a registration submitted faster than this after the form loaded |
 | `ForwardedHeaders:Enabled`       | `false`              | Believe `X-Forwarded-For`/`-Proto` (set this behind a proxy) |
 | `ForwardedHeaders:KnownProxies`  | —                    | Proxy IPs to trust, comma-separated. Required when enabled |
 | `ForwardedHeaders:KnownNetworks` | —                    | Proxy networks to trust in CIDR form, e.g. `10.0.0.0/8` |
@@ -162,12 +164,15 @@ All settings can be supplied via `appsettings.json` or environment variables.
   `{"username":"…","suspend":true}` (a **reversible** flag — a suspended account is removed
   from matches and cannot sign in; send `false` to reinstate). Deliberately not a hard-delete,
   so a leaked token cannot destroy accounts.
-- **Before a public launch, add anti-sybil on registration.** Sign-up is username + password
-  only — no email or verification — so the current defence against fake accounts is just the
-  per-IP registration rate limit (`RateLimiting:RegisterPermitLimit`). Match cards expose an
-  opt-in bio, contact line, and "shown interests", so before opening registration to the
-  public, put a CAPTCHA (or equivalent) in front of it to stop cheap bulk sign-ups from
-  harvesting those. Tracked in `PROJECT_STATE.md`.
+- **Turn on the registration guard before a public launch.** Sign-up is username + password only
+  (no email/verification). A built-in, **privacy-preserving** anti-sybil layer — no third-party
+  CAPTCHA, which would embed a tracker into a product whose whole promise is not tracking you — is
+  ready: an always-on honeypot plus a signed, single-use, time-limited form ticket enforced when
+  `AntiAbuse:GuardRegistration=true` (with `AntiAbuse:MinFormSeconds`). It blocks blind/looped/replayed
+  registration POSTs; the per-IP `RateLimiting:RegisterPermitLimit` is the always-on volume cap. Note:
+  single-use is tracked in-process, so a multi-instance deployment wanting strict single-use needs a
+  shared cache (fine for a single instance). For very high-value protection you can still add a
+  privacy-respecting CAPTCHA in front as well.
 
 ---
 

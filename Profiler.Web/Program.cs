@@ -37,6 +37,11 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(keyPath))
     .SetApplicationName("Profiler.Web");
 
+// Privacy-preserving anti-sybil for registration (honeypot + signed single-use form ticket).
+// Off by default; see Security.RegistrationGuard and README.
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<Profiler.Web.Security.RegistrationGuard>();
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(opt =>
     {

@@ -304,6 +304,16 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-25
+- **Privacy-preserving registration anti-sybil (honeypot + signed single-use ticket).** Closes the
+  pre-launch safety gap without a third-party CAPTCHA — the point of a privacy-first product is not
+  embedding a tracker. Two self-hosted layers: an always-on honeypot field (hidden from humans, filled
+  by naive bots) and a signed, time-limited, single-use registration form ticket (`RegistrationGuard`,
+  Data-Protection-signed, in-process single-use cache) enforced when `AntiAbuse:GuardRegistration=true`
+  — blocking scripts that POST blind at the endpoint or stockpile/replay one form load, plus a
+  `AntiAbuse:MinFormSeconds` time-trap. Off by default (dev/tests undisturbed); the per-IP register rate
+  limit stays the always-on volume cap; single-use is per-instance (multi-instance strict single-use
+  wants a shared cache — noted). No JS, no external service, no PII. 6 tests (honeypot always-on,
+  guard-off passes, blind-POST rejected, normal flow, replay blocked, time-trap).
 - **Operator suspend loop — act on reports (reversible).** Completes the safety loop: the operator could
   see reports but not act. `AppUser.SuspendedAt` (migration `AddUserSuspension`) is a **reversible**
   soft-suspend — deliberately not a token-gated hard-delete, which a leaked token could turn into mass

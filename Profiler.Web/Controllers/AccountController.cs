@@ -19,8 +19,13 @@ namespace Profiler.Web.Controllers;
 public class AccountController : Controller
 {
     private readonly AppDbContext _db;
+    private readonly Security.RegistrationGuard _registrationGuard;
 
-    public AccountController(AppDbContext db) => _db = db;
+    public AccountController(AppDbContext db, Security.RegistrationGuard registrationGuard)
+    {
+        _db = db;
+        _registrationGuard = registrationGuard;
+    }
 
     [HttpGet("register")]
     [AllowAnonymous]
@@ -28,7 +33,7 @@ public class AccountController : Controller
     {
         if (User.Identity?.IsAuthenticated == true)
             return RedirectToAction("Dashboard", "Sources");
-        return View();
+        return View(new RegisterViewModel { FormTicket = _registrationGuard.IssueTicketIfEnabled() });
     }
 
     [HttpPost("register")]
@@ -38,6 +43,15 @@ public class AccountController : Controller
     public async Task<IActionResult> Register(RegisterViewModel vm)
     {
         if (!ModelState.IsValid) return View(vm);
+
+        // Anti-sybil (honeypot always; signed single-use ticket when enabled). On rejection, reissue a
+        // fresh ticket so a legitimate retry from the re-rendered form still works.
+        if (_registrationGuard.Validate(vm.FormTicket, vm.Website) is { } guardError)
+        {
+            ModelState.AddModelError("", guardError);
+            vm.FormTicket = _registrationGuard.IssueTicketIfEnabled();
+            return View(vm);
+        }
 
         var username = vm.Username.Trim();
 
@@ -91,6 +105,9 @@ public class AccountController : Controller
             ModelState.AddModelError(nameof(vm.Username), "Username already taken.");
             return View(vm);
         }
+
+        // Account created — consume the form ticket so it can't mint a second one.
+        _registrationGuard.MarkUsed(vm.FormTicket);
 
         await SignInUserAsync(user);
         // Shown once, before anything else, because it is the only way back into this account and

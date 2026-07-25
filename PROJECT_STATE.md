@@ -695,9 +695,11 @@ that needs careful fresh design — do not rush any of these at the tail of a lo
    reports can't be inflated by one actor (DistinctReporters + unique index), delete cascades reports
    both ways, named report data is token-only. Its 2 P3s fixed: operator-token now a resource filter
    (runs before model binding, so `/metrics/suspend` no longer 400-leaks its existence when the feature
-   is off); `Report` save wrapped so a double-submit race is the idempotent no-op it intends. **Still
-   open before real launch:** anti-sybil CAPTCHA (external provider) — the per-IP register rate limit is
-   the interim guard.
+   is off); `Report` save wrapped so a double-submit race is the idempotent no-op it intends.
+   **Anti-sybil SHIPPED (privacy-preserving, no CAPTCHA, `<pending commit>`):** honeypot (always on) +
+   signed single-use time-limited registration ticket (`RegistrationGuard`, `AntiAbuse:GuardRegistration`,
+   off by default → flip on for public launch), 6 tests. Optional future: a privacy-respecting CAPTCHA for
+   very-high-value protection; a shared single-use cache if multi-instance.
 2. **Op-5 — hide/remove the values signal. OWNER DECISION.** Strong data-minimization case (weak
    discrimination, most-sensitive data) but reverses a deliberately-shipped, vision-relevant signal.
 3. **Connector-side rarity weighting** — consequential (real fingerprint-scheme migration; design the

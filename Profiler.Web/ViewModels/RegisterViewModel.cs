@@ -23,4 +23,16 @@ public class RegisterViewModel
 
     [Required, DataType(DataType.Password), Compare(nameof(Password))]
     public string ConfirmPassword { get; set; } = "";
+
+    /// <summary>
+    /// Signed, time-limited proof that this form was actually loaded (not POSTed blind by a script).
+    /// Populated by the GET, verified by the POST. See <see cref="Security.RegistrationGuard"/>.
+    /// </summary>
+    public string? FormTicket { get; set; }
+
+    /// <summary>
+    /// Honeypot: a decoy field hidden from humans. A real person leaves it empty; a form-filling bot
+    /// fills it and is rejected. Never shown, never stored — its only value is being blank.
+    /// </summary>
+    public string? Website { get; set; }
 }
