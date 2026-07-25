@@ -627,6 +627,27 @@ so measure at the aggregate/derived level only. Candidate signals, each cheap an
   closest-on, freshness, bio, values, intent, contact. Reviewed as acceptable (most fields optional/
   conditional, grouped logically) but worth a real-user look if cards feel dense.
 
+## Pushed to GitHub + deploy pipeline (2026-07-25)
+
+Pushed `rebuild/dotnet-profiler` and fast-forwarded `main` (was just the initial commit; safe, no
+divergence) to `origin` (github.com/kashiashvili/effective-octo-giggle, **private** repo). Added a
+containerized deploy pipeline: `Dockerfile` (multi-stage, non-root, `/data` volume, pepper at runtime),
+`.dockerignore`, and `.github/workflows/deploy.yml` (test → build → push image to GHCR via the built-in
+`GITHUB_TOKEN`, on push to `main`/`v*`/manual). `ci.yml` (build+test) already existed.
+
+**Owner steps required to finish deployment (need access/decisions this environment lacks):**
+1. **Actions permissions:** Settings → Actions → General → Workflow permissions = *Read and write* (so
+   the `packages: write` GHCR push is allowed), else the deploy job fails at the push step.
+2. **GHCR package visibility:** the published image is private by default — make the package public, or
+   pull with auth, wherever it runs.
+3. **Provide a host + `Fingerprint:Pepper`:** run `ghcr.io/kashiashvili/effective-octo-giggle:latest`
+   with a persistent `/data` volume and a real pepper secret (the app refuses to start without one).
+   Put TLS + forwarded-headers in front. No host can be provisioned from here.
+4. Before opening registration publicly, add the anti-sybil gate (documented in README).
+
+Once deployed, `/metrics` (token-gated) yields the real usage evidence every further signal decision
+depends on.
+
 ## Deployment readiness — VERIFIED (2026-07-25)
 
 The highest-value non-gated step, since every further signal decision now needs real usage evidence a
