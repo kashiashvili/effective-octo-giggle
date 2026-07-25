@@ -627,9 +627,22 @@ so measure at the aggregate/derived level only. Candidate signals, each cheap an
   closest-on, freshness, bio, values, intent, contact. Reviewed as acceptable (most fields optional/
   conditional, grouped logically) but worth a real-user look if cards feel dense.
 
+## Deployment readiness — VERIFIED (2026-07-25)
+
+The highest-value non-gated step, since every further signal decision now needs real usage evidence a
+deployment would produce. **Verified deployment-ready:** `Fingerprint:Pepper` is enforced outside
+Development and test-guarded (refuses no-pepper AND refuses the published dev value; whitespace
+rejected); 16 migrations auto-apply on startup, proven clean by the integration suite booting on a
+fresh DB; Data Protection key ring persists; `/health` probe present; HTTPS/HSTS/forwarded-headers
+handled + documented. `README.md` updated: `Metrics:Token` also gates `/metrics/reports` +
+`/metrics/suspend`, and a documented **anti-sybil pre-launch caveat** (registration is username+password
+only; add CAPTCHA before a public launch — the per-IP register rate limit is the interim guard). No code
+gap found. **A private/small deployment to gather initial `/metrics` evidence is unblocked now;** a
+public launch wants the anti-sybil gate first.
+
 ## Next Mandatory Action (updated 2026-07-25, late)
 
-**Baseline: 333 tests, build 0 warnings, clean tree. HEAD `660614b`. 15 migrations.**
+**Baseline: 337 tests, build 0 warnings, clean tree. HEAD `661a9c6`. 16 migrations.**
 
 **Shipped this session (all validated; new surfaces independently audited clean):** core tier
 recalibration + bar rescale; **self-described interests** (funnel unblock) + **free-text custom
