@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace Profiler.Web.Profile;
 
 /// <summary>One selectable interest: a stable slug (what gets hashed) and a human label.</summary>
@@ -201,6 +203,60 @@ public static class InterestCatalog
     /// </summary>
     public static List<string> Canonicalize(IEnumerable<string> features) =>
         features.Select(f => CanonicalBridge.TryGetValue(f, out var canonical) ? canonical : f).ToList();
+
+    // ---- Free-text custom interests ---------------------------------------------------------------
+    //
+    // A fixed ~140-tag list cannot hold the genuinely niche interest that makes the best match — and
+    // rarity weighting shows those rare shared interests carry the most signal. So let people type their
+    // own. The hard part is that two people who mean the same thing must land on the same feature, so we
+    // normalise aggressively (lowercase, collapse every run of non-alphanumerics to one hyphen, trim):
+    // "Byzantine History!", "byzantine  history", "Byzantine-History" all become `byzantine-history`.
+    // This resolves case/spacing/punctuation variance (the bulk of it); synonyms ("films" vs "movies")
+    // are not resolved and are an accepted v1 limitation. A typed interest that matches a catalog concept
+    // is mapped onto that concept's feature (so typing "python" unifies with picking Python and with a
+    // GitHub user), otherwise it becomes `interest:<slug>` — the shared "Communities & topics" namespace.
+    // The text is only ever hashed and discarded, never stored or rendered, so it carries no XSS risk.
+    public const int MaxCustomInterests = 25;
+    private const int MinCustomSlugLength = 2;
+    private const int MaxCustomSlugLength = 40;
+
+    // Reverse map: a normalized slug -> the (canonicalized) feature the catalog would emit for it. Slugs
+    // are unique across the catalog, so this is unambiguous.
+    private static readonly IReadOnlyDictionary<string, string> SlugToFeature =
+        Categories.SelectMany(c => c.Tags.Select(t => (t.Slug, Feature: Canonicalize(new[] { Feature(c, t) })[0])))
+                  .ToDictionary(x => x.Slug, x => x.Feature);
+
+    /// <summary>Normalize a free-text interest to a stable slug, or null if it is too short to be real.</summary>
+    public static string? NormalizeCustom(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var sb = new StringBuilder(raw.Length);
+        var lastHyphen = false;
+        foreach (var ch in raw.Trim().ToLowerInvariant())
+        {
+            if (char.IsLetterOrDigit(ch)) { sb.Append(ch); lastHyphen = false; }
+            else if (sb.Length > 0 && !lastHyphen) { sb.Append('-'); lastHyphen = true; }
+        }
+        var slug = sb.ToString().Trim('-');
+        if (slug.Length > MaxCustomSlugLength) slug = slug[..MaxCustomSlugLength].Trim('-');
+        return slug.Length < MinCustomSlugLength ? null : slug;
+    }
+
+    /// <summary>
+    /// Turn raw free-text lines into features: normalized, de-duplicated, capped, and mapped onto the
+    /// catalog concept when one matches (so typed interests unify with picked ones) else `interest:*`.
+    /// </summary>
+    public static List<string> CustomFeatures(IEnumerable<string>? rawLines)
+    {
+        if (rawLines == null) return new List<string>();
+        return rawLines
+            .Select(NormalizeCustom)
+            .Where(slug => slug != null)
+            .Distinct()
+            .Take(MaxCustomInterests)
+            .Select(slug => SlugToFeature.TryGetValue(slug!, out var f) ? f : $"interest:{slug}")
+            .ToList();
+    }
 
     /// <summary>
     /// Expand chosen features by rarity weight for weighted MinHash: a weight-w feature becomes w

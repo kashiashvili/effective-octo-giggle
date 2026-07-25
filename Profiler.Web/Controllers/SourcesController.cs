@@ -248,7 +248,7 @@ public class SourcesController : Controller
     // write is cheap defense-in-depth against a flood of fingerprint rebuilds. Shares the /sources
     // rejection page.
     [EnableRateLimiting("connect")]
-    public async Task<IActionResult> Interests(List<string>? features)
+    public async Task<IActionResult> Interests(List<string>? features, string? custom)
     {
         var userId = CurrentUserId;
 
@@ -259,21 +259,31 @@ public class SourcesController : Controller
             .Distinct()
             .ToList();
 
-        if (chosen.Count == 0)
+        // Bridge the unambiguous picked concepts (e.g. Python) into the shared connector vocabulary so a
+        // self-describer can match a connector user, not just other self-describers.
+        var canonical = InterestCatalog.Canonicalize(chosen);
+
+        // Free-text interests the catalog doesn't cover — normalized so people who type the same thing
+        // match, and mapped onto a catalog concept when one fits. This is where the rarest (highest-
+        // signal) interests come from.
+        var customLines = (custom ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var customFeatures = InterestCatalog.CustomFeatures(customLines);
+
+        // One de-duplicated interest set: a picked concept and the same concept typed collapse to one.
+        var allFeatures = canonical.Concat(customFeatures).Distinct().ToList();
+
+        if (allFeatures.Count == 0)
         {
-            ModelState.AddModelError("", "Pick at least one interest so we can build your fingerprint.");
+            ModelState.AddModelError("", "Pick or type at least one interest so we can build your fingerprint.");
             ViewBag.HasSelfDescribed = await _db.SourceFingerprints
                 .AnyAsync(s => s.UserId == userId && s.Source == SelfDescribedSource);
             return View();
         }
 
-        // Bridge the unambiguous concepts (e.g. Python) into the shared connector vocabulary so a
-        // self-describer can match a connector user, not just other self-describers — then weight by
-        // rarity (feature replication) so sharing a niche counts for more than sharing a popular thing.
-        // FeatureCount stays the number of interests the user actually picked (canonicalize is 1:1;
-        // expand only affects the hashed set).
-        var canonical = InterestCatalog.Canonicalize(chosen);
-        var raw = _generator.GenerateRaw(InterestCatalog.Expand(canonical));
+        // Weight by rarity (feature replication) so sharing a niche counts for more than sharing a
+        // popular thing. FeatureCount is the number of distinct interests, not the expanded count.
+        var raw = _generator.GenerateRaw(InterestCatalog.Expand(allFeatures));
+        var featureCount = allFeatures.Count;
         var now = DateTime.UtcNow;
 
         // Same two-save-in-a-transaction shape as Connect: per-source row, then the recomputed
@@ -289,7 +299,7 @@ public class SourcesController : Controller
                 UserId = userId,
                 Source = SelfDescribedSource,
                 RawSignatureJson = JsonSerializer.Serialize(raw),
-                FeatureCount = chosen.Count,
+                FeatureCount = featureCount,
                 UpdatedAt = now
             });
         }
@@ -298,7 +308,7 @@ public class SourcesController : Controller
             // Re-picking replaces the whole self-described set — there is no stored prior selection to
             // merge with, which matches the "we don't keep your answers" model.
             record.RawSignatureJson = JsonSerializer.Serialize(raw);
-            record.FeatureCount = chosen.Count;
+            record.FeatureCount = featureCount;
             record.UpdatedAt = now;
         }
         await _db.SaveChangesAsync();
@@ -307,11 +317,12 @@ public class SourcesController : Controller
         await _db.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        // Same one-shot themed summary connectors show, built from the (canonicalized) picks and then
-        // discarded with the request — only theme names and counts survive, never the tags themselves.
-        var lens = InterestLens.Summarize(canonical);
+        // Same one-shot themed summary connectors show, built from the whole (canonicalized + custom)
+        // interest set and then discarded with the request — only theme names and counts survive, never
+        // the interests themselves.
+        var lens = InterestLens.Summarize(allFeatures);
         TempData["InterestLens"] = JsonSerializer.Serialize(lens);
-        TempData["Success"] = $"Saved {chosen.Count} interest{(chosen.Count == 1 ? "" : "s")}. " +
+        TempData["Success"] = $"Saved {featureCount} interest{(featureCount == 1 ? "" : "s")}. " +
             $"Your fingerprint now covers {totalSources} source{(totalSources == 1 ? "" : "s")}.";
 
         return RedirectToAction("Index", "Matches");

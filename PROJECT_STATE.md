@@ -459,6 +459,14 @@ build 0 warnings.** HEAD after this unit.
     or the deferred oracle). Do NOT rush this into the core connector path; design the scheme-versioning
     first. Effort M–L.
 
+### Free-text custom interests — SHIPPED (2026-07-25)
+
+Lifted the ~140-tag catalog ceiling: users can type their own interests (the rarest, highest-signal
+ones). Aggressive normalization (`InterestCatalog.NormalizeCustom`) resolves case/spacing/punctuation so
+different spellings collide; typed interests matching a catalog concept map onto it (unifying with picks
+and, for languages, connector users), else `interest:<slug>`. Text hashed + discarded (DB-asserted),
+never rendered (no XSS). Synonyms are an accepted v1 limitation. **Baseline: 314 tests, 0 warnings.**
+
 ### TOP DISCOVERED BET (2026-07-25) — self-described and connector pools are DISJOINT — PARTIAL BRIDGE SHIPPED
 
 **Partial canonical bridge SHIPPED** (`InterestCatalog.Canonicalize`): programming-language picks now

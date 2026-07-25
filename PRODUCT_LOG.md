@@ -304,6 +304,18 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-25
+- **Free-text custom interests — lift the catalog ceiling on rarity.** A fixed ~140-tag list cannot hold
+  the genuinely niche interest that makes the best match, and the rarity-weighting evidence shows rare
+  shared interests carry the most signal — so the highest-value interests were unexpressible. The
+  self-described picker now has a "type your own, one per line" box. The entity-resolution problem that
+  had deferred this is handled by aggressive normalization (`InterestCatalog.NormalizeCustom`: lowercase,
+  collapse every run of non-alphanumerics to one hyphen, trim, length/count caps) so "Byzantine History!",
+  "byzantine  history", and "Byzantine-History" all become `byzantine-history` and match; synonyms are an
+  accepted v1 limitation. A typed interest that matches a catalog concept is mapped onto that concept's
+  feature (typing "python" unifies with picking Python and with a GitHub user); otherwise it becomes
+  `interest:<slug>` in the shared "Communities & topics" namespace. Text is only hashed and discarded —
+  never stored (DB-asserted) or rendered (no XSS). Two people who type the same interest differently
+  match (integration-tested). 15 tests.
 - **Cross-pool matching: bridge self-described interests into the connector vocabulary.** Self-described
   interests live in a `self-*` namespace, so a self-describer and a GitHub user who both love Python
   could never match — self-described had grown a *parallel* pool instead of the existing one, capping its

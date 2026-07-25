@@ -163,6 +163,68 @@ public class SelfDescribedInterestsTests : IClassFixture<ProfilerWebFactory>
         Assert.Contains(ghName, matches); // cross-pool match on the bridged languages
     }
 
+    private static async Task<HttpResponseMessage> PickWithCustomAsync(HttpClient client, string custom, params string[] features)
+    {
+        var page = await client.GetAsync("/sources/interests");
+        page.EnsureSuccessStatusCode();
+        var fields = new List<KeyValuePair<string, string>>
+        {
+            new("__RequestVerificationToken", await TokenAsync(page)),
+            new("custom", custom),
+        };
+        foreach (var f in features) fields.Add(new("features", f));
+        return await client.PostAsync("/sources/interests", new FormUrlEncodedContent(fields));
+    }
+
+    [Fact]
+    public async Task TwoUsers_WhoTypeTheSameCustomInterest_Differently_StillMatch()
+    {
+        // Free-text interests only help if normalization makes different spellings collide.
+        var aName = "sdi_ca_" + Guid.NewGuid().ToString("N")[..6];
+        var bName = "sdi_cb_" + Guid.NewGuid().ToString("N")[..6];
+        // Several shared niche interests so the overlap clears the match floor, typed with different case/spacing.
+        var aCustom = "Byzantine History\nSea Kayaking\nModular Synthesis\nMedieval Manuscripts";
+        var bCustom = "byzantine  history\nsea-kayaking\nmodular synthesis\nMEDIEVAL manuscripts";
+
+        var a = NewClient();
+        await RegisterAsync(a, aName);
+        await PickWithCustomAsync(a, aCustom);
+
+        var b = NewClient();
+        await RegisterAsync(b, bName);
+        await PickWithCustomAsync(b, bCustom);
+
+        var aMatches = await (await a.GetAsync("/matches")).Content.ReadAsStringAsync();
+        Assert.Contains(bName, aMatches);
+    }
+
+    [Fact]
+    public async Task CustomInterestText_IsNeverStored()
+    {
+        var client = NewClient();
+        var user = "sdi_cust_" + Guid.NewGuid().ToString("N")[..8];
+        await RegisterAsync(client, user);
+
+        await PickWithCustomAsync(client, "quantumbasketweaving\nzoroastrianpoetry");
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var me = await db.Users.AsNoTracking().FirstAsync(u => u.Username == user);
+        Assert.True(await db.Fingerprints.AsNoTracking().AnyAsync(f => f.UserId == me.Id));
+
+        var json = new System.Text.Json.JsonSerializerOptions
+        {
+            ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles
+        };
+        var everything = string.Join("\n", new[]
+        {
+            System.Text.Json.JsonSerializer.Serialize(await db.Users.AsNoTracking().ToListAsync(), json),
+            System.Text.Json.JsonSerializer.Serialize(await db.SourceFingerprints.AsNoTracking().ToListAsync(), json),
+        });
+        Assert.DoesNotContain("quantumbasketweaving", everything);
+        Assert.DoesNotContain("zoroastrianpoetry", everything);
+    }
+
     [Fact]
     public async Task EmptyOrCraftedSelection_BuildsNothing()
     {

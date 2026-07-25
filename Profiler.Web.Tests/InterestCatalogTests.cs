@@ -77,6 +77,63 @@ public class InterestCatalogTests
         Assert.Equal(expanded.Count, expanded.Distinct().Count());
     }
 
+    [Theory]
+    [InlineData("Byzantine History!", "byzantine-history")]
+    [InlineData("byzantine  history", "byzantine-history")]
+    [InlineData("Byzantine-History", "byzantine-history")]
+    [InlineData("  sci-fi  ", "sci-fi")]
+    [InlineData("modular synthesis", "modular-synthesis")]
+    public void NormalizeCustom_ResolvesCaseSpacingAndPunctuation(string raw, string expected)
+    {
+        // The whole point: people who mean the same thing must land on the same slug despite typing it
+        // differently, or free-text interests never match.
+        Assert.Equal(expected, InterestCatalog.NormalizeCustom(raw));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("a")]     // too short after normalizing
+    [InlineData("!!!")]   // no alphanumerics
+    [InlineData(null)]
+    public void NormalizeCustom_RejectsEmptyOrTooShort(string? raw)
+    {
+        Assert.Null(InterestCatalog.NormalizeCustom(raw));
+    }
+
+    [Fact]
+    public void NormalizeCustom_CapsLength()
+    {
+        var slug = InterestCatalog.NormalizeCustom(new string('a', 100));
+        Assert.NotNull(slug);
+        Assert.True(slug!.Length <= 40, $"slug should be capped, was {slug.Length}");
+    }
+
+    [Fact]
+    public void CustomFeatures_MapsKnownConceptsToTheCatalog_AndDedupes()
+    {
+        // A typed interest that matches a catalog concept unifies with picking it (and, for languages,
+        // with a connector user) instead of forming a separate `interest:*` island.
+        Assert.Equal(new[] { "language:python" }, InterestCatalog.CustomFeatures(new[] { "Python" }));
+        Assert.Equal(new[] { "self-reading:sci-fi" }, InterestCatalog.CustomFeatures(new[] { "Sci-Fi" }));
+
+        // Unknown interests become the shared interest: namespace.
+        Assert.Equal(new[] { "interest:byzantine-history" }, InterestCatalog.CustomFeatures(new[] { "byzantine history" }));
+
+        // Two spellings of one interest collapse to a single feature.
+        Assert.Single(InterestCatalog.CustomFeatures(new[] { "Sci-Fi", "sci fi", "SCI  FI" }));
+    }
+
+    [Fact]
+    public void CustomFeatures_CapsCount_AndDropsGarbage()
+    {
+        var many = Enumerable.Range(0, 100).Select(i => $"interest number {i}").ToList();
+        many.Add("!!!"); // dropped
+        var result = InterestCatalog.CustomFeatures(many);
+        Assert.True(result.Count <= InterestCatalog.MaxCustomInterests);
+        Assert.All(result, f => Assert.False(string.IsNullOrWhiteSpace(f)));
+    }
+
     [Fact]
     public void Canonicalize_BridgesLanguagesToConnectorVocabulary_AndPassesOthersThrough()
     {
