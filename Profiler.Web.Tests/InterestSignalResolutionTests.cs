@@ -164,4 +164,74 @@ public class InterestSignalResolutionTests
         Assert.True(sameStrong is > 2 and < 40,
             $"'Strong match' should be rare but reachable for same-niche pairs; got {sameStrong:F1}%");
     }
+
+    // Real catalog personas (features that actually exist in InterestCatalog), used to characterise the
+    // *weighted* self-described path — the one users hit — against the same MatchViewModel tiers.
+    private static readonly string[][] Personas =
+    {
+        new[] { "self-tech:python", "self-tech:rust", "self-tech:machine-learning", "self-tech:compilers", "self-tech:distributed-systems" },
+        new[] { "self-music:jazz", "self-music:shoegaze", "self-music:post-rock", "self-music:jazz-fusion", "self-music:vinyl" },
+        new[] { "self-outdoors:climbing", "self-outdoors:bouldering", "self-outdoors:trail-running", "self-outdoors:kayaking" },
+        new[] { "self-reading:sci-fi", "self-reading:philosophy", "self-reading:poetry", "self-reading:history" },
+        new[] { "self-food:sourdough", "self-food:fermentation", "self-food:coffee", "self-food:cheese" },
+    };
+
+    private static List<string> Picker(Random rng, int persona)
+    {
+        // A user takes their persona's core, plus 0–3 stray picks from other personas (real people are
+        // not purely one niche). Deduped, like the controller does.
+        var picks = new HashSet<string>(Personas[persona]);
+        var strays = rng.Next(0, 4);
+        for (var s = 0; s < strays; s++)
+        {
+            var p = rng.Next(Personas.Length);
+            picks.Add(Personas[p][rng.Next(Personas[p].Length)]);
+        }
+        return picks.ToList();
+    }
+
+    [Fact]
+    public void WeightedSelfDescribedPath_KeepsTheTiersReachable_AndDiscriminating()
+    {
+        // The self-described path hashes InterestCatalog.Expand(picks), not the raw picks, so the tier
+        // calibration must be re-checked there. Build synthetic pickers, run them through the REAL
+        // weighted pipeline, and assert against the REAL MatchViewModel tiers.
+        var gen = new FingerprintGenerator(128, pepper: "weighted-resolution");
+        var rng = new Random(77);
+        const int n = 8_000;
+
+        double Sim(List<string> a, List<string> b) =>
+            gen.Generate(InterestCatalog.Expand(a)).Similarity(gen.Generate(InterestCatalog.Expand(b)));
+
+        var samePersona = new List<double>(n);
+        var differentPersona = new List<double>(n);
+        for (var i = 0; i < n; i++)
+        {
+            var p = rng.Next(Personas.Length);
+            samePersona.Add(Sim(Picker(rng, p), Picker(rng, p)));
+
+            var p1 = rng.Next(Personas.Length);
+            var p2 = (p1 + 1 + rng.Next(Personas.Length - 1)) % Personas.Length;
+            differentPersona.Add(Sim(Picker(rng, p1), Picker(rng, p2)));
+        }
+
+        string Tier(double s) => new MatchViewModel { Similarity = s }.TierLabel;
+        double GoodPlus(List<double> xs) =>
+            100.0 * xs.Count(s => Tier(s) is "Good match" or "Strong match") / xs.Count;
+
+        _out.WriteLine($"Weighted self-described: same-persona Good+ {GoodPlus(samePersona):F1}%  " +
+                       $"(mean {samePersona.Average():F3}); different-persona Good+ {GoodPlus(differentPersona):F1}%  " +
+                       $"(mean {differentPersona.Average():F3})");
+
+        // Identical picks must still read as the top tier — weighting preserves the 1.0 self-similarity.
+        Assert.Equal("Strong match", Tier(Sim(Personas[0].ToList(), Personas[0].ToList())));
+
+        // Tiers stay reachable AND discriminating on the weighted path: people who share a niche mostly
+        // reach Good+, people in different niches mostly do not.
+        Assert.True(GoodPlus(samePersona) > 55,
+            $"weighted same-persona pairs should mostly reach Good+ ({GoodPlus(samePersona):F1}%)");
+        Assert.True(GoodPlus(samePersona) > GoodPlus(differentPersona) + 25,
+            $"weighted path did not separate niches from strangers enough " +
+            $"({GoodPlus(samePersona):F1}% vs {GoodPlus(differentPersona):F1}%)");
+    }
 }

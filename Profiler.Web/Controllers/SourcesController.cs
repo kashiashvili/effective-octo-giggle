@@ -244,6 +244,10 @@ public class SourcesController : Controller
 
     [HttpPost("interests")]
     [ValidateAntiForgeryToken]
+    // Metered like Connect: the work is bounded and local (no outbound calls), but rate-limiting the
+    // write is cheap defense-in-depth against a flood of fingerprint rebuilds. Shares the /sources
+    // rejection page.
+    [EnableRateLimiting("connect")]
     public async Task<IActionResult> Interests(List<string>? features)
     {
         var userId = CurrentUserId;

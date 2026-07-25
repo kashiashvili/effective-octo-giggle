@@ -419,6 +419,18 @@ Both reviewers reported on the recalibrated release:
   non-developer) could not produce a fingerprint at all. Strongest bet: **self-described interests**
   feeding the existing pipeline. Runner-up bets recorded below.
 
+### Release Auditor on self-described + weighting (2026-07-25) — clean, 3 findings fixed
+
+Independent audit of the two features (self-described interests + rarity weighting). **No P0/P1/P2.**
+Verified: allowlist airtight (no arbitrary-feature injection), `[Authorize]`+`[ValidateAntiForgeryToken]`
+present, no IDOR (userId from claims), picks + `#N` replicas never persisted (DB-asserted), lens/TempData
+carry only theme counts, Expand correct, transaction atomic, re-pick replaces, FeatureCount = pick count,
+connector path byte-identical (weight 1, Connect doesn't call Expand). Three findings, all fixed
+(`<pending commit>`): dead `via-ferrata` entry removed from `RareSlugs`; **weighted-path tier calibration
+now validated** (`WeightedSelfDescribedPath_KeepsTheTiersReachable_AndDiscriminating`: same-persona 100%
+Good+, different-persona 15.7%, identical picks = Strong); Interests POST now `[EnableRateLimiting("connect")]`.
+**Baseline: 296 tests, build 0 warnings.**
+
 ### Self-described interests — SHIPPED (2026-07-25)
 
 Built the Critic's top bet. Curated `InterestCatalog` (~140 tags / 9 themes) → `/sources/interests`

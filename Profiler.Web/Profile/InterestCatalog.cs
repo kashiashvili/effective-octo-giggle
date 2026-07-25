@@ -153,7 +153,7 @@ public static class InterestCatalog
     {
         "compilers", "distributed-systems", "embedded", "functional-programming",
         "shoegaze", "post-rock", "jazz-fusion", "soul-funk", "vinyl", "music-production",
-        "via-ferrata", "bouldering", "trail-running", "kayaking", "martial-arts",
+        "bouldering", "trail-running", "kayaking", "martial-arts",
         "fermentation", "sourdough", "cheese", "cocktails",
         "calligraphy", "leatherwork", "sculpture", "film-photography", "pottery", "3d-printing",
         "linguistics", "neuroscience", "history-of-science", "birdwatching",
