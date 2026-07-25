@@ -87,6 +87,11 @@ public class ShowableInterestsCardTests : IClassFixture<ProfilerWebFactory>
         Assert.Contains("Byzantine History", json);
         // The case-duplicate collapsed — only one "sea kayaking" survives.
         Assert.Single(Regex.Matches(json, "(?i)sea kayaking"));
+
+        // The human-readable transparency page must show them too — it promises "exactly what we store".
+        var htmlPage = await (await client.GetAsync("/account/data")).Content.ReadAsStringAsync();
+        Assert.Contains("Sea Kayaking", htmlPage);
+        Assert.Contains("Shown interests", htmlPage);
     }
 
     [Fact]

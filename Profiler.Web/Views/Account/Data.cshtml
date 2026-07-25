@@ -24,6 +24,7 @@
                     <dt>Contact</dt><dd>@(string.IsNullOrWhiteSpace(Model.Contact) ? "— (not set)" : Model.Contact)</dd>
                     <dt>Here for</dt><dd>@(Profiler.Web.Profile.ConnectionIntent.LabelFor(Model.ConnectionIntent) ?? "— (not set)")</dd>
                     <dt>Values position</dt><dd>@(Model.ValuesOpenness.HasValue ? $"{Model.ValuesOpenness} (openness scale −2…+2; derived, answers discarded)" : "— (not set)")</dd>
+                    <dt>Shown interests</dt><dd>@(Model.ShowableInterests.Any() ? string.Join(", ", Model.ShowableInterests) + " (public on your match cards)" : "— (not set)")</dd>
                 </dl>
             </div>
         </div>
