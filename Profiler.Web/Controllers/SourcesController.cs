@@ -242,12 +242,19 @@ public class SourcesController : Controller
         return View();
     }
 
+    // Generous cap on interest text: a real person types a handful of lines, so this only stops a giant
+    // paste from forcing a huge string allocation. Well above any legitimate use.
+    private const int MaxCustomLinesProcessed = 200;
+
     [HttpPost("interests")]
     [ValidateAntiForgeryToken]
     // Metered like Connect: the work is bounded and local (no outbound calls), but rate-limiting the
     // write is cheap defense-in-depth against a flood of fingerprint rebuilds. Shares the /sources
     // rejection page.
     [EnableRateLimiting("connect")]
+    // Interest text is tiny; cap the body so a multi-megabyte paste cannot be buffered or split into a
+    // huge line array (the connectors endpoint has its own, larger, limit for CSV uploads).
+    [RequestSizeLimit(256 * 1024)]
     public async Task<IActionResult> Interests(List<string>? features, string? custom)
     {
         var userId = CurrentUserId;
@@ -266,7 +273,9 @@ public class SourcesController : Controller
         // Free-text interests the catalog doesn't cover — normalized so people who type the same thing
         // match, and mapped onto a catalog concept when one fits. This is where the rarest (highest-
         // signal) interests come from.
-        var customLines = (custom ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var customLines = (custom ?? "")
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(MaxCustomLinesProcessed);
         var customFeatures = InterestCatalog.CustomFeatures(customLines);
 
         // One de-duplicated interest set: a picked concept and the same concept typed collapse to one.
