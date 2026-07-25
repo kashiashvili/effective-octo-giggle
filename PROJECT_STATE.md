@@ -541,24 +541,28 @@ funnel unblock (self-described interests) + recalibrated the core match tiers + 
 rarity-weighting bet. Both mandated reviewers ran on the recalibrated release (Auditor clean; Critic
 produced 5 bets, top one shipped).
 
-**Next iteration — build rarity/IDF-weighted matching (evidence-backed bet #2).** Start fresh and
-design carefully; the frequency oracle is privacy-sensitive (new retained state) and needs a strong-
-reasoning pass, not a rushed one. Suggested increments:
-1. **Design the frequency oracle privacy model first** (this is the crux, not the code): aggregate
-   per-feature counts only, salted/hashed feature keys, low-count flooring so a df=1 feature cannot
-   reveal "one person here likes X"; decide retention explicitly against the north star and record it
-   in `PRODUCT_LOG.md`. If the privacy cost cannot be made acceptable, **stop and keep plain matching**
-   — the experiment proves the *upside*, not that the retention is acceptable.
+**Next iteration — build rarity/IDF-weighted matching (evidence-backed bet #2), STATIC-WEIGHTS FIRST.**
+Design decision recorded 2026-07-25 (the "privacy model first" step): **do NOT build the dynamic
+frequency oracle first.** The self-described `InterestCatalog` is finite and fixed (~140 tags) and is
+now the *primary* funnel for the target user, so its rarity weights can be **authored statically**
+(e.g. `niche:byzantine-history` heavy, `common:python` light) — delivering most of the validated 6.4×
+benefit with **zero new retained state, zero per-user data, no oracle**. This sidesteps the entire
+privacy cost for the primary path. A dynamic per-feature frequency table would only be needed for
+open-vocabulary *connector* features, and is **deferred** (build only if evidence later shows connector
+matching needs it, and only with an aggregate/salted/low-count-floored design decided explicitly
+against the north star). Increments:
+1. Add a static `Weight` (or rarity tier) to each `InterestCatalog` tag — authored, no runtime data.
 2. Implement weighted MinHash (consistent weighted sampling) behind a new `FingerprintScheme` version;
    `SchemeVerifier` already invalidates old signatures on a scheme change (near-zero users, acceptable).
-3. Maintain the oracle at fingerprint-build time (raw features still available there, discarded after).
-4. Validate with the existing synthetic harnesses (`InterestSignalResolutionTests`,
-   `InterestWeightingExperimentTests`): weighted scheme separates communities better AND common-only
-   overlap drops out, without leaking via the oracle (assert against the DB).
-5. Recheck the tier calibration under the new scheme (weighting changes the similarity distribution).
+   Connector features (no static weight) default to a neutral/high weight — no oracle.
+3. Validate with the synthetic harnesses (`InterestSignalResolutionTests`,
+   `InterestWeightingExperimentTests`): weighted scheme separates niches better AND common-only overlap
+   drops out; assert no new per-user retention appears in the DB.
+4. Recheck the tier calibration under the new scheme (weighting changes the similarity distribution).
 
-**Alternative if the oracle privacy model proves unacceptable:** pursue Critic bet #3 (cull the
-paste-a-raw-token connectors — a security+honesty win, owner call) or continue discovery. Do not ship
-new retained state that erodes the north star just to improve match quality.
+**Guardrail:** the experiment proves the *upside* of weighting, not that any retained frequency state
+is acceptable. Keep the static-weights design unless there is a concrete, north-star-safe reason to add
+the oracle. Alternative work if this stalls: Critic bet #3 (cull the paste-a-raw-token connectors — a
+security+honesty win, owner call) or further discovery.
 
 Do not hand control back merely because the release is clean.
