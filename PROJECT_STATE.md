@@ -654,11 +654,17 @@ Release Auditor ×3 — all clean or findings fixed.
 **The clean, high-value, evidence-independent bets are now shipped.** What remains is gated on an owner
 decision, an external resource (a live deployment / a CAPTCHA provider), or is a consequential change
 that needs careful fresh design — do not rush any of these at the tail of a long context:
-1. **Op-6 — COMPLETE (`ecf7fc7`).** Report → operator review (`/metrics/reports`) → reversible
-   soft-suspend (`AppUser.SuspendedAt`, `POST /metrics/suspend`): excluded from matches, session +
-   login refused, reinstatable. Soft flag, not delete (leaked-token-safe). 4 tests. **Still open before
-   real launch:** anti-sybil CAPTCHA (external provider) — the per-IP register rate limit is the interim
-   guard.
+1. **Op-6 — COMPLETE + independently security-audited (`ecf7fc7`, hardened `9ca1872`).** Report →
+   operator review (`/metrics/reports`) → reversible soft-suspend (`AppUser.SuspendedAt`,
+   `POST /metrics/suspend`): excluded from matches, session + login refused, reinstatable. Soft flag,
+   not delete (leaked-token-safe). Independent Release Auditor: **no P0/P1/P2**; verified token gate is
+   first (404/401 before any state change, constant-time), no IDOR, suspended session dies next request,
+   reports can't be inflated by one actor (DistinctReporters + unique index), delete cascades reports
+   both ways, named report data is token-only. Its 2 P3s fixed: operator-token now a resource filter
+   (runs before model binding, so `/metrics/suspend` no longer 400-leaks its existence when the feature
+   is off); `Report` save wrapped so a double-submit race is the idempotent no-op it intends. **Still
+   open before real launch:** anti-sybil CAPTCHA (external provider) — the per-IP register rate limit is
+   the interim guard.
 2. **Op-5 — hide/remove the values signal. OWNER DECISION.** Strong data-minimization case (weak
    discrimination, most-sensitive data) but reverses a deliberately-shipped, vision-relevant signal.
 3. **Connector-side rarity weighting** — consequential (real fingerprint-scheme migration; design the
