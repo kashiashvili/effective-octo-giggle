@@ -696,7 +696,7 @@ that needs careful fresh design — do not rush any of these at the tail of a lo
    both ways, named report data is token-only. Its 2 P3s fixed: operator-token now a resource filter
    (runs before model binding, so `/metrics/suspend` no longer 400-leaks its existence when the feature
    is off); `Report` save wrapped so a double-submit race is the idempotent no-op it intends.
-   **Anti-sybil SHIPPED (privacy-preserving, no CAPTCHA, `<pending commit>`):** honeypot (always on) +
+   **Anti-sybil SHIPPED (privacy-preserving, no CAPTCHA, `cc5f988`):** honeypot (always on) +
    signed single-use time-limited registration ticket (`RegistrationGuard`, `AntiAbuse:GuardRegistration`,
    off by default → flip on for public launch), 6 tests. Optional future: a privacy-respecting CAPTCHA for
    very-high-value protection; a shared single-use cache if multi-instance.
@@ -708,5 +708,11 @@ that needs careful fresh design — do not rush any of these at the tail of a lo
    client-side self-describe FP (pepper-on-client problem), anti-sybil CAPTCHA (provider), promote the
    vision (owner), real `/metrics` usage evidence (deployment).
 
-Continue with the Op-6 soft-suspend loop (careful design) or further discovery. Do not hand control back
-merely because the release is clean — but do not rush a security-sensitive or vision-reversing change.
+**Op-6 (suspend loop) and the anti-sybil gate are now DONE.** All non-gated, high-value, evidence-
+independent work is shipped: multi-source funnel, weighted/calibrated/cross-pool matching, shared-
+interest reveal, full trust & safety loop (report → review → reversible suspend), privacy-preserving
+anti-sybil, measurement, containerized deploy pipeline pushed to `main`. What remains is genuinely
+gated: owner strategic decisions (promote the vision; hide/keep the weak values signal) and anything
+needing **real usage evidence from a live deployment** (connector-side weighting calibration, 2nd
+values axis, clusters, a return channel). Do not rush a vision-reversing change or invent low-value
+work; the next real progress needs an owner decision or a deployment producing usage data.
