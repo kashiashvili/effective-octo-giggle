@@ -627,6 +627,15 @@ so measure at the aggregate/derived level only. Candidate signals, each cheap an
   closest-on, freshness, bio, values, intent, contact. Reviewed as acceptable (most fields optional/
   conditional, grouped logically) but worth a real-user look if cards feel dense.
 
+## Accessibility pass (2026-07-25) — audited, 2 real fixes
+
+Swept the core journey for a11y (the last untouched quality dimension). Already strong: `lang`,
+skip-link, `<main>` landmark, `role=status/alert` flash messages, `<label asp-for>` associations,
+`:focus-visible`, `sr-only`, no bare `<img>`. Two real WCAG heading defects fixed (`4e54d71`): auth
+pages used `<h2>` as the top heading with no `<h1>` (→ promoted to `<h1>`); Matches/Hidden empty states
+jumped `<h1>`→`<h4>` (→ `<h2>`). Purely semantic — class-scoped CSS moved to the corrected tags, so
+rendering is pixel-identical (browser-verified).
+
 ## Integrated user-flow review (2026-07-25) — PASSED
 
 Walked the cumulative product live (QA server, a fully-populated match seeded to render the worst-case
