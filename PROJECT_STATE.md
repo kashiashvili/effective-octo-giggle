@@ -627,6 +627,18 @@ so measure at the aggregate/derived level only. Candidate signals, each cheap an
   closest-on, freshness, bio, values, intent, contact. Reviewed as acceptable (most fields optional/
   conditional, grouped logically) but worth a real-user look if cards feel dense.
 
+## Integrated user-flow review (2026-07-25) — PASSED
+
+Walked the cumulative product live (QA server, a fully-populated match seeded to render the worst-case
+card). All of this session's surfaces cooperate correctly on one card: Strong-match tier + rescaled
+bar, mutual connection intent, coarse values alignment, the **shared-interest reveal intersection**
+("You both want to talk about: Rust · Sea kayaking"), bio, contact, and Hide + Report, plus the
+Best-match / Same-intent / Similar-outlook sort controls and the contact-nudge. **No regression, no
+cross-feature bug.** The fully-populated card is tall but logically grouped (identity → interest
+strength → compatibility signals → personal → actions) and readable — having seen the real worst case,
+a redesign would be speculative churn, not a clear win, so the recorded card-density bet is **closed as
+not-warranted** on evidence. QA seed data removed after the review.
+
 ## Pushed to GitHub + deploy pipeline (2026-07-25)
 
 Pushed `rebuild/dotnet-profiler` and fast-forwarded `main` (was just the initial commit; safe, no
