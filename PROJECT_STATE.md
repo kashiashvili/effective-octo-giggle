@@ -472,11 +472,12 @@ gap (username+password only, no verification, only recourse is a silent hide). R
    spellings unify. Profile edit + dashboard + export + deletion parity. 10 tests. **Baseline: 329 tests,
    0 warnings.** NOTE: Op-6 (trust & safety) is now the pre-launch gate — Op-1 makes profiles more worth
    harvesting; a report path + minimal anti-sybil must precede real exposure.
-2. **Op-6 trust & safety — LAUNCH-GATE (record, build before any real deployment).** A `report` action
-   beside `Hide` (needs a report store + an operator review surface — bigger than it looks) + minimal
-   anti-sybil on registration (CAPTCHA-lite / proof-of-work + new-account velocity guard). Op-1 makes
-   profiles more worth harvesting, so this must precede real exposure. Not urgent pre-launch (zero users)
-   but a hard gate before launch.
+2. **Op-6 trust & safety — REPORT PATH SHIPPED (`f190da6`); anti-sybil deferred.** A `report` action on
+   the card records moderation data (`UserReport`, closed-set reason) + auto-hides the reported user;
+   operator review at token-gated `GET /metrics/reports`. **Still open before real launch:** anti-sybil
+   on registration (CAPTCHA needs an external provider — deployment-time; per-IP register rate limit is
+   the interim guard) and an admin ban/delete loop (operator can currently act out-of-band / via DB).
+   `Baseline: 333 tests, 0 warnings.`
 3. **Op-5 remove/hide the values signal — OWNER DECISION (do not rip out autonomously).** In-repo
    evidence shows the single openness axis discriminates weakly; it is the most sensitive data for the
    least-validated signal, against data-minimization. Strong argument to hide-by-default, but it reverses

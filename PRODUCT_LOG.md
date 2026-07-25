@@ -304,6 +304,17 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-25
+- **Report path — safety recourse beyond a silent hide.** With more now shown on cards (bio + contact +
+  showable interests) and registration being username+password only, the only prior recourse was a
+  silent one-sided hide — a bad actor stayed in everyone else's pool. A "Report" control on the match
+  card records operator-facing moderation data (`UserReport`, migration `AddUserReports`; reason from a
+  closed set — never free text about another person) and **also hides** the reported user from the
+  reporter (immediate self-protection). Idempotent (unique reporter→reported); cascades with either
+  account. Operator review: token-gated `GET /metrics/reports` (same token as `/metrics`) ranks reported
+  users by distinct reporters with a reason breakdown — necessarily names users (moderation is about
+  specific accounts), so behind the operator token, never an ordinary session. Deferred to deployment:
+  anti-sybil CAPTCHA (needs a provider; per-IP register rate limit is the interim guard) and an admin
+  ban/delete loop. 7 tests.
 - **Opt-in shared-interest reveal — a concrete reason to reach out.** A fresh Opportunity Critic found
   the input funnel is now strong but everything *after* the match is thin: a card told a stranger how
   much + which category they share, never *what* — the one thing that would drive an off-platform
