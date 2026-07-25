@@ -433,12 +433,18 @@ build 0 warnings.** HEAD after this unit.
 ### Runner-up Critic bets (2026-07-25) — recorded, ranked
 1. ~~Self-described interests~~ **SHIPPED.**
 2. **Rarity/IDF-weighted interest matching (weighted MinHash).** Down-weight ubiquitous interests
-   (`language:python` — everyone), up-weight rare shared ones, at fingerprint-build time (raw still
-   available then). Attacks the median-0.21 overlap at the root, not by rescaling a label. Needs a
-   frequency oracle (aggregate, salted, count-only — new retained state to design carefully) + a new
-   scheme version (invalidates existing sigs; near-zero users so acceptable). Evidence-independent
-   (reuse `InterestSignalResolutionTests` to prove weighting separates communities better). **Strong
-   next core-outcome bet.** Effort M.
+   (`language:python` — everyone), up-weight rare shared ones. **Concept now VALIDATED by a synthetic
+   experiment (`InterestWeightingExperimentTests`, 2026-07-25):** on a 2 000-user synthetic population,
+   IDF weighting improves separation of genuine-niche vs common-only overlap **6.4×** (plain 3.05× →
+   weighted 19.4×), driving spurious "we both like a popular thing" overlap to ~0.008 while keeping
+   real niche overlap ~0.16; a constructed case shows plain Jaccard *cannot* rank a rare shared
+   interest above a common one (identical scores) whereas weighting ranks it ~17× higher. So the upside
+   is real and worth its cost. **Remaining work (the actual build, its own iteration):** a weighted
+   MinHash scheme (consistent weighted sampling) + a **feature-frequency oracle** — the privacy-
+   sensitive part: it is new retained state, so design it aggregate/salted/count-only with low-count
+   flooring (a df=1 feature must not reveal "one person here likes X"), and decide the retention
+   explicitly against the north star. Needs a new fingerprint-scheme version (invalidates existing
+   sigs; near-zero users, acceptable). **Strongest next core-outcome bet; evidence-backed.** Effort M.
 3. **Cull the paste-a-raw-token connectors** (14 cards + 6 "coming soon"). Training users to paste
    OAuth tokens into a form is a phishing-shaped anti-pattern; tokens transit/log server-side. Keep
    GitHub-username, CSV, RSS, + self-described. Security+honesty win. Effort S. **Owner call** (removes
