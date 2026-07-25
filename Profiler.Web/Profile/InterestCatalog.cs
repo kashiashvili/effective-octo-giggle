@@ -198,8 +198,10 @@ public static class InterestCatalog
     /// <summary>
     /// Map bridged self-described features to the canonical connector string they should match on, so
     /// self-described and connector fingerprints can overlap. Non-bridged features pass through. 1:1, so
-    /// the count is unchanged. Bridged features are common languages, so weight 1 (their connector
-    /// counterpart is weight 1) is both correct and required for the signatures to align.
+    /// the count is unchanged. A bridged feature hashes as its `language:*` form, which is not in the
+    /// rarity table, so it takes weight 1 — regardless of the tag's catalog rarity. That is required,
+    /// not incidental: the connector emits the same `language:*` at weight 1, and the two signatures only
+    /// align if both sides replicate it the same number of times.
     /// </summary>
     public static List<string> Canonicalize(IEnumerable<string> features) =>
         features.Select(f => CanonicalBridge.TryGetValue(f, out var canonical) ? canonical : f).ToList();
@@ -226,13 +228,27 @@ public static class InterestCatalog
         Categories.SelectMany(c => c.Tags.Select(t => (t.Slug, Feature: Canonicalize(new[] { Feature(c, t) })[0])))
                   .ToDictionary(x => x.Slug, x => x.Feature);
 
+    // Common interests whose meaning lives entirely in the symbols the normalizer strips: "C++" would
+    // collapse to "c" and vanish. Map the whole-string cases to a clean slug that survives — and that
+    // unifies with the catalog where one exists (cpp -> the C++ tag -> language:c++).
+    private static readonly IReadOnlyDictionary<string, string> CustomAliases = new Dictionary<string, string>
+    {
+        ["c++"] = "cpp",
+        ["c#"] = "csharp",
+        ["f#"] = "fsharp",
+        [".net"] = "dotnet",
+    };
+
     /// <summary>Normalize a free-text interest to a stable slug, or null if it is too short to be real.</summary>
     public static string? NormalizeCustom(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
-        var sb = new StringBuilder(raw.Length);
+        // Rescue symbol-defined tokens before the normalizer would strip them to nothing.
+        var lowered = raw.Trim().ToLowerInvariant();
+        if (CustomAliases.TryGetValue(lowered, out var alias)) return alias;
+        var sb = new StringBuilder(lowered.Length);
         var lastHyphen = false;
-        foreach (var ch in raw.Trim().ToLowerInvariant())
+        foreach (var ch in lowered)
         {
             if (char.IsLetterOrDigit(ch)) { sb.Append(ch); lastHyphen = false; }
             else if (sb.Length > 0 && !lastHyphen) { sb.Append('-'); lastHyphen = true; }

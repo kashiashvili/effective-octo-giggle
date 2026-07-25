@@ -101,6 +101,25 @@ public class InterestCatalogTests
         Assert.Null(InterestCatalog.NormalizeCustom(raw));
     }
 
+    [Theory]
+    [InlineData("C++", "cpp")]
+    [InlineData("c++", "cpp")]
+    [InlineData("C#", "csharp")]
+    [InlineData("F#", "fsharp")]
+    public void NormalizeCustom_RescuesSymbolDefinedTokens(string raw, string expected)
+    {
+        // Without the alias these strip to "c"/"f" and vanish, despite being common interests.
+        Assert.Equal(expected, InterestCatalog.NormalizeCustom(raw));
+    }
+
+    [Fact]
+    public void TypedCpp_UnifiesWithTheCatalogCppTag()
+    {
+        // Typing "C++" should reach the same feature as picking the C++ checkbox (which bridges to
+        // GitHub's language:c++), not vanish.
+        Assert.Equal(new[] { "language:c++" }, InterestCatalog.CustomFeatures(new[] { "C++" }));
+    }
+
     [Fact]
     public void NormalizeCustom_CapsLength()
     {
