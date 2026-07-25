@@ -63,7 +63,8 @@ public class MatchesController : Controller
         var matcher = new UserMatcher();
         foreach (var record in allFps)
         {
-            if (record.UserId != userId && (!record.User.IsDiscoverable || hidden.Contains(record.UserId))) continue;
+            // A suspended account is excluded from everyone's matches, on top of the discoverable/hidden rules.
+            if (record.UserId != userId && (!record.User.IsDiscoverable || hidden.Contains(record.UserId) || record.User.SuspendedAt != null)) continue;
             matcher.Add(record.UserId.ToString(), ProfileFingerprint.FromJson(record.FingerprintJson), record.User.Username);
         }
 

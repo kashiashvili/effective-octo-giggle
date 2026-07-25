@@ -63,12 +63,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                 var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
                 var user = await db.Users
                     .Where(u => u.Id == userId)
-                    .Select(u => new { u.SessionsValidFrom })
+                    .Select(u => new { u.SessionsValidFrom, u.SuspendedAt })
                     .FirstOrDefaultAsync();
 
-                // Gone, or signed in before the account's cutoff — the latter is how a password
-                // change, or an explicit "sign out everywhere", reaches sessions on other devices.
-                if (user == null || ctx.Principal.WasIssuedBefore(user.SessionsValidFrom))
+                // Gone, suspended by the operator, or signed in before the account's cutoff — the last
+                // is how a password change, or an explicit "sign out everywhere", reaches sessions on
+                // other devices.
+                if (user == null || user.SuspendedAt != null || ctx.Principal.WasIssuedBefore(user.SessionsValidFrom))
                 {
                     ctx.RejectPrincipal();
                     await ctx.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

@@ -123,6 +123,15 @@ public class AccountController : Controller
             return View(vm);
         }
 
+        // A suspended account cannot start a new session either — otherwise suspension would only last
+        // until the next login. Deliberately not distinguished from bad credentials by wording, but a
+        // suspended user with the right password is told plainly rather than left guessing.
+        if (user.SuspendedAt != null)
+        {
+            ModelState.AddModelError("", "This account has been suspended.");
+            return View(vm);
+        }
+
         await SignInUserAsync(user);
         return RedirectToAction("Dashboard", "Sources");
     }

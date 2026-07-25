@@ -104,7 +104,7 @@ public class MetricsController : ControllerBase
 
         var reports = await _db.UserReports
             .Join(_db.Users, r => r.ReportedId, u => u.Id,
-                (r, u) => new { u.Username, r.Reason, r.ReporterId, r.CreatedAt })
+                (r, u) => new { u.Username, u.SuspendedAt, r.Reason, r.ReporterId, r.CreatedAt })
             .ToListAsync();
 
         var byUser = reports
@@ -117,6 +117,8 @@ public class MetricsController : ControllerBase
                 DistinctReporters = g.Select(x => x.ReporterId).Distinct().Count(),
                 Reasons = g.GroupBy(x => x.Reason).ToDictionary(x => x.Key, x => x.Count()),
                 LatestUtc = g.Max(x => x.CreatedAt),
+                // So the operator sees at a glance which reported accounts are already actioned.
+                Suspended = g.First().SuspendedAt != null,
             })
             .OrderByDescending(x => x.DistinctReporters)
             .ThenByDescending(x => x.Reports)
@@ -129,6 +131,29 @@ public class MetricsController : ControllerBase
             ReportedUsers = byUser.Count,
             Users = byUser,
         });
+    }
+
+    /// <summary>
+    /// Operator moderation action: suspend or reinstate an account by username, behind the operator
+    /// token. A reversible flag, not a delete — a leaked token can suspend, but cannot destroy data.
+    /// Suspending excludes the account from everyone's matches and refuses its sessions and logins.
+    /// This is a bearer-token API call, not a browser form, so it carries no antiforgery token.
+    /// </summary>
+    public record SuspendRequest(string Username, bool Suspend);
+
+    [HttpPost("suspend")]
+    public async Task<IActionResult> Suspend([FromBody] SuspendRequest body)
+    {
+        if (RequireOperatorToken() is { } denied) return denied;
+        if (body == null || string.IsNullOrWhiteSpace(body.Username)) return BadRequest();
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == body.Username);
+        if (user == null) return NotFound();
+
+        user.SuspendedAt = body.Suspend ? DateTime.UtcNow : null;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { user.Username, Suspended = user.SuspendedAt != null, user.SuspendedAt });
     }
 
     private static string? ExtractBearer(string? header)

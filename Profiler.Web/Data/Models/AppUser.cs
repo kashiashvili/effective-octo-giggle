@@ -73,5 +73,13 @@ public class AppUser
     /// </summary>
     public string? ShowableInterestsJson { get; set; }
 
+    /// <summary>
+    /// When set, the account is suspended by the operator (a moderation action on reports): it is
+    /// excluded from everyone's matches and its sessions and logins are refused. Deliberately a
+    /// reversible flag rather than a delete — a token-gated hard-delete would let a leaked operator
+    /// token wipe accounts, whereas a suspension can be lifted. Null for an account in good standing.
+    /// </summary>
+    public DateTime? SuspendedAt { get; set; }
+
     public FingerprintRecord? Fingerprint { get; set; }
 }
