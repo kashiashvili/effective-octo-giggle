@@ -263,7 +263,10 @@ public class SourcesController : Controller
             return View();
         }
 
-        var raw = _generator.GenerateRaw(chosen);
+        // Weight the fingerprint by rarity before hashing (feature replication) so sharing a niche
+        // interest counts for more than sharing a popular one — see InterestCatalog.Expand. FeatureCount
+        // stays the number of interests the user actually picked, not the expanded count.
+        var raw = _generator.GenerateRaw(InterestCatalog.Expand(chosen));
         var now = DateTime.UtcNow;
 
         // Same two-save-in-a-transaction shape as Connect: per-source row, then the recomputed

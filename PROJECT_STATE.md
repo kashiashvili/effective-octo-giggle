@@ -432,7 +432,12 @@ build 0 warnings.** HEAD after this unit.
 
 ### Runner-up Critic bets (2026-07-25) — recorded, ranked
 1. ~~Self-described interests~~ **SHIPPED.**
-2. **Rarity/IDF-weighted interest matching (weighted MinHash).** Down-weight ubiquitous interests
+2. ~~Rarity-weighted matching (self-described)~~ **SHIPPED** (`InterestCatalog` static weights +
+   feature-replication weighted MinHash; no oracle, no retained state; validated through the real
+   pipeline). **Still open: connector-side weighting** — the bigger win, gated on a privacy-safe way to
+   weight open-vocabulary connector commons (curated common-feature list, or a carefully-designed
+   aggregate/salted/low-count-floored frequency oracle). See original bet #2 detail below.
+2b. **Rarity/IDF-weighted interest matching (weighted MinHash) — connector side, still open.** Down-weight ubiquitous interests
    (`language:python` — everyone), up-weight rare shared ones. **Concept now VALIDATED by a synthetic
    experiment (`InterestWeightingExperimentTests`, 2026-07-25):** on a 2 000-user synthetic population,
    IDF weighting improves separation of genuine-niche vs common-only overlap **6.4×** (plain 3.05× →

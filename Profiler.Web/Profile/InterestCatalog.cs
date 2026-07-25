@@ -119,4 +119,74 @@ public static class InterestCatalog
 
     /// <summary>The feature string a tag emits, e.g. "self-music:jazz".</summary>
     public static string Feature(InterestCategory category, InterestTag tag) => $"{category.Prefix}:{tag.Slug}";
+
+    // ---- Rarity weighting -------------------------------------------------------------------------
+    //
+    // Sharing a rare interest predicts a real connection far better than sharing a popular one — a
+    // synthetic experiment (InterestWeightingExperimentTests) put the improvement at ~6x separation.
+    // We weight rarity with a well-known trick that needs NO new stored data and no per-user frequency
+    // table (which would be retained state against the north star): "feature replication". A weight-w
+    // interest is expanded into w distinct sub-features before hashing, so two people who share a rare
+    // (heavy) interest agree on more MinHash slots than two who share a common (light) one. Because the
+    // weight is a property of the interest, both people expand it identically, so the replicas line up.
+    //
+    // Weights are authored statically here, not learned from users — that is the whole point: the
+    // catalog is finite, so its rarity is a design fact, not runtime data. Broad, popular interests are
+    // light; niche ones are heavy; everything else is neutral. (Connector features carry no catalog
+    // weight and stay at 1 for now — down-weighting open-vocabulary connector commons would need a
+    // frequency oracle, which is deliberately deferred.)
+    private const int CommonWeight = 1;
+    private const int NeutralWeight = 2;
+    private const int RareWeight = 3;
+
+    // Broad, popular interests — a shared one is weak evidence, so it counts least.
+    private static readonly IReadOnlySet<string> CommonSlugs = new HashSet<string>
+    {
+        "python", "web-dev", "machine-learning", "sci-fi", "fantasy", "history", "philosophy",
+        "jazz", "hip-hop", "electronic", "classical", "indie-rock", "hiking", "running", "cycling",
+        "yoga", "home-cooking", "baking", "coffee", "photography", "gardening", "astronomy", "chess",
+        "sci-fi-film", "documentaries", "anime", "non-fiction", "indie-games", "rpgs",
+    };
+
+    // Niche interests — a shared one is strong evidence of a real overlap, so it counts most.
+    private static readonly IReadOnlySet<string> RareSlugs = new HashSet<string>
+    {
+        "compilers", "distributed-systems", "embedded", "functional-programming",
+        "shoegaze", "post-rock", "jazz-fusion", "soul-funk", "vinyl", "music-production",
+        "via-ferrata", "bouldering", "trail-running", "kayaking", "martial-arts",
+        "fermentation", "sourdough", "cheese", "cocktails",
+        "calligraphy", "leatherwork", "sculpture", "film-photography", "pottery", "3d-printing",
+        "linguistics", "neuroscience", "history-of-science", "birdwatching",
+        "roguelikes", "tabletop-rpg", "mmos", "speedrunning", "fighting-games",
+        "poetry", "world-cinema", "arthouse",
+    };
+
+    /// <summary>Replication weight for a catalog slug: rarer interests weigh more.</summary>
+    public static int WeightOfSlug(string slug) =>
+        RareSlugs.Contains(slug) ? RareWeight :
+        CommonSlugs.Contains(slug) ? CommonWeight :
+        NeutralWeight;
+
+    // Feature string -> weight, precomputed once for the whole catalog.
+    private static readonly IReadOnlyDictionary<string, int> FeatureWeights =
+        Categories.SelectMany(c => c.Tags.Select(t => (Feature: Feature(c, t), Weight: WeightOfSlug(t.Slug))))
+                  .ToDictionary(x => x.Feature, x => x.Weight);
+
+    /// <summary>
+    /// Expand chosen features by rarity weight for weighted MinHash: a weight-w feature becomes w
+    /// distinct sub-features. Unknown features (e.g. connector-derived) get weight 1 — unchanged.
+    /// Standard MinHash over the expanded set is a weighted MinHash of the originals.
+    /// </summary>
+    public static List<string> Expand(IEnumerable<string> features)
+    {
+        var expanded = new List<string>();
+        foreach (var f in features)
+        {
+            var weight = FeatureWeights.TryGetValue(f, out var w) ? w : 1;
+            expanded.Add(f);
+            for (var i = 1; i < weight; i++)
+                expanded.Add($"{f}#{i}");
+        }
+        return expanded;
+    }
 }

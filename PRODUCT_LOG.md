@@ -304,6 +304,18 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-25
+- **Rarity-weighted self-described matching (no new retained data).** Sharing a rare interest predicts
+  a real connection far better than sharing a popular one; a synthetic experiment measured ~6x better
+  separation from weighting. Shipped it for self-described interests without a per-user frequency table
+  (which would be retained state against the north star): the catalog is finite, so rarity is authored
+  statically (`InterestCatalog` common/rare slug sets → weight 1/2/3) and applied by **feature
+  replication** — a weight-w interest is expanded to w distinct sub-features before MinHash, so two
+  people who share a niche agree on more slots than two who share a popular thing. No new storage, no
+  scheme/pepper change; connector features keep weight 1 (down-weighting open-vocabulary connector
+  commons would need a frequency oracle, deliberately deferred). Verified through the real pipeline: a
+  rare shared interest scores above a common one; identical picks still match; picks (and their
+  replicas) are still discarded. Note: the effect is modest for *self-described* picks (deliberate, not
+  auto-emitted noise); the larger win is on connector features and remains gated on the deferred oracle.
 - **Self-described interests — the funnel unblock.** Opportunity-Critic finding: the connect funnel
   is effectively developer-only — 14 of 18 sources demand a self-minted OAuth token / API key, so a
   normal privacy-conscious person with no GitHub and no patience for CSV exports could not produce a
