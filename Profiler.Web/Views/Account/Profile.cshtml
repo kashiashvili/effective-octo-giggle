@@ -29,6 +29,18 @@
                 </small>
             </div>
             <div class="form-group">
+                <label asp-for="ShowableInterests" class="form-label">Interests to show on your card</label>
+                <textarea asp-for="ShowableInterests" class="form-control" rows="3"
+                          placeholder="sea kayaking&#10;byzantine history&#10;modular synthesis"></textarea>
+                <span asp-validation-for="ShowableInterests" class="field-error"></span>
+                <small class="help-text">
+                    Optional, one per line (up to @Profiler.Web.Profile.ShowableInterests.MaxCount). These
+                    are the only interests shown on your match cards — a concrete reason for someone to
+                    reach out. <strong>Public and separate</strong> from the interests used for matching,
+                    which are always discarded.
+                </small>
+            </div>
+            <div class="form-group">
                 <label asp-for="ConnectionIntent" class="form-label">What you're here for</label>
                 <select asp-for="ConnectionIntent" class="form-control">
                     <option value="">— Prefer not to say —</option>

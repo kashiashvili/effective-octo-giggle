@@ -18,6 +18,10 @@ public class DataExportViewModel
     /// <summary>The scheme version the values bucket was derived under, or null.</summary>
     public string? ValuesScheme { get; set; }
 
+    /// <summary>Interests the user chose to show publicly on match cards (opt-in, separate from the
+    /// discarded matching fingerprint). Empty when none were shared.</summary>
+    public List<string> ShowableInterests { get; set; } = new();
+
     /// <summary>When the user last opened their matches (drives the "new since last visit" count).</summary>
     public DateTime? LastMatchesViewedAt { get; set; }
 

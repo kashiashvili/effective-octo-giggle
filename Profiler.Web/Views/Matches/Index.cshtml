@@ -224,6 +224,16 @@
                             {
                                 <p class="match-values">🧭 @match.ValuesAlignmentLabel</p>
                             }
+                            @* A concrete reason to reach out: interests they chose to show. Shared ones
+                               (both of you show them) lead; otherwise their own list is the icebreaker. *@
+                            @if (match.SharedShowableInterests.Any())
+                            {
+                                <p class="match-showable match-showable-shared">🔖 You both want to talk about: @string.Join(" · ", match.SharedShowableInterests)</p>
+                            }
+                            else if (match.ShowableInterests.Any())
+                            {
+                                <p class="match-showable">🔖 Ask them about: @string.Join(", ", match.ShowableInterests)</p>
+                            }
                             @* Their words, then how to reach them — the personal block. *@
                             @if (!string.IsNullOrWhiteSpace(match.Bio))
                             {

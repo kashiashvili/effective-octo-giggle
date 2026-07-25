@@ -63,5 +63,15 @@ public class AppUser
     /// <summary>Scheme version the bucket was derived under, so a future item change is detectable.</summary>
     public string? ValuesScheme { get; set; }
 
+    /// <summary>
+    /// Optional, user-chosen interests to show publicly on match cards — "talk to me about…". A small
+    /// capped JSON list of plain-text labels. Deliberately SEPARATE from the matching fingerprint: the
+    /// interests used for matching are still derived and discarded, so the "raw interests are never
+    /// stored" guarantee is untouched. This is voluntary public disclosure, the same model as
+    /// <see cref="Bio"/> — it exists so a match has a concrete reason (and icebreaker) to reach out,
+    /// instead of only a similarity percentage. Null when the user has shared none.
+    /// </summary>
+    public string? ShowableInterestsJson { get; set; }
+
     public FingerprintRecord? Fingerprint { get; set; }
 }

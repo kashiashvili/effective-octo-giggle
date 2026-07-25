@@ -6,7 +6,8 @@
     var bio = ViewBag.Bio as string;
     var contact = ViewBag.Contact as string;
     var intentLabel = ViewBag.ConnectionIntentLabel as string;
-    bool hasProfile = !string.IsNullOrWhiteSpace(bio) || !string.IsNullOrWhiteSpace(contact) || !string.IsNullOrWhiteSpace(intentLabel);
+    var showableInterests = ViewBag.ShowableInterests as List<string> ?? new List<string>();
+    bool hasProfile = !string.IsNullOrWhiteSpace(bio) || !string.IsNullOrWhiteSpace(contact) || !string.IsNullOrWhiteSpace(intentLabel) || showableInterests.Any();
     int totalSignals = sources.Sum(s => s.FeatureCount);
     // A fingerprint built from few signals gives noisy matches; nudge the user to enrich it.
     bool thinFingerprint = sources.Count > 0 && totalSignals < 15;
@@ -224,7 +225,11 @@
                     }
                     @if (!string.IsNullOrWhiteSpace(intentLabel))
                     {
-                        <p class="text-muted mb-0">🎯 Here for: @intentLabel</p>
+                        <p class="text-muted mb-2">🎯 Here for: @intentLabel</p>
+                    }
+                    @if (showableInterests.Any())
+                    {
+                        <p class="text-muted mb-0">🔖 Talk to me about: @string.Join(", ", showableInterests)</p>
                     }
                 </div>
             </div>

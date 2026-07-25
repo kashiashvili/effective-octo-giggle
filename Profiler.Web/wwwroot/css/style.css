@@ -743,6 +743,10 @@ footer {
   color: var(--white);
 }
 
+/* Interests a match chose to show — the icebreaker line on a card. */
+.match-showable { font-size: .9rem; margin: .5rem 0 0; color: var(--gray-700); }
+.match-showable-shared { font-weight: 600; color: var(--primary); }
+
 /* Self-described interest picker — checkbox chips grouped by theme. */
 .interest-group { border: none; padding: 0; margin: 0 0 1.75rem; }
 .interest-group legend {

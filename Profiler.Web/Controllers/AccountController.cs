@@ -286,7 +286,14 @@ public class AccountController : Controller
     {
         var user = await FindCurrentUserAsync();
         if (user == null) return await SignOutToHomeAsync();
-        return View(new ProfileViewModel { Bio = user.Bio, Contact = user.Contact, ConnectionIntent = user.ConnectionIntent });
+        return View(new ProfileViewModel
+        {
+            Bio = user.Bio,
+            Contact = user.Contact,
+            ConnectionIntent = user.ConnectionIntent,
+            // We don't store the raw text, only the parsed labels — show them one per line for editing.
+            ShowableInterests = string.Join("\n", Profiler.Web.Profile.ShowableInterests.Deserialize(user.ShowableInterestsJson))
+        });
     }
 
     [HttpPost("profile")]
@@ -303,7 +310,8 @@ public class AccountController : Controller
         foreach (var (value, label, field, allowNewlines) in new[]
         {
             (vm.Bio, "Bios", nameof(vm.Bio), true),
-            (vm.Contact, "Contact details", nameof(vm.Contact), false)
+            (vm.Contact, "Contact details", nameof(vm.Contact), false),
+            (vm.ShowableInterests, "Interests", nameof(vm.ShowableInterests), true)
         })
         {
             if (Security.TextPolicy.ValidateProfileText(value, label, allowNewlines) is { } problem)
@@ -324,6 +332,10 @@ public class AccountController : Controller
         user.Bio = string.IsNullOrWhiteSpace(vm.Bio) ? null : vm.Bio.Trim();
         user.Contact = string.IsNullOrWhiteSpace(vm.Contact) ? null : vm.Contact.Trim();
         user.ConnectionIntent = Profiler.Web.Profile.ConnectionIntent.Normalize(vm.ConnectionIntent);
+        // Parse into the capped, de-duplicated public label list; only these labels are stored, not the
+        // raw text. This is opt-in public disclosure, separate from the discarded matching fingerprint.
+        user.ShowableInterestsJson = Profiler.Web.Profile.ShowableInterests.Serialize(
+            Profiler.Web.Profile.ShowableInterests.Parse(vm.ShowableInterests));
         await _db.SaveChangesAsync();
 
         TempData["Success"] = "Your profile has been saved.";
@@ -439,6 +451,7 @@ public class AccountController : Controller
             ConnectionIntent = user.ConnectionIntent,
             ValuesOpenness = user.ValuesOpenness,
             ValuesScheme = user.ValuesScheme,
+            ShowableInterests = Profiler.Web.Profile.ShowableInterests.Deserialize(user.ShowableInterestsJson),
             LastMatchesViewedAt = user.LastMatchesViewedAt,
             FingerprintDimensions = dimensions,
             Sources = sources,

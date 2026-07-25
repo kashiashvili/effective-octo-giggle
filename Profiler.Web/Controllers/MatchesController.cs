@@ -74,6 +74,11 @@ public class MatchesController : Controller
         // The viewer's own values bucket, to show coarse alignment on cards.
         var myValues = allFps.FirstOrDefault(f => f.UserId == userId)?.User.ValuesOpenness;
 
+        // The viewer's own showable interests, to surface the ones a match also chose to show as shared
+        // conversation hooks.
+        var myShowable = Profiler.Web.Profile.ShowableInterests.Deserialize(
+            allFps.FirstOrDefault(f => f.UserId == userId)?.User.ShowableInterestsJson);
+
         var mySources = JsonSerializer.Deserialize<List<string>>(myFp.SourcesJson) ?? new();
 
         var matches = matcher.FindMatches(userId.ToString(), minSimilarity: MinMatchSimilarity);
@@ -124,12 +129,23 @@ public class MatchesController : Controller
             // reciprocal for it.
             var iAmVisible = ViewBag.IsDiscoverable ?? true;
 
+            // Withheld while hidden, like bio/contact.
+            var showableForCard = iAmVisible
+                ? Profiler.Web.Profile.ShowableInterests.Deserialize(matchFp?.User.ShowableInterestsJson)
+                : new List<string>();
+
             return new MatchViewModel
             {
                 Username = m.Username,
                 Similarity = m.Similarity,
                 SharedSources = shared,
                 SharedSourceOverlaps = overlaps,
+                // Opt-in public interests, shown only when the viewer is visible (same reciprocity as
+                // bio/contact). The ones the viewer also shows are the shared hooks, led with on the card.
+                ShowableInterests = showableForCard,
+                SharedShowableInterests = iAmVisible
+                    ? Profiler.Web.Profile.ShowableInterests.Common(myShowable, showableForCard)
+                    : new List<string>(),
                 Bio = iAmVisible ? matchFp?.User.Bio : null,
                 Contact = iAmVisible ? matchFp?.User.Contact : null,
                 // A separate, explainable signal shown alongside interests — never blended into the

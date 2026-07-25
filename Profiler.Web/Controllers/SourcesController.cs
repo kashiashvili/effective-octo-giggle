@@ -54,6 +54,7 @@ public class SourcesController : Controller
         ViewBag.Bio = user.Bio;
         ViewBag.Contact = user.Contact;
         ViewBag.ConnectionIntentLabel = Profiler.Web.Profile.ConnectionIntent.LabelFor(user.ConnectionIntent);
+        ViewBag.ShowableInterests = Profiler.Web.Profile.ShowableInterests.Deserialize(user.ShowableInterestsJson);
         ViewBag.HasValues = user.ValuesOpenness.HasValue;
         ViewBag.IsDiscoverable = user.IsDiscoverable;
         // Accounts predating recovery have no code on file, and a used code is not replaced if the

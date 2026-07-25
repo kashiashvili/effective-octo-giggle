@@ -31,6 +31,13 @@ public class MatchViewModel
     public SharedSourceOverlap? StrongestOverlap =>
         SharedSourceOverlaps.FirstOrDefault(o => o.SimilarityPercent >= 10);
 
+    /// <summary>Interests the matched user chose to show publicly — a concrete icebreaker. Empty when
+    /// they shared none or the viewer is hidden.</summary>
+    public List<string> ShowableInterests { get; set; } = new();
+
+    /// <summary>Of those, the ones the viewer also chose to show — the shared conversation hooks, led with.</summary>
+    public List<string> SharedShowableInterests { get; set; } = new();
+
     /// <summary>Optional public bio the matched user chose to share.</summary>
     public string? Bio { get; set; }
 
