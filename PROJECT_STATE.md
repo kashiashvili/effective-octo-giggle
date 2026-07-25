@@ -449,7 +449,41 @@ build 0 warnings.** HEAD after this unit.
    pipeline). **Still open: connector-side weighting** — the bigger win, gated on a privacy-safe way to
    weight open-vocabulary connector commons (curated common-feature list, or a carefully-designed
    aggregate/salted/low-count-floored frequency oracle). See original bet #2 detail below.
-2b. **Rarity/IDF-weighted interest matching (weighted MinHash) — connector side, still open.** Down-weight ubiquitous interests
+2b. **Rarity/IDF-weighted interest matching (weighted MinHash) — connector side, still open.**
+    **Now flagged CONSEQUENTIAL:** unlike self-described (brand-new, no existing signatures), applying
+    weighting to the connector path changes *established* connector fingerprints, and weighting is not
+    covered by `SchemeVerifier` (only pepper is), so old/new connector signatures would silently stop
+    matching with no reconnection prompt — a real migration/data-integrity concern in a live deployment
+    (moot at near-zero users, but must be designed, e.g. fold a weighting-version into the scheme so a
+    change forces re-derivation). Also needs a privacy-safe common-feature source (curated list — partial;
+    or the deferred oracle). Do NOT rush this into the core connector path; design the scheme-versioning
+    first. Effort M–L.
+
+### TOP DISCOVERED BET (2026-07-25) — self-described and connector pools are DISJOINT
+
+Structural finding (confirmed by code inspection, not yet fixed): self-described interests emit
+`self-<theme>:<slug>` features; connectors emit `language:*`, `spotify-genre:*`, `topic:*`, etc. The two
+vocabularies **never intersect**, so a self-describer and a connector user who love the exact same thing
+(e.g. both Python) **cannot match**. The funnel unblock therefore grew a *parallel* pool instead of the
+existing one — bad for match density (the #1 existential risk) and it quietly caps the value of the
+self-described feature. **This is the strongest next bet: unify the interest vocabulary so all sources
+match each other.** Options, cheapest first:
+- **Partial canonical bridge (small, low-risk, ship first):** for the unambiguous 1:1 concepts —
+  programming languages especially — have self-described *also* emit the canonical connector string
+  (`self-tech:python` → also `language:python`). Bridges the cleanest overlaps, connector signatures
+  unchanged (self-described emits extra features, no connector-side change, no scheme bump), testable now
+  (a self-describer matches a GitHub user on Python). Music/film/etc. deferred (fuzzy: multiple connector
+  vocabularies per concept). **Design subtlety to resolve first:** if a bridged interest emits BOTH
+  `self-tech:python` and `language:python`, two self-describers who both pick Python now share *two*
+  features for one interest — double-counting that inflates self-to-self similarity and partly undoes
+  the new rarity weighting for bridged commons. Options: (a) emit the canonical string *instead of* the
+  self-* one for bridged tags (but then lens theming, which keys on `self-*` prefixes, needs the
+  canonical mapped to a theme too), or (b) accept the minor inflation for v1. Decide before building.
+- **Full canonical vocabulary (large, redesign):** normalize *all* sources (self-described + connectors)
+  to a shared `interest:<concept>` namespace via a mapping layer. Entity-resolution problem; a real
+  vision-level redesign of the fingerprint feature space. High value, high effort, needs careful design.
+Evidence-independent (validatable synthetically). **Recommended: start with the partial canonical bridge
+as the smallest useful validated increment; it directly attacks density with near-zero risk.** Down-weight ubiquitous interests
    (`language:python` — everyone), up-weight rare shared ones. **Concept now VALIDATED by a synthetic
    experiment (`InterestWeightingExperimentTests`, 2026-07-25):** on a 2 000-user synthetic population,
    IDF weighting improves separation of genuine-niche vs common-only overlap **6.4×** (plain 3.05× →
@@ -553,36 +587,32 @@ so measure at the aggregate/derived level only. Candidate signals, each cheap an
 
 ## Next Mandatory Action (updated 2026-07-25)
 
-**Baseline: 293 tests, build 0 warnings, clean tree. HEAD `339af8d`.** This session shipped the
-funnel unblock (self-described interests) + recalibrated the core match tiers + validated the
-rarity-weighting bet. Both mandated reviewers ran on the recalibrated release (Auditor clean; Critic
-produced 5 bets, top one shipped).
+**Baseline: 296 tests, build 0 warnings, clean tree. HEAD `cf3b3bb`.** This session shipped: core tier
+recalibration + similarity-bar rescale; **self-described interests (the funnel unblock)**; rarity-
+weighted self-described matching (static weights, feature replication, no oracle/retained state). Both
+mandated reviewers ran (Critic → 5 bets, 2 shipped; two Release Auditor passes, both clean, all findings
+fixed). Rarity-weighting build is **DONE** for the self-described path.
 
-**Next iteration — build rarity/IDF-weighted matching (evidence-backed bet #2), STATIC-WEIGHTS FIRST.**
-Design decision recorded 2026-07-25 (the "privacy model first" step): **do NOT build the dynamic
-frequency oracle first.** The self-described `InterestCatalog` is finite and fixed (~140 tags) and is
-now the *primary* funnel for the target user, so its rarity weights can be **authored statically**
-(e.g. `niche:byzantine-history` heavy, `common:python` light) — delivering most of the validated 6.4×
-benefit with **zero new retained state, zero per-user data, no oracle**. This sidesteps the entire
-privacy cost for the primary path. A dynamic per-feature frequency table would only be needed for
-open-vocabulary *connector* features, and is **deferred** (build only if evidence later shows connector
-matching needs it, and only with an aggregate/salted/low-count-floored design decided explicitly
-against the north star). Increments:
-1. Add a static `Weight` (or rarity tier) to each `InterestCatalog` tag — authored, no runtime data.
-2. Implement weighted MinHash behind a new `FingerprintScheme` version. **Simple correct technique:
-   feature replication** — a weight-`w` feature is expanded to `w` distinct sub-features (`f`, `f#1`,
-   …, `f#(w-1)`) before `GenerateRaw`; standard MinHash over the expanded multiset *is* weighted
-   MinHash, so no consistent-weighted-sampling algorithm is needed for small integer weights (rarity
-   tiers ~1–5). `SchemeVerifier` already invalidates old signatures on a scheme change (near-zero
-   users, acceptable). Connector features (no static weight) default to weight 1 — no oracle.
-3. Validate with the synthetic harnesses (`InterestSignalResolutionTests`,
-   `InterestWeightingExperimentTests`): weighted scheme separates niches better AND common-only overlap
-   drops out; assert no new per-user retention appears in the DB.
-4. Recheck the tier calibration under the new scheme (weighting changes the similarity distribution).
+**Next iteration — unify the interest vocabulary so self-described and connector pools can match
+(TOP DISCOVERED BET, see above).** Confirmed structural gap: `self-*` features never equal connector
+features, so the two pools are disjoint — the funnel unblock grew a *parallel* pool, capping its value
+and hurting density (the #1 existential risk). Build the **partial canonical bridge** as the smallest
+useful increment:
+1. **Resolve the double-count design choice first** (recorded above): prefer emitting the canonical
+   connector string (e.g. `language:python`) *instead of* the `self-*` one for bridged tags, and add
+   the canonical prefix to `InterestLens` so theming still works — this avoids inflating self-to-self
+   similarity and preserves the rarity weighting. (Fallback: accept minor inflation.)
+2. Map the unambiguous 1:1 concepts only — programming languages first (`python`→`language:python`,
+   `rust`→`language:rust`, `typescript`, `go`, `cpp`→`language:c++`; GitHub emits lowercased
+   `language:*`). Defer fuzzy music/film genres (multiple connector vocabularies per concept).
+3. Test: a self-describer who picks Python matches a seeded GitHub user with `language:python`; two
+   self-describers still match; no regression to connector-only or self-only pairs; picks still discarded.
+4. Recheck tier calibration if the emitted feature set materially changes.
 
-**Guardrail:** the experiment proves the *upside* of weighting, not that any retained frequency state
-is acceptable. Keep the static-weights design unless there is a concrete, north-star-safe reason to add
-the oracle. Alternative work if this stalls: Critic bet #3 (cull the paste-a-raw-token connectors — a
-security+honesty win, owner call) or further discovery.
+**Also open / lower priority:** connector-side rarity weighting (bet 2b — now flagged consequential:
+real scheme migration, design scheme-versioning first); cull paste-a-raw-token connectors (bet 3 —
+security+honesty, owner call); community-scoped pools (bet 4 — needs a partner); promote the vision to
+multi-signal (owner decision). Real usage evidence (adoption of any signal via `/metrics`) still needs a
+live deployment, outside this environment.
 
 Do not hand control back merely because the release is clean.
