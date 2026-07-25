@@ -552,9 +552,12 @@ open-vocabulary *connector* features, and is **deferred** (build only if evidenc
 matching needs it, and only with an aggregate/salted/low-count-floored design decided explicitly
 against the north star). Increments:
 1. Add a static `Weight` (or rarity tier) to each `InterestCatalog` tag — authored, no runtime data.
-2. Implement weighted MinHash (consistent weighted sampling) behind a new `FingerprintScheme` version;
-   `SchemeVerifier` already invalidates old signatures on a scheme change (near-zero users, acceptable).
-   Connector features (no static weight) default to a neutral/high weight — no oracle.
+2. Implement weighted MinHash behind a new `FingerprintScheme` version. **Simple correct technique:
+   feature replication** — a weight-`w` feature is expanded to `w` distinct sub-features (`f`, `f#1`,
+   …, `f#(w-1)`) before `GenerateRaw`; standard MinHash over the expanded multiset *is* weighted
+   MinHash, so no consistent-weighted-sampling algorithm is needed for small integer weights (rarity
+   tiers ~1–5). `SchemeVerifier` already invalidates old signatures on a scheme change (near-zero
+   users, acceptable). Connector features (no static weight) default to weight 1 — no oracle.
 3. Validate with the synthetic harnesses (`InterestSignalResolutionTests`,
    `InterestWeightingExperimentTests`): weighted scheme separates niches better AND common-only overlap
    drops out; assert no new per-user retention appears in the DB.
