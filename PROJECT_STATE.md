@@ -700,8 +700,15 @@ that needs careful fresh design — do not rush any of these at the tail of a lo
    signed single-use time-limited registration ticket (`RegistrationGuard`, `AntiAbuse:GuardRegistration`,
    off by default → flip on for public launch), 6 tests. Optional future: a privacy-respecting CAPTCHA for
    very-high-value protection; a shared single-use cache if multi-instance.
-2. **Op-5 — hide/remove the values signal. OWNER DECISION.** Strong data-minimization case (weak
-   discrimination, most-sensitive data) but reverses a deliberately-shipped, vision-relevant signal.
+2. **Op-5 — hide/keep/strengthen the values signal. OWNER DECISION (now with fuller evidence).** Data-
+   minimization case: it collects the most sensitive data for the least-validated signal. New evidence
+   (`ValuesSortImpactTests`, 2026-07-25): its main user-facing use, the "Similar outlook first" sort,
+   reorders heavily (~66% top-1 change, ~18/20 displaced) yet the bucket discriminates weakly — HIGH
+   impact, LOW resolution, so opting in lets a coarse/weak signal override the strong interest ranking.
+   Coherence fix already shipped (`e00693a`): the sort now keys to the three shown tiers, not a finer
+   invisible distance. Owner's call: hide it by default (data-minimization), strengthen it (2nd Schwartz
+   axis — gated on real adoption evidence), or reframe the sort control. Reverses/commits a vision-
+   relevant, deliberately-shipped signal, so it stays the owner's decision — not an autonomous rip-out.
 3. **Connector-side rarity weighting** — consequential (real fingerprint-scheme migration; design the
    scheme-versioning first). **Extend the bridge to music/film** — fuzzier per-concept mapping.
 4. **Gated/latent:** Op-2 clusters (density), Op-3 return channel/Web Push (needs a pool), Op-4

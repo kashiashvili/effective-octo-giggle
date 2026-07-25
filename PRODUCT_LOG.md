@@ -304,6 +304,16 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-25
+- **Values sort: coherence fix + impact evidence.** Assumption-tested the values signal's main
+  user-facing use (the "Similar outlook first" sort). Finding: with both sides set, it reorders heavily
+  (top-1 changes ~66%, ~18/20 positions move) — inherent to an outlook-first sort since outlook and
+  interest are independent — while the underlying bucket discriminates weakly (95% cluster in −1..+1).
+  So the sort is **high-impact but low-resolution**: opting in lets a coarse/weak signal heavily override
+  the strong interest ranking. Recorded as decision-support for the owner's hide/keep/strengthen call on
+  the values signal. Coherence fix the test surfaced: `AlignmentRank` ordered by the raw 0–4 distance —
+  finer than the three tiers the label shows and finer than the weak signal supports — so two identically-
+  labelled matches could be ordered differently on a distinction the UI never displays. Rank now keys to
+  the shown tiers; interest breaks ties within a tier.
 - **Privacy-preserving registration anti-sybil (honeypot + signed single-use ticket).** Closes the
   pre-launch safety gap without a third-party CAPTCHA — the point of a privacy-first product is not
   embedding a tracker. Two self-hosted layers: an always-on honeypot field (hidden from humans, filled
