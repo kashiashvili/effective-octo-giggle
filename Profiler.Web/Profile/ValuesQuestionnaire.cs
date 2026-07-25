@@ -60,12 +60,26 @@ public static class ValuesQuestionnaire
     }
 
     /// <summary>
-    /// Numeric closeness for ordering — smaller is closer. <see cref="int.MaxValue"/> when either
-    /// side has no values signal, so those sort last. Sorting keys off this rather than the display
-    /// label, so rewording the label cannot silently break the sort.
+    /// Ordering key for the "Similar outlook first" sort — smaller is closer, <see cref="int.MaxValue"/>
+    /// when either side has no signal (so those sort last). Deliberately keyed to the SAME three coarse
+    /// tiers the <see cref="AlignmentLabel"/> shows (Similar / Some overlap / Different), NOT the raw
+    /// 0..4 distance. Two reasons, both from the evidence: the raw distance draws distinctions finer than
+    /// the UI ever displays (a user can't see why two "Some overlap" matches are ordered differently),
+    /// and the underlying bucket discriminates weakly (95% of people cluster in −1..+1, so a 1-vs-2
+    /// distance is mostly noise — see ValuesSortImpactTests). Ranking by the shown tier lifts genuinely
+    /// similar-outlook matches to the top while letting the stronger interest signal order within each
+    /// tier, instead of a coarse/noisy signal finely reshuffling a strong one.
     /// </summary>
-    public static int AlignmentRank(int? a, int? b) =>
-        a is null || b is null ? int.MaxValue : Math.Abs(a.Value - b.Value);
+    public static int AlignmentRank(int? a, int? b)
+    {
+        if (a is null || b is null) return int.MaxValue;
+        return Math.Abs(a.Value - b.Value) switch
+        {
+            0 => 0,       // Similar outlook
+            1 or 2 => 1,  // Some overlap in outlook
+            _ => 2,       // Different outlook
+        };
+    }
 
     /// <summary>
     /// Coarse, wordy alignment between two buckets — never a number. Thresholds are calibrated so the

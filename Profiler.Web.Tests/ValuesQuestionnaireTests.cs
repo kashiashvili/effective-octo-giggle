@@ -95,12 +95,24 @@ public class ValuesQuestionnaireTests
     }
 
     [Theory]
-    [InlineData(2, 2, 0)]
-    [InlineData(2, -2, 4)]
-    [InlineData(-1, 1, 2)]
-    public void AlignmentRank_IsTheDistance_SmallerIsCloser(int a, int b, int expected)
+    // Keyed to the three shown label tiers, not the raw distance: exact match = 0 (Similar),
+    // one–two steps = 1 (Some overlap), further = 2 (Different). Smaller is closer.
+    [InlineData(2, 2, 0)]    // Similar
+    [InlineData(1, 2, 1)]    // one step  -> Some overlap
+    [InlineData(-1, 1, 1)]   // two steps -> Some overlap (same tier, not a finer rank)
+    [InlineData(2, -2, 2)]   // four steps -> Different
+    public void AlignmentRank_KeysToTheShownTiers_SmallerIsCloser(int a, int b, int expected)
     {
         Assert.Equal(expected, ValuesQuestionnaire.AlignmentRank(a, b));
+    }
+
+    [Fact]
+    public void AlignmentRank_DoesNotDistinguishWithinAShownTier()
+    {
+        // A user sees the same "Some overlap in outlook" label for a 1-step and a 2-step gap, so the sort
+        // must not silently order them differently on a distinction the UI never shows (and the signal
+        // cannot reliably support). Both map to the same rank; interest order breaks the tie.
+        Assert.Equal(ValuesQuestionnaire.AlignmentRank(0, 1), ValuesQuestionnaire.AlignmentRank(0, 2));
     }
 
     [Fact]
