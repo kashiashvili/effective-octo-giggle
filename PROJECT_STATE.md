@@ -409,13 +409,44 @@ axis or finer scoring) before being relied on**, not left as the only values dim
 evidence-backed, not a guess — but adding the axis still increases sensitivity, so it remains gated
 on real adoption evidence (`/metrics`) + owner intent.
 
-### Re-review after the tier recalibration (2026-07-25)
+### Re-review after the tier recalibration (2026-07-25) — DONE
 
-The recalibration + bar rescale materially changed the release, so the mandated two-reviewer gate is
-re-running on the current product: an independent diff Release Auditor (commits `28bb2a8`, `f0a507b`)
-and an independent Product Opportunity Critic (≥5 materially new bets, told what is already gated).
-Integrate their findings, fix anything real, then re-confirm release-candidate status. Baseline at
-this point: **283 tests, build 0 warnings.** HEAD `f0a507b`.
+Both reviewers reported on the recalibrated release:
+- **Diff Release Auditor: "No issues."** Tier thresholds and `BarPercent` correct; no lingering 30/60
+  dependency; honest `~X% shared` text preserved; new tests substantive; synthetic-only, no DB.
+- **Product Opportunity Critic (≥5 new bets):** top finding — **the connect funnel is developer-only**
+  (14/18 sources demand a self-minted OAuth token/API key), so the actual target user (privacy-conscious
+  non-developer) could not produce a fingerprint at all. Strongest bet: **self-described interests**
+  feeding the existing pipeline. Runner-up bets recorded below.
+
+### Self-described interests — SHIPPED (2026-07-25)
+
+Built the Critic's top bet. Curated `InterestCatalog` (~140 tags / 9 themes) → `/sources/interests`
+picker → `self-<theme>:<slug>` features → existing `FingerprintGenerator` pipeline as a "Self-described"
+source (signature + count), **picks discarded (DB-asserted)**. Export/deletion/disconnect/matching
+parity is free (stored like any source). Two self-describers cross-match. Allowlist validation blocks
+crafted features. Lens themes the picks (new `self-*` prefixes). Unit + 4 integration tests; verified
+live end to end (register → pick → fingerprint → dashboard shows the source → in the pool). This is the
+funnel unblock: a user with **zero connected accounts** can now be matched. **Baseline: 291 tests,
+build 0 warnings.** HEAD after this unit.
+
+### Runner-up Critic bets (2026-07-25) — recorded, ranked
+1. ~~Self-described interests~~ **SHIPPED.**
+2. **Rarity/IDF-weighted interest matching (weighted MinHash).** Down-weight ubiquitous interests
+   (`language:python` — everyone), up-weight rare shared ones, at fingerprint-build time (raw still
+   available then). Attacks the median-0.21 overlap at the root, not by rescaling a label. Needs a
+   frequency oracle (aggregate, salted, count-only — new retained state to design carefully) + a new
+   scheme version (invalidates existing sigs; near-zero users so acceptable). Evidence-independent
+   (reuse `InterestSignalResolutionTests` to prove weighting separates communities better). **Strong
+   next core-outcome bet.** Effort M.
+3. **Cull the paste-a-raw-token connectors** (14 cards + 6 "coming soon"). Training users to paste
+   OAuth tokens into a form is a phishing-shaped anti-pattern; tokens transit/log server-side. Keep
+   GitHub-username, CSV, RSS, + self-described. Security+honesty win. Effort S. **Owner call** (removes
+   advertised capability); do alongside real OAuth if that's ever built.
+4. **Community-scoped pools** (match within a Discord/conference/subreddit) — best structural fix for
+   cold-start, but needs a real community partner; can't self-validate here. Next *vision* bet.
+5. **Provable "raw discarded"** (re-derive-your-own-fingerprint tool; long-term: client-side compute)
+   — right moat, premature before a funnel + pool exist. Park.
 
 ### Active: pre-release reviews of the multi-signal expansion
 

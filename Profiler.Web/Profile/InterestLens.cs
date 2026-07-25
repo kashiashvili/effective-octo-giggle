@@ -78,6 +78,18 @@ public static class InterestLens
         ("rss-keyword", "Communities & topics"),
         ("rss-feed", "Communities & topics"),
         ("locale", "Communities & topics"),
+
+        // Self-described interests (the InterestCatalog). Each catalog theme has its own prefix so the
+        // lens themes them the same way it themes connector signals.
+        ("self-tech", "Programming & tech"),
+        ("self-music", "Music"),
+        ("self-reading", "Reading"),
+        ("self-screen", "Film & TV"),
+        ("self-gaming", "Gaming"),
+        ("self-outdoors", "Outdoors & sport"),
+        ("self-food", "Food & drink"),
+        ("self-art", "Art & making"),
+        ("self-science", "Science & curiosity"),
     };
 
     private const string Fallback = "Other interests";

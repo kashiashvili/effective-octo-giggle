@@ -18,6 +18,10 @@ public class SourcesController : Controller
 {
     private const long MaxCsvUploadBytes = 10 * 1024 * 1024;
 
+    // The source name for interests a user picked themselves rather than deriving from a connector.
+    // Stored like any other source so export, deletion, disconnect, and matching treat it uniformly.
+    public const string SelfDescribedSource = "Self-described";
+
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _httpFactory;
     // Injected rather than constructed here: it carries the deployment's pepper, and a generator
@@ -223,6 +227,82 @@ public class SourcesController : Controller
         // rest of this request, never stored, and never placed in the cookie.
         var lens = InterestLens.Summarize(result.Features);
         TempData["InterestLens"] = JsonSerializer.Serialize(lens);
+
+        return RedirectToAction("Index", "Matches");
+    }
+
+    [HttpGet("interests")]
+    public async Task<IActionResult> Interests()
+    {
+        // The chosen tags are discarded once the signature is built (raw interests are never stored),
+        // so the page cannot pre-tick a previous selection — the same trade every source makes. We only
+        // know *whether* a self-described source exists, to word the page as add vs. replace.
+        ViewBag.HasSelfDescribed = await _db.SourceFingerprints
+            .AnyAsync(s => s.UserId == CurrentUserId && s.Source == SelfDescribedSource);
+        return View();
+    }
+
+    [HttpPost("interests")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Interests(List<string>? features)
+    {
+        var userId = CurrentUserId;
+
+        // Keep only real catalog features: a crafted form can never inject an arbitrary feature into
+        // the fingerprint, and duplicates collapse (the same tag ticked twice is one signal).
+        var chosen = (features ?? new List<string>())
+            .Where(InterestCatalog.IsValidFeature)
+            .Distinct()
+            .ToList();
+
+        if (chosen.Count == 0)
+        {
+            ModelState.AddModelError("", "Pick at least one interest so we can build your fingerprint.");
+            ViewBag.HasSelfDescribed = await _db.SourceFingerprints
+                .AnyAsync(s => s.UserId == userId && s.Source == SelfDescribedSource);
+            return View();
+        }
+
+        var raw = _generator.GenerateRaw(chosen);
+        var now = DateTime.UtcNow;
+
+        // Same two-save-in-a-transaction shape as Connect: per-source row, then the recomputed
+        // combined signature, so matching never reads a half-updated state.
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+
+        var record = await _db.SourceFingerprints
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.Source == SelfDescribedSource);
+        if (record == null)
+        {
+            _db.SourceFingerprints.Add(new SourceFingerprintRecord
+            {
+                UserId = userId,
+                Source = SelfDescribedSource,
+                RawSignatureJson = JsonSerializer.Serialize(raw),
+                FeatureCount = chosen.Count,
+                UpdatedAt = now
+            });
+        }
+        else
+        {
+            // Re-picking replaces the whole self-described set — there is no stored prior selection to
+            // merge with, which matches the "we don't keep your answers" model.
+            record.RawSignatureJson = JsonSerializer.Serialize(raw);
+            record.FeatureCount = chosen.Count;
+            record.UpdatedAt = now;
+        }
+        await _db.SaveChangesAsync();
+
+        var totalSources = await RecomputeCombinedFingerprintAsync(userId);
+        await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        // Same one-shot themed summary connectors show, built from the picks and then discarded with
+        // the request — only theme names and counts survive, never the tags themselves.
+        var lens = InterestLens.Summarize(chosen);
+        TempData["InterestLens"] = JsonSerializer.Serialize(lens);
+        TempData["Success"] = $"Saved {chosen.Count} interest{(chosen.Count == 1 ? "" : "s")}. " +
+            $"Your fingerprint now covers {totalSources} source{(totalSources == 1 ? "" : "s")}.";
 
         return RedirectToAction("Index", "Matches");
     }

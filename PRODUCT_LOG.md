@@ -53,8 +53,10 @@ fingerprint; the underlying interests are discarded after the fingerprint is bui
 1. **Register** → account is created, you are **signed in automatically**, and you are shown
    your **recovery code once** (there is no email address on file, so this is the only way
    back in) before landing on the Connect page.
-2. **Connect at least one source.** The quickest need no tokens: a GitHub username, RSS
-   feed URLs, or a Goodreads/Netflix CSV export. Others accept OAuth tokens / API keys.
+2. **Connect at least one source, or describe your interests.** No account at all is needed:
+   at `/sources/interests` you can tick interests from a curated list and get the same
+   fingerprint. Connectors that need no tokens: a GitHub username, RSS feed URLs, or a
+   Goodreads/Netflix CSV export. The rest accept OAuth tokens / API keys.
 3. Profiler **fetches your interests, builds the fingerprint, and discards the raw data.**
 4. **View your matches** — ranked, with a qualitative tier and the source types you share.
 5. **See each match's optional bio and contact** and reach out off-platform.
@@ -302,6 +304,21 @@ dotnet test                           # 214 tests, fully offline
 Each entry: what changed and why it mattered.
 
 ### 2026-07-25
+- **Self-described interests — the funnel unblock.** Opportunity-Critic finding: the connect funnel
+  is effectively developer-only — 14 of 18 sources demand a self-minted OAuth token / API key, so a
+  normal privacy-conscious person with no GitHub and no patience for CSV exports could not produce a
+  fingerprint *at all*, and the core promise was unreachable for the actual target user. Fix: a
+  curated interest picker at `/sources/interests` (`InterestCatalog`, ~140 tags across 9 themes). A
+  user ticks what they're into → each tick becomes a `self-<theme>:<slug>` feature → run through the
+  **same** `FingerprintGenerator` pipeline as any connector, stored as a "Self-described" source (raw
+  signature + count), and the **picks themselves are discarded** — asserted against the DB, mirroring
+  the connector privacy model. Because it is stored like any source, export, account-deletion,
+  disconnect, and matching treat it uniformly (free parity). Two people who tick the same interests
+  cross-match. Server-side allowlist validation blocks injecting arbitrary features. The one-shot
+  interest lens themes the picks correctly (new `self-*` prefixes added to `InterestLens`). No new
+  matching code. Removes the dev-only barrier and gives zero-connected-account privacy-maximalists a
+  full-strength interest fingerprint. Unit + 4 integration tests (privacy round-trip, two-user match,
+  crafted-input rejection, re-pick/export parity) + catalog integrity; verified live end to end.
 - **Assumption test → recalibrated match tiers (the core signal).** The values axis got a
   resolution simulation; the *core* interest signal never had, so its tier cut-offs (Strong ≥60%,
   Good ≥30%) were unexamined guesses on a naïve 0–100 scale. A synthetic-profile simulation (no real

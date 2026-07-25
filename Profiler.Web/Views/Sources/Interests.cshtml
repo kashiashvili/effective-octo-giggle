@@ -1,0 +1,57 @@
+@using Profiler.Web.Profile
+@{
+    ViewBag.Title = "Describe your interests";
+    bool hasSelfDescribed = ViewBag.HasSelfDescribed ?? false;
+}
+
+<div class="page-wrap">
+  <div class="container">
+    <div class="connect-header">
+        <h1>✏️ Describe your interests</h1>
+        <p>
+            No account to connect? Pick what you're into. We turn your choices into the same anonymous
+            fingerprint as any other source, then <strong>discard the choices themselves</strong> — only
+            the fingerprint is kept, so you can be matched without handing over anything about you.
+        </p>
+        @if (hasSelfDescribed)
+        {
+            <div class="alert alert-info">
+                <span class="alert-icon">🔒</span>
+                <span>
+                    You've described your interests before, but we don't store which ones you picked —
+                    so this list starts blank. <strong>Submitting replaces</strong> your previous
+                    self-described set.
+                </span>
+            </div>
+        }
+    </div>
+
+    <form asp-action="Interests" asp-controller="Sources" method="post">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+        <p class="source-group-hint">Tick everything that fits — the more you pick, the sharper your match.</p>
+
+        @foreach (var category in InterestCatalog.Categories)
+        {
+            <fieldset class="interest-group">
+                <legend>@category.Theme</legend>
+                <div class="interest-chips">
+                    @foreach (var tag in category.Tags)
+                    {
+                        var feature = InterestCatalog.Feature(category, tag);
+                        var id = "i_" + feature.Replace(':', '_');
+                        <label class="interest-chip" for="@id">
+                            <input type="checkbox" name="features" value="@feature" id="@id" />
+                            <span>@tag.Display</span>
+                        </label>
+                    }
+                </div>
+            </fieldset>
+        }
+
+        <div class="form-submit">
+            <button type="submit" class="btn btn-primary btn-lg">Build my fingerprint 🔒</button>
+        </div>
+    </form>
+  </div>
+</div>

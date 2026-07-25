@@ -743,6 +743,29 @@ footer {
   color: var(--white);
 }
 
+/* Self-described interest picker — checkbox chips grouped by theme. */
+.interest-group { border: none; padding: 0; margin: 0 0 1.75rem; }
+.interest-group legend {
+  font-size: .95rem; font-weight: 700; color: var(--gray-700);
+  padding: 0; margin-bottom: .6rem;
+}
+.interest-chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+.interest-chip {
+  display: inline-flex; align-items: center;
+  padding: .35rem .85rem; border-radius: 999px;
+  border: 1px solid var(--gray-200); background: var(--white);
+  color: var(--gray-600); font-size: .85rem; cursor: pointer;
+  user-select: none; transition: background .12s, color .12s, border-color .12s;
+}
+.interest-chip:hover { border-color: var(--primary-light); color: var(--primary); }
+/* Hide the native box; the whole chip is the target and colours when checked. */
+.interest-chip input { position: absolute; opacity: 0; width: 0; height: 0; }
+.interest-chip:has(input:checked) {
+  background: var(--primary); border-color: var(--primary); color: var(--white);
+}
+/* Keyboard focus stays visible even though the box itself is hidden. */
+.interest-chip:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: 2px; }
+
 .invite-box {
   max-width: 460px;
   margin: 1.25rem auto 0;
