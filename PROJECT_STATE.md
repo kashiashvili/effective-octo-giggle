@@ -627,34 +627,31 @@ so measure at the aggregate/derived level only. Candidate signals, each cheap an
   closest-on, freshness, bio, values, intent, contact. Reviewed as acceptable (most fields optional/
   conditional, grouped logically) but worth a real-user look if cards feel dense.
 
-## Next Mandatory Action (updated 2026-07-25)
+## Next Mandatory Action (updated 2026-07-25, late)
 
-**Baseline: 296 tests, build 0 warnings, clean tree. HEAD `cf3b3bb`.** This session shipped: core tier
-recalibration + similarity-bar rescale; **self-described interests (the funnel unblock)**; rarity-
-weighted self-described matching (static weights, feature replication, no oracle/retained state). Both
-mandated reviewers ran (Critic → 5 bets, 2 shipped; two Release Auditor passes, both clean, all findings
-fixed). Rarity-weighting build is **DONE** for the self-described path.
+**Baseline: 333 tests, build 0 warnings, clean tree. HEAD `660614b`. 15 migrations.**
 
-**Next iteration — unify the interest vocabulary so self-described and connector pools can match
-(TOP DISCOVERED BET, see above).** Confirmed structural gap: `self-*` features never equal connector
-features, so the two pools are disjoint — the funnel unblock grew a *parallel* pool, capping its value
-and hurting density (the #1 existential risk). Build the **partial canonical bridge** as the smallest
-useful increment:
-1. **Resolve the double-count design choice first** (recorded above): prefer emitting the canonical
-   connector string (e.g. `language:python`) *instead of* the `self-*` one for bridged tags, and add
-   the canonical prefix to `InterestLens` so theming still works — this avoids inflating self-to-self
-   similarity and preserves the rarity weighting. (Fallback: accept minor inflation.)
-2. Map the unambiguous 1:1 concepts only — programming languages first (`python`→`language:python`,
-   `rust`→`language:rust`, `typescript`, `go`, `cpp`→`language:c++`; GitHub emits lowercased
-   `language:*`). Defer fuzzy music/film genres (multiple connector vocabularies per concept).
-3. Test: a self-describer who picks Python matches a seeded GitHub user with `language:python`; two
-   self-describers still match; no regression to connector-only or self-only pairs; picks still discarded.
-4. Recheck tier calibration if the emitted feature set materially changes.
+**Shipped this session (all validated; new surfaces independently audited clean):** core tier
+recalibration + bar rescale; **self-described interests** (funnel unblock) + **free-text custom
+interests** + **cross-pool language bridge** + **rarity weighting** (validated experiment); **opt-in
+shared-interest reveal** (Op-1 — a concrete reason to reach out); **report path** (Op-6a — safety
+recourse + token-gated operator review at `/metrics/reports`). Reviewer passes: Opportunity Critic ×2,
+Release Auditor ×3 — all clean or findings fixed.
 
-**Also open / lower priority:** connector-side rarity weighting (bet 2b — now flagged consequential:
-real scheme migration, design scheme-versioning first); cull paste-a-raw-token connectors (bet 3 —
-security+honesty, owner call); community-scoped pools (bet 4 — needs a partner); promote the vision to
-multi-signal (owner decision). Real usage evidence (adoption of any signal via `/metrics`) still needs a
-live deployment, outside this environment.
+**The clean, high-value, evidence-independent bets are now shipped.** What remains is gated on an owner
+decision, an external resource (a live deployment / a CAPTCHA provider), or is a consequential change
+that needs careful fresh design — do not rush any of these at the tail of a long context:
+1. **Op-6 completion — next buildable safety.** An admin **suspend** loop so the operator can act on the
+   reports they can now see. Prefer a *reversible soft-suspend* (a flag that excludes the user from
+   matching and rejects their login) over a token-gated hard-delete, which a leaked token could turn into
+   mass deletion. Security-sensitive: design the auth surface and reversibility deliberately.
+2. **Op-5 — hide/remove the values signal. OWNER DECISION.** Strong data-minimization case (weak
+   discrimination, most-sensitive data) but reverses a deliberately-shipped, vision-relevant signal.
+3. **Connector-side rarity weighting** — consequential (real fingerprint-scheme migration; design the
+   scheme-versioning first). **Extend the bridge to music/film** — fuzzier per-concept mapping.
+4. **Gated/latent:** Op-2 clusters (density), Op-3 return channel/Web Push (needs a pool), Op-4
+   client-side self-describe FP (pepper-on-client problem), anti-sybil CAPTCHA (provider), promote the
+   vision (owner), real `/metrics` usage evidence (deployment).
 
-Do not hand control back merely because the release is clean.
+Continue with the Op-6 soft-suspend loop (careful design) or further discovery. Do not hand control back
+merely because the release is clean — but do not rush a security-sensitive or vision-reversing change.
