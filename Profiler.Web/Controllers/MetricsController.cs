@@ -33,8 +33,8 @@ public class MetricsController : ControllerBase
 
     public const string TokenKey = "Metrics:Token";
 
-    [HttpGet("")]
-    public async Task<IActionResult> Index()
+    /// <summary>Returns a non-null result (404/401) when the caller is not the token-bearing operator.</summary>
+    private IActionResult? RequireOperatorToken()
     {
         var configured = _config[TokenKey];
         // No token configured means the feature is off; do not even reveal that the route exists.
@@ -43,6 +43,13 @@ public class MetricsController : ControllerBase
         var presented = ExtractBearer(Request.Headers.Authorization.ToString());
         if (presented == null || !FixedTimeEquals(presented, configured))
             return Unauthorized();
+        return null;
+    }
+
+    [HttpGet("")]
+    public async Task<IActionResult> Index()
+    {
+        if (RequireOperatorToken() is { } denied) return denied;
 
         var users = _db.Users;
         var totalUsers = await users.CountAsync();
@@ -81,6 +88,46 @@ public class MetricsController : ControllerBase
             BreakdownsWithheldBelowCohort = breakdownsShown ? (int?)null : MinCohortForBreakdown,
             ConnectionIntentBreakdown = intentBreakdown,
             ValuesOpennessDistribution = valuesDistribution,
+        });
+    }
+
+    /// <summary>
+    /// Operator-only moderation view: who has been reported, by how many distinct people, why, and when
+    /// — enough for the operator to act. Unlike the aggregate metrics above this necessarily names users,
+    /// because moderation is about specific accounts; it is behind the same operator token and never
+    /// reachable with an ordinary session.
+    /// </summary>
+    [HttpGet("reports")]
+    public async Task<IActionResult> Reports()
+    {
+        if (RequireOperatorToken() is { } denied) return denied;
+
+        var reports = await _db.UserReports
+            .Join(_db.Users, r => r.ReportedId, u => u.Id,
+                (r, u) => new { u.Username, r.Reason, r.ReporterId, r.CreatedAt })
+            .ToListAsync();
+
+        var byUser = reports
+            .GroupBy(r => r.Username)
+            .Select(g => new
+            {
+                Username = g.Key,
+                Reports = g.Count(),
+                // Many reports from one person is weaker signal than a few from many different people.
+                DistinctReporters = g.Select(x => x.ReporterId).Distinct().Count(),
+                Reasons = g.GroupBy(x => x.Reason).ToDictionary(x => x.Key, x => x.Count()),
+                LatestUtc = g.Max(x => x.CreatedAt),
+            })
+            .OrderByDescending(x => x.DistinctReporters)
+            .ThenByDescending(x => x.Reports)
+            .ToList();
+
+        return Ok(new
+        {
+            GeneratedAtUtc = DateTime.UtcNow,
+            TotalReports = reports.Count,
+            ReportedUsers = byUser.Count,
+            Users = byUser,
         });
     }
 

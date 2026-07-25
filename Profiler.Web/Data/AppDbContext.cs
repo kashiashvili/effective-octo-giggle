@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<FingerprintRecord> Fingerprints => Set<FingerprintRecord>();
     public DbSet<SourceFingerprintRecord> SourceFingerprints => Set<SourceFingerprintRecord>();
     public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
+    public DbSet<UserReport> UserReports => Set<UserReport>();
     public DbSet<FingerprintScheme> FingerprintSchemes => Set<FingerprintScheme>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -59,6 +60,23 @@ public class AppDbContext : DbContext
             entity.HasOne<AppUser>()
                   .WithMany()
                   .HasForeignKey(e => e.BlockedId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserReport>(entity =>
+        {
+            // At most one standing report per reporter→reported pair (re-reporting is idempotent).
+            entity.HasIndex(e => new { e.ReporterId, e.ReportedId }).IsUnique();
+
+            // Like a block, a report is a fact about two people and must not outlive either — deleting
+            // an account removes every report it filed or received.
+            entity.HasOne<AppUser>()
+                  .WithMany()
+                  .HasForeignKey(e => e.ReporterId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<AppUser>()
+                  .WithMany()
+                  .HasForeignKey(e => e.ReportedId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
     }

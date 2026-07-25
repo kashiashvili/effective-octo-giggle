@@ -264,6 +264,31 @@ public class MatchesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // Reporting records operator-facing moderation data AND hides the reported user from the reporter,
+    // so reporting is also immediate self-protection. The reason is a closed-set key, never free text.
+    [HttpPost("report")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Report(string username, string reason)
+    {
+        var me = User.GetUserId();
+        var target = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+        if (target == null || target.Id == me) return RedirectToAction(nameof(Index));
+
+        // Off-list reason (only possible from a tampered form) falls back to "other" rather than failing.
+        var reasonKey = Profiler.Web.Profile.ReportReason.IsValid(reason) ? reason : "other";
+
+        if (!await _db.UserReports.AnyAsync(r => r.ReporterId == me && r.ReportedId == target.Id))
+            _db.UserReports.Add(new Data.Models.UserReport { ReporterId = me, ReportedId = target.Id, Reason = reasonKey });
+
+        // Reporting also hides them from you — you should not have to keep seeing someone you reported.
+        if (!await _db.UserBlocks.AnyAsync(b => b.BlockerId == me && b.BlockedId == target.Id))
+            _db.UserBlocks.Add(new Data.Models.UserBlock { BlockerId = me, BlockedId = target.Id });
+
+        await _db.SaveChangesAsync();
+        TempData["Success"] = "Thanks — we've recorded your report and hidden them from your matches.";
+        return RedirectToAction(nameof(Index));
+    }
+
     [HttpGet("hidden")]
     public async Task<IActionResult> Hidden()
     {

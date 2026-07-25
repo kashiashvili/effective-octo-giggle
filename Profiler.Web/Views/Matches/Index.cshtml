@@ -259,11 +259,30 @@
                                     }
                                 </p>
                             }
-                            <form asp-action="Hide" asp-controller="Matches" method="post" class="match-hide">
-                                <input type="hidden" name="username" value="@match.Username" />
-                                <button type="submit" class="match-hide-btn" data-no-busy
-                                        title="Hide @match.Username from your matches">🙈 Hide</button>
-                            </form>
+                            <div class="match-actions">
+                                <form asp-action="Hide" asp-controller="Matches" method="post" class="match-hide">
+                                    <input type="hidden" name="username" value="@match.Username" />
+                                    <button type="submit" class="match-hide-btn" data-no-busy
+                                            title="Hide @match.Username from your matches">🙈 Hide</button>
+                                </form>
+                                <details class="match-report">
+                                    <summary class="match-hide-btn" title="Report @match.Username">🚩 Report</summary>
+                                    <form asp-action="Report" asp-controller="Matches" method="post" class="match-report-form">
+                                        <input type="hidden" name="username" value="@match.Username" />
+                                        <label class="sr-only" for="reason-@i">Reason</label>
+                                        <select name="reason" id="reason-@i" class="form-control">
+                                            @foreach (var (key, label) in Profiler.Web.Profile.ReportReason.All)
+                                            {
+                                                <option value="@key">@label</option>
+                                            }
+                                        </select>
+                                        <button type="submit" class="btn btn-outline btn-sm" data-no-busy>
+                                            Report &amp; hide
+                                        </button>
+                                        <small class="text-muted">Reporting also hides them from you.</small>
+                                    </form>
+                                </details>
+                            </div>
                         </div>
                     </div>
                 }

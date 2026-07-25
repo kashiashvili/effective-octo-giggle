@@ -536,6 +536,9 @@ public class AccountController : Controller
         // these, but doing it here too keeps the promise independent of whether the provider enforces
         // foreign keys.
         _db.UserBlocks.RemoveRange(_db.UserBlocks.Where(b => b.BlockerId == user.Id || b.BlockedId == user.Id));
+        // Reports point both ways too — the ones you filed and the ones filed against you. Same reason
+        // as blocks: remove them here so the deletion promise holds regardless of FK enforcement.
+        _db.UserReports.RemoveRange(_db.UserReports.Where(r => r.ReporterId == user.Id || r.ReportedId == user.Id));
         _db.Users.Remove(user);
         await _db.SaveChangesAsync();
 
