@@ -82,6 +82,26 @@ dotnet run --project Profiler.Web
 The SQLite database (`profiler.db`) is created and migrated automatically on first
 run (EF Core migrations in `Profiler.Web/Migrations/`).
 
+### Deploy (verified path)
+
+```bash
+cp deploy/.env.example deploy/.env.production
+echo "Fingerprint__Pepper=$(openssl rand -base64 32)" >> deploy/.env.production
+echo "Metrics__Token=$(openssl rand -base64 24)"      >> deploy/.env.production
+docker compose up -d --build
+BASE=http://localhost:8080 MT="<Metrics:Token>" ./deploy/smoke.sh
+```
+
+`deploy/smoke.sh` verifies a running deployment end to end — the core journey, that the anti-abuse
+guards actually fire, that raw interests never appear on the wire, and that the operator endpoints are
+token-gated. It only creates throwaway accounts, so it is safe to run against any environment. (Run it
+repeatedly and the per-IP registration limit will start returning 429 — that is the guard working; the
+script reports it as such.)
+
+**Before exposing it publicly:** terminate TLS in front (reverse proxy or platform HTTPS) and set the
+forwarded-headers options below, so rate limiting and HTTPS redirection see the real client IP and
+scheme. Keep the `profiler-data` volume across redeploys, and back up the pepper.
+
 ### Run with Docker
 
 Every push to `main` (or a `v*` tag, or a manual run) builds a container image and publishes it to the

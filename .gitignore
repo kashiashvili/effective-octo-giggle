@@ -13,6 +13,14 @@ obj/
 # Data Protection key ring (secret key material — never commit)
 keys/
 
+# Deployment secrets (pepper, operator token) — never commit
+.env
+.env.*
+deploy/.env*
+*.secret
+# ...but the template carries no secrets and must be committed.
+!deploy/.env.example
+
 # Test / coverage
 [Tt]est[Rr]esults/
 *.coverage

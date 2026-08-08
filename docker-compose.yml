@@ -1,0 +1,32 @@
+# One-command deployment. Reads secrets from deploy/.env.production (gitignored — create it first,
+# see deploy/.env.example). Bring it up with:
+#
+#   docker compose up -d --build
+#   BASE=http://localhost:8080 MT=<Metrics:Token> ./deploy/smoke.sh    # verify
+#
+# For a public host, terminate TLS in front of this (reverse proxy / platform HTTPS) and set the
+# forwarded-headers options so rate limiting and HTTPS redirection see the real client IP and scheme.
+
+services:
+  profiler:
+    build: .
+    image: profiler-web:live
+    container_name: profiler
+    restart: unless-stopped
+    ports:
+      - "${PROFILER_PORT:-8080}:8080"
+    env_file:
+      - deploy/.env.production
+    volumes:
+      # The SQLite database AND the Data Protection key ring live here. Keep this volume across
+      # redeploys: losing it logs everyone out and (without the same pepper) invalidates fingerprints.
+      - profiler-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  profiler-data:

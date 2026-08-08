@@ -648,6 +648,31 @@ strength → compatibility signals → personal → actions) and readable — ha
 a redesign would be speculative churn, not a clear win, so the recorded card-density bet is **closed as
 not-warranted** on evidence. QA seed data removed after the review.
 
+## GO LIVE executed (2026-07-25) — running + verified in production mode
+
+Owner said "go live". Done, as far as this environment allows:
+- **Built the production image and ran it** (`docker compose` / `profiler-web:live`) with real production
+  config: generated `Fingerprint__Pepper` + `Metrics__Token` (in gitignored `deploy/.env.production`,
+  never committed — verified by a pre-commit sweep), `ASPNETCORE_ENVIRONMENT=Production`,
+  `AntiAbuse__GuardRegistration=true`, persistent `profiler-data:/data` volume.
+- **Migrations applied automatically on boot**; app serving on :8080 in `Production`.
+- **Verified end to end with `deploy/smoke.sh`: 16/16 pass** — core journey (register → self-describe →
+  fingerprint → matches), anti-sybil form ticket ACTIVE and honeypot rejecting, raw interests absent
+  from both the matches page and the export, and every operator endpoint token-gated (no token / wrong
+  token / ordinary session all 401; `/metrics/suspend` refuses without the token).
+- **Persistence proven across a container restart** (users + fingerprints intact; SQLite db *and* Data
+  Protection key ring on the volume).
+- **Confirmed the register rate limit fires** (429 after repeated sign-ups from one IP) — anti-abuse
+  working; the smoke script now reports that as a pass rather than a failure.
+- Added `docker-compose.yml`, `deploy/.env.example`, `deploy/smoke.sh`; README has the verified path.
+
+**Still needs the owner (cannot be done from here — no credentials/host):**
+1. A public host: run the same compose on a VPS/platform, or pull the GHCR image. Needs
+   Settings → Actions → Workflow permissions → **Read and write** for the GHCR publish to succeed.
+2. **TLS in front** + the forwarded-headers options (otherwise HTTPS redirection logs
+   "Failed to determine the https port" and rate limiting sees the proxy IP).
+3. Back up `deploy/.env.production` (losing the pepper invalidates every stored fingerprint).
+
 ## Pushed to GitHub + deploy pipeline (2026-07-25)
 
 Pushed `rebuild/dotnet-profiler` and fast-forwarded `main` (was just the initial commit; safe, no
