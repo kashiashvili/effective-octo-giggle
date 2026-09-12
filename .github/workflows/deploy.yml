@@ -41,6 +41,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      image_ref: ${{ steps.image.outputs.ref }}
     steps:
       - uses: actions/checkout@v4
 
@@ -54,7 +56,10 @@ jobs:
       # Lowercase the image name — GHCR rejects uppercase, and org/user names can contain it.
       - name: Compute image name
         id: image
-        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          # Deploy the exact build, not a moving :latest — matches metadata-action's type=sha tag.
+          echo "ref=ghcr.io/${GITHUB_REPOSITORY,,}:sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Docker metadata (tags + labels)
         id: meta
@@ -78,3 +83,38 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # Ships the image just built to Azure App Service. Skipped entirely until AZURE_WEBAPP_NAME is set,
+  # so the workflow stays green before Azure exists. Auth is the publish profile (an App Service
+  # credential) — no Azure login needed in CI.
+  deploy-azure:
+    needs: build-and-push
+    if: ${{ github.ref == 'refs/heads/main' && vars.AZURE_WEBAPP_NAME != '' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://${{ vars.AZURE_WEBAPP_NAME }}.azurewebsites.net
+    steps:
+      - name: Deploy container to App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          images: ${{ needs.build-and-push.outputs.image_ref }}
+
+      # A container that cannot boot still "deploys" — App Service just serves 503. The app is also
+      # configured to refuse to start on a bad ForwardedHeaders/pepper setup, which is exactly the
+      # failure this catches. On the free tier the first request also wakes a sleeping app, so allow
+      # a generous window.
+      - name: Wait for the app to answer
+        run: |
+          URL="https://${{ vars.AZURE_WEBAPP_NAME }}.azurewebsites.net/"
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$URL" || echo 000)
+            echo "attempt $i: HTTP $code"
+            [ "$code" = "200" ] && echo "healthy: $URL" && exit 0
+            sleep 15
+          done
+          echo "::error::App never returned 200 — check container logs:"
+          echo "  az webapp log tail -g <resource-group> -n ${{ vars.AZURE_WEBAPP_NAME }}"
+          exit 1

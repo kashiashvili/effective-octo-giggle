@@ -89,6 +89,14 @@ real users produces (surfaced privately via token-gated `/metrics`). The loop ca
 4. Set **`Metrics:Token`** (operator/moderation access) and, for public launch, **`AntiAbuse:GuardRegistration=true`**.
 5. Front it with **TLS** and set the **forwarded-headers** options so rate limiting / HTTPS see the real client.
 
+**Azure path (chosen 2026-09-12): App Service Linux container, publish-profile auth, GHCR image.**
+Run `./deploy/azure-bootstrap.sh` once (it needs your `az login`); it creates everything, sets every
+app setting, and prints the pepper, the operator token, and the publish profile. Then set the repo
+variable `AZURE_WEBAPP_NAME` + secret `AZURE_WEBAPP_PUBLISH_PROFILE`, make the GHCR package public, and
+the `deploy-azure` job in `.github/workflows/deploy.yml` ships every push to `main`. Starts on the free
+F1 tier ($0; sleeps when idle, 60 CPU-min/day); `az appservice plan update -g <rg> -n <plan> --sku B1`
+(~$13/mo) upgrades in place with no redeploy and no data loss.
+
 **Unblocks.** Real adoption data → the evidence Decisions 2(c) and the data-gated bets depend on.
 
 ---
