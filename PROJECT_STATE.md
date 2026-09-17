@@ -31,7 +31,7 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit: values audit fixes (2026-09-17; `0fbc35c` the feature, `bde7957`+`9a8fd3b` accessibility).
+- Branch `rebuild/dotnet-profiler` (all work). **`origin/main` and `origin/rebuild/dotnet-profiler` are both at `e5efb6f`** (owner pushed on 2026-09-17; the loop never pushes — `CLAUDE.md` §4). Local `main` is stale and unused. Eight local commits are unpushed, all of `d48979e..c4236e9` — the organiser card, its audit fixes, and the whole values & worldview rebuild. Last product commit: values audit fixes (`b47d7e4`; `0fbc35c` the feature, `bde7957`+`9a8fd3b` accessibility).
 - `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **400 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 18 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `Build:Sha` (CI-stamped, footer), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
