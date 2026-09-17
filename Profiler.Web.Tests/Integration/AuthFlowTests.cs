@@ -185,7 +185,7 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
         var html = await resp.Content.ReadAsStringAsync();
         Assert.Contains("too large", html, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("10 MB", html);
-        Assert.Contains("25 MB", html);
+        Assert.Contains("35 MB", html);
         Assert.Contains("/sources/connect", html);
         Assert.Contains("/css/style.css", html); // styled, not bare text
         Assert.DoesNotContain("Something went wrong", html); // not the generic /Home/Error page
