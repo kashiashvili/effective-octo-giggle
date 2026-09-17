@@ -250,7 +250,7 @@ match on shared channels.
   **aborted, not merely abandoned**.
 - A fingerprint is **never saved from zero features**; a partial failure keeps the
   sources that succeeded and leaves your existing data intact.
-- An oversized connect submission (over the 25 MB pipeline cap) gets a styled "upload too large"
+- An oversized connect submission (over the 35 MB pipeline cap) gets a styled "upload too large"
   page with next steps, instead of a raw framework error or the generic error page — checked against
   the endpoint's own size limit before any body reading is attempted, so it fires reliably under
   both Kestrel and the test host.
@@ -262,7 +262,7 @@ match on shared channels.
   lookalike cannot shadow an existing Latin name, and a username that folds to the same form as an
   existing one (case + Unicode compatibility, beyond the ASCII SQLite's NOCASE covers) is refused. **Antiforgery** tokens on every POST (asserted by a reflection test).
 - **Login rate limiting** (5 attempts/min per IP, configurable).
-- **15s timeout** on all connector HTTP calls; **10 MB cap** per CSV upload, plus a 25 MB
+- **15s timeout** on all connector HTTP calls; **10 MB cap** per CSV upload, plus a 35 MB
   `RequestSizeLimit` on the connect endpoint so oversized bodies are rejected before buffering.
 - **Ghost-session rejection**: a cookie whose user no longer exists is rejected.
 - **HTTPS redirect + HSTS** in non-Development; auth cookie marked Secure over HTTPS.
@@ -372,7 +372,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 378 tests, fully offline
+dotnet test                           # 380 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -499,6 +499,17 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Release Auditor on the onboarding / YouTube / genre-bridge units: one P2 fixed, six P3s closed.**
+  P2: YouTube by token and by Takeout export in the same submit produced two "YouTube" results and
+  the per-source row is unique, so the save threw — the very path the export unit promised
+  ("refreshes the same signature"). Results are now merged by source as the union of their features
+  before saving (`AggregationResult.MergedBySource`, unit-tested). P3s: the connect request cap is
+  35 MB so three maximum-size files reach the per-file message instead of the generic 413; the
+  landing step 1 and the dashboard quick action name the YouTube export too; the privacy copy says
+  expired snapshots go "on the server's next daily pass" (a sleeping host cannot delete anything);
+  the YouTube end-to-end test now scans every stored table for channel titles and ids, not only the
+  pages; the landing test is scoped to the hero and step 1 instead of the whole page; the dashboard
+  quick-action order has a test for both states. 380.
 - **Circles, slice 1: invite-scoped groups people can start, share and leave.** Opportunity Critic
   #3's strongest ungated bet (design `docs/DESIGN_CIRCLES.md`; positioning question = Decision 5):
   every remaining bet waits on pool density and Decision 4 assumes a "private cohort" that had no

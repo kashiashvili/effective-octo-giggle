@@ -13,6 +13,16 @@ public class AggregationResult
 
     public List<string> Sources => Results.Select(r => r.Source).ToList();
     public List<string> Features => Results.SelectMany(r => r.Features).ToList();
+
+    /// <summary>
+    /// One source can arrive twice in a single submission — YouTube by token and by Takeout export —
+    /// while the stored per-source signature is unique per source. Results for the same source are
+    /// merged as the union of their features, so both paths feed one "YouTube" row.
+    /// </summary>
+    public List<SourceResult> MergedBySource() => Results
+        .GroupBy(r => r.Source)
+        .Select(g => new SourceResult(g.Key, g.SelectMany(r => r.Features).Distinct().ToList()))
+        .ToList();
 }
 
 public class ProfileAggregator

@@ -95,10 +95,10 @@ public class SourcesController : Controller
 
     [HttpPost("connect")]
     [ValidateAntiForgeryToken]
-    // Three CSVs of up to 10 MB each (a Takeout subscriptions file is a few KB) plus form fields.
-    // Rejects oversized bodies at the pipeline level, before
-    // ASP.NET buffers up to its 128 MB default and the per-file check below ever runs.
-    [RequestSizeLimit(25 * 1024 * 1024)]
+    // Three CSVs of up to 10 MB each (a Takeout subscriptions file is a few KB) plus form fields, so
+    // three maximum-size files still reach the per-file check below with its precise message. Rejects
+    // anything bigger at the pipeline level, before ASP.NET buffers up to its 128 MB default.
+    [RequestSizeLimit(35 * 1024 * 1024)]
     // Every submit fans out to third-party APIs (and user-supplied RSS URLs), so this endpoint
     // is metered the same as login/register rather than left to make unlimited outbound calls.
     [EnableRateLimiting("connect")]
@@ -216,7 +216,9 @@ public class SourcesController : Controller
         // discrepancy would be permanent.
         await using var transaction = await _db.Database.BeginTransactionAsync();
 
-        foreach (var source in result.Results)
+        // Same source twice in one submit (token + export) becomes one row with the union of features.
+        var merged = result.MergedBySource();
+        foreach (var source in merged)
         {
             var distinctFeatures = source.Features.Distinct().ToList();
             var raw = generator.GenerateRaw(distinctFeatures);
@@ -246,8 +248,8 @@ public class SourcesController : Controller
         await _db.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        TempData["Success"] = $"{string.Join(", ", result.Sources)} " +
-            $"{(result.Sources.Count == 1 ? "was" : "were")} updated. " +
+        TempData["Success"] = $"{string.Join(", ", merged.Select(m => m.Source))} " +
+            $"{(merged.Count == 1 ? "was" : "were")} updated. " +
             $"Your fingerprint now covers {totalSources} source{(totalSources == 1 ? "" : "s")}.";
         if (result.Failures.Count > 0)
             TempData["Error"] = "Some sources could not be fetched and were left out — " +

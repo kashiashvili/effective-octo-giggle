@@ -31,8 +31,8 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `d1bbe1c` genre bridge (2026-09-17); circles slice 1 follows it.
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **378 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `ff03acc` circles slice 1 (2026-09-17); audit fixes follow it.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **380 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*`.
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Circles slice 1 — built, tests green, committing (2026-09-17).** Start/invite/join/leave, carry-through on register/login, export, delete, flag, migration `AddCircles`; 7 tests → 378.
+**Audit-fix unit (Auditor on `9c9ff96..d1bbe1c`) — built, tests green, committing (2026-09-17).** P2 same-source merge; P3s closed. +2 tests → 380.
 
-**Next mandatory action:** audit-fix unit for the Release Auditor on `9c9ff96..d1bbe1c` (P2: token YouTube + Takeout export in one submit collide on the per-source unique index → merge results by source; P3s: size-limit comment/limit, copy mentions of the YouTube export, privacy-copy qualifier, DB-level raw-title assertion, landing test scoping, dashboard order test). Then circles slice 2 (chip + sort + metrics + docs), QA walk, Release Auditor over circles. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Next mandatory action:** circles slice 2 — `MatchViewModel.SharedCircles`, one membership join per match list, "Same circle: <name>" chip, "Same circle first" sort offered only when the viewer has a circle, withheld while hidden, `/metrics` `circles` + `usersInCircles`, docs (§2/§3, README), tests (two invitees see the chip, outsider none, hidden viewer none, leave removes it, sort lifts circle-mates, flag off hides chip+sort). Then QA walk + Release Auditor over `ff03acc..HEAD`. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -102,7 +102,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 
 ## 10. Last Completed Iteration
 
-`58baf17` 2026-09-17 — YouTube via Google Takeout `subscriptions.csv`, no token; connect page's unbacked "More sources" list removed. Earlier today: `9e0f578` audit fixes (snapshot service never stops host; age-based retention); `9c9ff96` onboarding leads with the no-accounts path; `e6a0fcb` `/metrics` funnel; `ab80929` go-live data safety.
+`ff03acc` 2026-09-17 — circles slice 1 (start / signed invite / join / leave, carry-through on register+login, export, delete, flag, migration `AddCircles`). Earlier today: `d1bbe1c` genre bridge; `58baf17` YouTube Takeout export; `9e0f578` audit fixes; `9c9ff96` onboarding; `e6a0fcb` `/metrics` funnel; `ab80929` go-live data safety.
 
 ## 11. Deploy Status
 

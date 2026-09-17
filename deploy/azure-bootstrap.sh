@@ -65,8 +65,18 @@ az webapp config appsettings set -g "$RG" -n "$APP_NAME" -o none --settings \
 echo "==> Single instance (SQLite corrupts if App Service scales out) + health check"
 az appservice plan update -g "$RG" -n "$PLAN" --number-of-workers 1 -o none 2>/dev/null || true
 # /health is 200 only when the database is reachable, so a container that boots but cannot open its
-# database is restarted instead of serving errors. (Ignored on the free tier, which has no health check.)
-az webapp config set -g "$RG" -n "$APP_NAME" --generic-configurations '{"healthCheckPath":"/health"}' -o none 2>/dev/null || true
+# database is restarted instead of serving errors.
+#
+# Paid tiers only, on purpose. App Service probes this path every minute from several load-balancer
+# nodes; each probe wakes the app and touches the database. On F1 that runs against a budget of just
+# 60 CPU-minutes PER DAY, so a permanent per-minute probe can spend the whole quota and Azure then
+# stops the site ("Error 403 - This web app is stopped") until midnight UTC.
+if [ "$SKU" = "F1" ] || [ "$SKU" = "D1" ]; then
+  echo "    (skipping health check: $SKU is a shared/free tier with a daily CPU quota)"
+  az webapp config set -g "$RG" -n "$APP_NAME" --generic-configurations '{"healthCheckPath":""}' -o none 2>/dev/null || true
+else
+  az webapp config set -g "$RG" -n "$APP_NAME" --generic-configurations '{"healthCheckPath":"/health"}' -o none 2>/dev/null || true
+fi
 
 echo
 echo "=================================================================="

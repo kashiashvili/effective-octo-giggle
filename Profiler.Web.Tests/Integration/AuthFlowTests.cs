@@ -167,9 +167,9 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
         connectPage.EnsureSuccessStatusCode();
         var token = await ExtractTokenAsync(connectPage);
 
-        // Just over the connect POST's 25 MB pipeline-level cap ([RequestSizeLimit] in
+        // Just over the connect POST's 35 MB pipeline-level cap ([RequestSizeLimit] in
         // SourcesController) — generated in memory, never written to disk.
-        var oversizedFile = new byte[26 * 1024 * 1024];
+        var oversizedFile = new byte[36 * 1024 * 1024];
 
         using var content = new MultipartFormDataContent
         {

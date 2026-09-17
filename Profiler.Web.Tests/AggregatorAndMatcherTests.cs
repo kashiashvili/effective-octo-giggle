@@ -90,6 +90,22 @@ public class AggregatorAndMatcherTests
     }
 
     [Fact]
+    public void MergedBySource_UnionsFeaturesOfASourceThatArrivedTwice_AndLeavesOthersAlone()
+    {
+        // YouTube can arrive by token and by Takeout export in one submit; the per-source row is unique.
+        var result = new AggregationResult();
+        result.Results.Add(new SourceResult("YouTube", new List<string> { "youtube-channel:a", "youtube-tag:x" }));
+        result.Results.Add(new SourceResult("GitHub", new List<string> { "language:go" }));
+        result.Results.Add(new SourceResult("YouTube", new List<string> { "youtube-channel:a", "youtube-channel:b" }));
+
+        var merged = result.MergedBySource();
+
+        Assert.Equal(new[] { "YouTube", "GitHub" }, merged.Select(r => r.Source));
+        Assert.Equal(new[] { "youtube-channel:a", "youtube-tag:x", "youtube-channel:b" }, merged[0].Features);
+        Assert.Equal(new[] { "language:go" }, merged[1].Features);
+    }
+
+    [Fact]
     public async Task Aggregate_RunsConnectorsConcurrently_NotOneAfterAnother()
     {
         var delay = TimeSpan.FromMilliseconds(300);

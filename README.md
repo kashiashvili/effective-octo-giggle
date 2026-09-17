@@ -145,6 +145,20 @@ Defaults: free **F1** tier (sleeps when idle, 60 CPU-min/day), `westeurope`, ima
 **single worker** (SQLite corrupts if App Service scales out) and stores the database and key ring
 under the persistent `/home` path.
 
+**Free tier caveat.** F1 gives 60 CPU-minutes *per day*. A .NET container that restarts, plus any
+per-minute probing, can spend that in hours — Azure then stops the site and every request returns
+"Error 403 - This web app is stopped" until midnight UTC. The bootstrap therefore leaves the health
+check off on F1/D1. If the site keeps hitting the quota, move to B1 (no redeploy, no data loss):
+
+```bash
+az appservice plan update -g profiler-rg -n profiler-plan --sku B1
+az webapp config set -g profiler-rg -n <APP_NAME> --generic-configurations '{"healthCheckPath":"/health"}'
+```
+
+Check why a site is down with:
+`az webapp show -g profiler-rg -n <APP_NAME> --query "{state:state, usageState:usageState}"` —
+`QuotaExceeded` means the free quota, not a crash.
+
 Onboarding a group from one network (office, meetup Wi-Fi)? Registrations are limited to 5 per IP per
 hour, so raise `RateLimiting__RegisterPermitLimit` for the session (`az webapp config appsettings set`,
 then restart) and put it back afterwards.
@@ -313,7 +327,7 @@ Then `GET /health` must answer 200 and `deploy/smoke.sh` should pass against the
 dotnet test
 ```
 
-The suite (378 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (380 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 

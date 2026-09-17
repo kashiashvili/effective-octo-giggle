@@ -386,7 +386,7 @@ static async Task WriteUploadTooLargeResponseAsync(HttpResponse response)
                     <div class="empty-state">
                         <div class="empty-icon">📦</div>
                         <h4>That upload was too large</h4>
-                        <p>Each CSV is limited to 10 MB, and 25 MB total per submission — this one went over.</p>
+                        <p>Each CSV is limited to 10 MB, and 35 MB total per submission — this one went over.</p>
                         <p>Goodreads and Netflix exports can usually be trimmed to a recent date range before
                            re-exporting. Any other sources you wanted to connect can be submitted on their own
                            in a separate submission.</p>

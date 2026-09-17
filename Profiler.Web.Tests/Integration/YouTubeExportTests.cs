@@ -2,7 +2,11 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Profiler.Web.Data;
 using Xunit;
 
 namespace Profiler.Web.Tests.Integration;
@@ -76,5 +80,17 @@ public class YouTubeExportTests : IClassFixture<ProfilerWebFactory>
         // The raw channel titles never reach a page: only the derived signature exists.
         Assert.DoesNotContain($"Channel {tag} 1", matches);
         Assert.DoesNotContain($"Channel {tag} 1", dashboard);
+
+        // ...nor the database: everything stored, as text, holds no channel title or id.
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var json = new JsonSerializerOptions { ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles };
+        var stored = string.Join("\n",
+            JsonSerializer.Serialize(await db.Users.AsNoTracking().ToListAsync(), json),
+            JsonSerializer.Serialize(await db.Fingerprints.AsNoTracking().ToListAsync(), json),
+            JsonSerializer.Serialize(await db.SourceFingerprints.AsNoTracking().ToListAsync(), json));
+        Assert.DoesNotContain($"Channel {tag}", stored);
+        Assert.DoesNotContain($"UC{tag}", stored);
+        Assert.Contains("YouTube", stored); // the per-source signature row itself was written
     }
 }
