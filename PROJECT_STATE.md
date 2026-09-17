@@ -31,7 +31,7 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `d48979e` organiser card (2026-09-17); its audit fixes follow it.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `4533dfa` (2026-09-17, organiser-card audit fixes).
 - `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **394 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `Build:Sha` (CI-stamped, footer), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**None active. Stopped under `CLAUDE.md` §10 condition 1 — owner said "commit current progress and finish" (2026-09-17 evening).** Last unit (organiser health card) committed with tests green (394) and a clean worktree.
+**None active. Stopped under `CLAUDE.md` §10 condition 1 — owner said "commit current progress and finish" (2026-09-17 evening).** Every unit shipped today has had its Release Auditor pass; the last one (`8a1ab42..d48979e`) closed in `4533dfa`. Worktree clean, 394 tests green.
 
-**Exact resume action:** (1) Release Auditor over `8a1ab42..HEAD` (token fold, audit fixes, organiser card) — not yet run; fix findings. (2) Product Owner review of the day, then §7 item 4 (try-before-register preview): write the design note first (coarse band, pool ≥10 fingerprints, per-IP limit, nothing stored, picks discarded in-request), then build. (3) Restart `profiler-web-qa` before any QA walk — the running instance predates the token fold. Owner replies to `docs/OWNER_DECISIONS.md` (five open decisions) pre-empt everything.
+**Exact resume action:** Product Owner review of the day, then §7 item 4 (try-before-register preview): write the design note first (coarse band, pool ≥10 fingerprints, per-IP limit, nothing stored, picks discarded in-request), then build. Restart `profiler-web-qa` before any QA walk. Owner replies to `docs/OWNER_DECISIONS.md` (five open decisions) pre-empt everything. Note for the owner: a `Build:Sha` stamp (Dockerfile, `deploy.yml`, footer, CSS) was found in the working tree and committed with `8a1ab42`; it was not authored by the loop — see `PRODUCT_LOG.md` §11.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
