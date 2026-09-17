@@ -7,7 +7,7 @@ data** is done: multi-source matching (interests + intent + values), self-descri
 interests, cross-pool bridging, rarity weighting, evidence-recalibrated tiers, the shared-interest
 reveal, the full trust-&-safety loop (report → operator review → reversible suspend), privacy-preserving
 anti-sybil, token-gated measurement, and a containerized deploy pipeline on `main`. Three independent
-Release Audits and two Opportunity Critics; 383 tests, 0 warnings (re-verified 2026-09-17).
+Release Audits and two Opportunity Critics; 385 tests, 0 warnings (re-verified 2026-09-17).
 
 What remains needs **you**. Each decision below has the evidence, the options, a recommendation, and
 what it unblocks. None require reading code — the loop can execute whichever way you decide.
@@ -101,7 +101,9 @@ real users produces (surfaced privately via token-gated `/metrics`). The loop ca
 5. Front it with **TLS** and set the **forwarded-headers** options so rate limiting / HTTPS see the real client.
 6. Copy the app's rolling database snapshots (`/data/backups`, on Azure `/home/data/backups`) off the host
    now and then — the volume is the only copy (`README.md` "Back up and restore").
-7. Onboarding a group from one network (an office, a meetup's Wi-Fi)? The register limit is **5 per IP per
+7. Start a **circle** for the cohort first (dashboard → "Start a circle") and share *its* invite link instead of
+   the bare register link: members see each other flagged and can sort each other first.
+8. Onboarding a group from one network (an office, a meetup's Wi-Fi)? The register limit is **5 per IP per
    hour** (`RateLimiting:RegisterPermitLimit`); the sixth person sees "Too many sign-up attempts" for an hour.
    Raise it for the session (`az webapp config appsettings set … RateLimiting__RegisterPermitLimit=50`, restart)
    and put it back afterwards.

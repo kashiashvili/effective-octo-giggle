@@ -271,12 +271,12 @@
                                         <small class="text-muted">@circle.MemberCount member@(circle.MemberCount == 1 ? "" : "s")</small>
                                         <form asp-action="Leave" asp-controller="Circles" method="post" class="ms-auto">
                                             <input type="hidden" name="circleId" value="@circle.Id" />
-                                            <button type="submit" class="btn btn-outline btn-sm">Leave</button>
+                                            <button type="submit" class="btn btn-outline btn-sm" aria-label="Leave @circle.Name">Leave</button>
                                         </form>
                                     </div>
                                     <div class="invite-row mt-2">
                                         <input type="text" class="form-control invite-input" value="@circle.InviteUrl" readonly aria-label="Invite link for @circle.Name" />
-                                        <button type="button" class="btn btn-primary btn-sm" data-copy="@circle.InviteUrl" data-no-busy>Copy link</button>
+                                        <button type="button" class="btn btn-primary btn-sm" data-copy="@circle.InviteUrl" data-no-busy aria-label="Copy invite link for @circle.Name" aria-live="polite">Copy link</button>
                                     </div>
                                     <small class="text-muted">Anyone with this link can join for the next @Profiler.Web.Security.CircleInvites.Lifetime.TotalDays days. We never see who you sent it to.</small>
                                 </li>

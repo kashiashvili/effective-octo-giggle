@@ -34,7 +34,7 @@ CircleMembership  { Id, CircleId (FK cascade), UserId (FK cascade), JoinedAt }  
 
 `/circles/join/<token>` where `token = DataProtection(purpose "circle-invite.v1").Protect("<circleId>|<issued>", 30 days)`. Any member can show the current link on their dashboard (a fresh token each time; old ones stay valid until they expire). Nothing about the token is stored. A tampered or expired token renders "This invite link has expired — ask for a new one."
 
-Register and login accept an optional `circle` query parameter, carry it as a hidden field, and on success redirect to the join page for that token, so an invitee who has no account yet still lands on the confirmation.
+Register and login accept an optional `circle` query parameter (only while circles are enabled) and carry it as a hidden field. Login redirects straight to the join page; registration shows the recovery code first, with "join the circle I was invited to" as its continue button, consumed on that one render. The join page shows the member count to whoever holds the link — the link is the credential, and joining would reveal the count anyway. Starting or joining is metered per IP (`RateLimiting:CirclesPermitLimit`) and capped at 20 circles per account.
 
 ## Matches
 
@@ -55,4 +55,4 @@ For the viewer: `myCircles = memberships.Where(UserId == me)`. One query joins t
 
 ## Validation
 
-`dotnet build -warnaserror`; `dotnet test` ≥ 371; integration: two invitees see each other's chip, an outsider sees none, hidden viewer sees none, leave removes chip, account deletion removes memberships, tampered token rejected, register-with-invite lands on the join page; QA walk on `profiler-web-qa`; independent Release Auditor before calling the feature complete.
+`dotnet build -warnaserror`; `dotnet test` ≥ 371 (385 after both slices); integration: two invitees see each other's chip, an outsider sees none, hidden viewer sees none, leave removes chip, account deletion removes memberships, tampered token rejected, register-with-invite lands on the join page; QA walk on `profiler-web-qa` (done 2026-09-17: dashboard card, member invite page, expired page); independent Release Auditor (done 2026-09-17, verdict yes; findings fixed).

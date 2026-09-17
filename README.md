@@ -200,6 +200,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 | `RateLimiting:LoginPermitLimit`  | `5`                  | Allowed login attempts per IP per minute             |
 | `RateLimiting:RegisterPermitLimit` | `5`                | Allowed registrations per IP per hour                |
 | `RateLimiting:ConnectPermitLimit`  | `10`               | Allowed source-connect submits per IP per minute      |
+| `RateLimiting:CirclesPermitLimit`  | `10`               | Circle start/join submits per IP per minute (plus a hard cap of 20 circles per account) |
 | `DataProtection:KeyPath`         | `<contentRoot>/keys` | Where the auth-cookie key ring is persisted          |
 | `Fingerprint:Pepper`             | — (**required**)     | Secret mixed into every fingerprint hash             |
 | `Metrics:Token`                  | — (off)              | Operator bearer token. Gates `GET /metrics` (aggregate funnel + adoption counts: registered, with fingerprint, fingerprints by source, viewed matches, returned after the first day, active last 7 days, bio/contact/intent/values), `GET /metrics/reports` (moderation review), and `POST /metrics/suspend` (suspend/reinstate). All 404 unless set |
@@ -242,7 +243,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
   **unencrypted** on that volume (the app logs a one-line warning about it at start):
   whoever can read the volume can also forge sessions, not only read the database, so
   treat volume access as root access. Rotating is deleting the folder — everyone is
-  signed out, nothing else is lost. Encrypting keys at rest needs a certificate or a
+  signed out and every outstanding circle invite link stops working; nothing else is lost. Encrypting keys at rest needs a certificate or a
   cloud key store and is a deliberate non-goal for a single-instance deployment.
 - **Reading `/metrics` as a funnel.** `totalUsers` → `withFingerprint` (did people get past
   "connect or self-describe"; `fingerprintsBySource` says which path) → `viewedMatches` →
@@ -342,7 +343,7 @@ Then `GET /health` must answer 200 and `deploy/smoke.sh` should pass against the
 dotnet test
 ```
 
-The suite (383 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (385 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 

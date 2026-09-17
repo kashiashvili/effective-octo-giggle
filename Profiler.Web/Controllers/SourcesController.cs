@@ -70,19 +70,19 @@ public class SourcesController : Controller
         ViewBag.MaxCircleNameLength = CirclesController.MaxNameLength;
         // The viewer's circles with a current invite link each. The link is minted on render and never
         // stored, so there is no record of who shared it with whom.
-        ViewBag.Circles = _flags.CirclesEnabled
+        var circleRows = _flags.CirclesEnabled
             ? await _db.CircleMemberships
                 .Where(m => m.UserId == userId)
                 .Join(_db.Circles, m => m.CircleId, c => c.Id, (m, c) => c)
                 .OrderBy(c => c.Name)
                 .Select(c => new { c.Id, c.Name, MemberCount = _db.CircleMemberships.Count(m => m.CircleId == c.Id) })
                 .ToListAsync()
-                .ContinueWith(t => t.Result.Select(c => new CircleSummaryViewModel
-                {
-                    Id = c.Id, Name = c.Name, MemberCount = c.MemberCount,
-                    InviteUrl = $"{Request.Scheme}://{Request.Host}/circles/join/{_invites.Issue(c.Id)}"
-                }).ToList())
-            : new List<CircleSummaryViewModel>();
+            : new();
+        ViewBag.Circles = circleRows.Select(c => new CircleSummaryViewModel
+        {
+            Id = c.Id, Name = c.Name, MemberCount = c.MemberCount,
+            InviteUrl = $"{Request.Scheme}://{Request.Host}/circles/join/{_invites.Issue(c.Id)}"
+        }).ToList();
         return View();
     }
 

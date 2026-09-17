@@ -108,6 +108,11 @@ var registerPermitLimit = builder.Configuration.GetValue<int?>("RateLimiting:Reg
 // Limit is configurable ("RateLimiting:ConnectPermitLimit") so tests can relax it.
 var connectPermitLimit = builder.Configuration.GetValue<int?>("RateLimiting:ConnectPermitLimit") ?? 10;
 
+// Starting or joining circles writes rows on every submit; unmetered, one account could grow the
+// tables (and the operator's counts) without limit. Per user there is also a hard membership cap.
+// Limit is configurable ("RateLimiting:CirclesPermitLimit") so tests can relax it.
+var circlesPermitLimit = builder.Configuration.GetValue<int?>("RateLimiting:CirclesPermitLimit") ?? 10;
+
 builder.Services.AddRateLimiter(opt =>
 {
     opt.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -135,6 +140,14 @@ builder.Services.AddRateLimiter(opt =>
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0
         }));
+    opt.AddPolicy("circles", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = circlesPermitLimit,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        }));
     // Rejection happens before MVC, so this renders a small page directly rather than a view.
     // It links the app's own stylesheet instead of duplicating any of it.
     opt.OnRejected = async (ctx, token) =>
@@ -150,6 +163,10 @@ builder.Services.AddRateLimiter(opt =>
             ? ("Too many source updates",
                "Connecting a source sends requests to other services on your behalf, so we limit how often it can run. Wait a minute and try again — nothing you had already connected was changed.",
                "/sources/connect", "Back to Connect Sources")
+            : path.StartsWithSegments("/circles")
+            ? ("Too many circle changes",
+               "We limit how often circles can be started or joined from one place. Wait a minute and try again — nothing you were already in has changed.",
+               "/sources/dashboard", "Back to dashboard")
             : path.StartsWithSegments("/account/register")
                 ? ("Too many sign-up attempts",
                    "We limit how many accounts can be created from one place. Please wait a little and try again.",

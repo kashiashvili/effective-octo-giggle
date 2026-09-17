@@ -334,7 +334,9 @@ Schema changes are made with EF migrations and applied on startup via
 4. Access tokens / API keys are used once to fetch data and **never persisted**.
 5. Signal counts are aggregate numbers only — not the underlying interests.
 6. Other users only ever see your **username, a match tier/approximate %, the source
-   types you share, and whatever bio/contact you chose to make public.**
+   types you share, the circles you both are in, and whatever you chose to make public:
+   bio, contact, connection intent, values bucket (as a coarse alignment label) and the
+   interests you chose to show.** All of these are withheld while you are hidden.
 7. Where the operator turns on database snapshots (`Backup:Directory`; the shipped container
    and Azure setups do), a deleted account survives in them for at most `Backup:Keep ×
    Backup:IntervalHours` (7 days by default). The snapshots are copies of the same signature-only
@@ -355,6 +357,7 @@ All settings come from `appsettings.json` or environment variables.
 | `RateLimiting:LoginPermitLimit` | `5` | Login attempts per IP per minute |
 | `RateLimiting:RegisterPermitLimit` | `5` | Registrations per IP per hour |
 | `RateLimiting:ConnectPermitLimit` | `10` | Source-connect submits per IP per minute |
+| `RateLimiting:CirclesPermitLimit` | `10` | Circle start/join submits per IP per minute (plus a hard cap of 20 circles per account) |
 | `DataProtection:KeyPath` | `<contentRoot>/keys` | Where the auth-cookie key ring is stored (git-ignored secret) |
 | `Fingerprint:Pepper` | — (**required outside Development**) | Secret mixed into every fingerprint hash. Without it, a stolen database can be tested against guessed interests. Changing it invalidates every signature |
 | `ForwardedHeaders:Enabled` | `false` | Believe `X-Forwarded-For`/`-Proto`. **Required behind a proxy**, or every visitor shares one rate-limit bucket |
@@ -375,7 +378,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 383 tests, fully offline
+dotnet test                           # 385 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -467,6 +470,9 @@ data loss: `az appservice plan update -g <rg> -n <plan> --sku B1`.
   forge sessions as well as read the (signature-only) database; rotation = delete the folder
   (signs everyone out). Encrypting at rest needs a certificate or cloud key store — non-goal for
   a single-instance deployment; documented in `README.md` deployment notes.
+- **Circle names are not unique** (no discovery, so two "Run club"s are only confusing to someone in
+  both), and a join page whose session expired before "Join" lands on the dashboard after sign-in
+  rather than back on the invite — open the link again.
 - **Snapshots live on the same volume as the database.** They cover a bad migration, a bad
   release or accidental data damage, not the loss of the volume itself; copying `backups/` off-host
   is a manual operator step (README "Back up and restore").
@@ -502,6 +508,23 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Release Auditor on circles: verdict yes; one P2 and the P3s closed.** P2: starting or joining
+  circles was unmetered and uncapped, so one account could grow the tables and the operator's
+  counts without limit — now a per-IP limiter (`RateLimiting:CirclesPermitLimit`, 10/min, with its
+  own "Too many circle changes" page) and a hard cap of 20 circles per account, refused with a
+  plain message on create and join. P3s: "Same circle first" is withheld while hidden like the
+  chip; an invite carried through register/login is ignored when circles are off (no 404 after
+  sign-in); the recovery page's hand-off is consumed on first render instead of lingering in
+  TempData; the empty-circle cleanup is one conditional delete so a join racing the last leave
+  cannot lose its membership, and a join that loses that race sees the expired page; circle
+  creation and account deletion each run in a transaction; the dashboard query is awaited
+  instead of continued off the request; Leave/Copy buttons carry per-circle labels and the copy
+  button announces its "Copied" swap; the handbook's "what others see" line now lists every
+  reciprocal field; README notes that rotating the key ring also voids outstanding invite links;
+  the design's register-flow wording matches the code; name non-uniqueness and the expired-
+  session join are recorded as limitations. QA walk on `profiler-web-qa` done (dashboard card,
+  member invite page, expired page). Tests: cap on create and join, limiter, hand-off shown once,
+  sort withheld while hidden, flag-off carry-through: 385.
 - **Circles, slice 2: the chip and the sort.** People from a circle the viewer shares carry a
   "Same circle: <name>" chip (first among the card's signals — the most concrete reason two people
   are on the same list) and "Same circle first" joins the sort options whenever the viewer is in a

@@ -296,6 +296,7 @@ public class CirclesTests : IClassFixture<ProfilerWebFactory>
         Assert.Equal(HttpStatusCode.Redirect, (await PostAsync(a, "/account/visibility", new() { ["discoverable"] = "false" })).StatusCode);
         var hidden = await a.GetStringAsync("/matches");
         Assert.DoesNotContain("Same circle:", hidden);
+        Assert.DoesNotContain("Same circle first", hidden);
         await PostAsync(a, "/account/visibility", new() { ["discoverable"] = "true" });
 
         // Leaving removes the chip.
@@ -335,6 +336,16 @@ public class CirclesTests : IClassFixture<ProfilerWebFactory>
         Assert.Contains(bName, matches);
         Assert.DoesNotContain("Same circle", matches);
 
+        // With circles off an invite carried into login goes nowhere near a 404: plain dashboard.
+        var bOff = NewClient(off);
+        var bLoginPage = await bOff.GetStringAsync($"/account/login?circle={token}");
+        Assert.DoesNotContain($"value=\"{token}\"", bLoginPage);
+        var bLogin = await bOff.PostAsync("/account/login", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["Username"] = bName, ["Password"] = "Tr0ubad0ur-x9", ["CircleInvite"] = token, ["__RequestVerificationToken"] = AntiforgeryIn(bLoginPage)
+        }));
+        Assert.Contains("/sources/dashboard", bLogin.Headers.Location!.ToString());
+
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Equal(2, await db.CircleMemberships.CountAsync(m => db.Circles.Any(x => x.Id == m.CircleId && x.Name == "Choir " + tag)));
@@ -365,6 +376,58 @@ public class CirclesTests : IClassFixture<ProfilerWebFactory>
 
         Assert.Equal(1, after.Circles - before.Circles);
         Assert.Equal(2, after.Users - before.Users);
+    }
+
+    [Fact]
+    public async Task OneAccount_CannotExceedTheMembershipCap_OrTheRateLimit()
+    {
+        var tag = Guid.NewGuid().ToString("N")[..6];
+        var a = NewClient();
+        await RegisterAsync(a, "circ_cap_" + tag);
+        for (var i = 0; i < Profiler.Web.Controllers.CirclesController.MaxCirclesPerUser; i++)
+            Assert.Equal(HttpStatusCode.Redirect, (await PostAsync(a, "/circles/create", new() { ["name"] = $"cap {tag} {i}" })).StatusCode);
+
+        await PostAsync(a, "/circles/create", new() { ["name"] = $"cap {tag} overflow" });
+        var dashboard = await a.GetStringAsync("/sources/dashboard");
+        Assert.Contains("at most", dashboard);
+        Assert.DoesNotContain($"cap {tag} overflow", dashboard);
+
+        // Joining past the cap is refused the same way, and the membership is not created.
+        var host = NewClient();
+        await RegisterAsync(host, "circ_caph_" + tag);
+        var token = await StartCircleAsync(host, "cap host " + tag);
+        await PostAsync(a, "/circles/join", new() { ["token"] = token }, tokenPage: $"/circles/join/{token}");
+        Assert.DoesNotContain("cap host " + tag, await a.GetStringAsync("/sources/dashboard"));
+
+        // The per-IP limiter meters create and join like the other write endpoints.
+        using var tight = _factory.WithWebHostBuilder(h => h.UseSetting("RateLimiting:CirclesPermitLimit", "2"));
+        var r = NewClient(tight);
+        await RegisterAsync(r, "circ_rate_" + tag);
+        Assert.Equal(HttpStatusCode.Redirect, (await PostAsync(r, "/circles/create", new() { ["name"] = "rate 1 " + tag })).StatusCode);
+        Assert.Equal(HttpStatusCode.Redirect, (await PostAsync(r, "/circles/create", new() { ["name"] = "rate 2 " + tag })).StatusCode);
+        var third = await PostAsync(r, "/circles/create", new() { ["name"] = "rate 3 " + tag });
+        Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
+        Assert.Contains("Too many circle changes", await third.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task TheRecoveryPagesInviteHandOff_IsShownOnce()
+    {
+        var tag = Guid.NewGuid().ToString("N")[..6];
+        var host = NewClient();
+        await RegisterAsync(host, "circ_once_h_" + tag);
+        var token = await StartCircleAsync(host, "Once " + tag);
+
+        var invitee = NewClient();
+        await RegisterAsync(invitee, "circ_once_" + tag, circleInvite: token);
+        Assert.Contains("join the circle", await invitee.GetStringAsync("/account/recovery-code"));
+
+        // A later recovery-code page (a regenerated code) must not resurrect the hand-off.
+        var regen = await PostAsync(invitee, "/account/recovery-code", new() { ["password"] = "Tr0ubad0ur-x9" });
+        Assert.Equal(HttpStatusCode.Redirect, regen.StatusCode);
+        var again = await invitee.GetStringAsync("/account/recovery-code");
+        Assert.Contains("recovery code", again, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("join the circle", again);
     }
 
     [Fact]

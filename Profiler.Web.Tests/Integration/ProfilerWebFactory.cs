@@ -21,6 +21,7 @@ public class ProfilerWebFactory : WebApplicationFactory<Program>
         builder.UseSetting("RateLimiting:LoginPermitLimit", "100000");
         builder.UseSetting("RateLimiting:RegisterPermitLimit", "100000");
         builder.UseSetting("RateLimiting:ConnectPermitLimit", "100000");
+        builder.UseSetting("RateLimiting:CirclesPermitLimit", "100000");
 
         builder.ConfigureServices(services =>
         {

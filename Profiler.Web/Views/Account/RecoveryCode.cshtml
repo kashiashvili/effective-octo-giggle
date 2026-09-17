@@ -26,7 +26,7 @@
             no contact details on file, and this code instead.
         </p>
 
-        @if (TempData.Peek("CircleInvite") is string invite && Profiler.Web.Security.CircleInvites.LooksLikeToken(invite))
+        @if (ViewBag.CircleInvite is string invite)
         {
             <a href="/circles/join/@Uri.EscapeDataString(invite)" class="btn btn-primary btn-block">I've saved it — join the circle I was invited to</a>
             <p class="text-center mt-2"><a href="/sources/interests">Skip the circle, pick my interests</a></p>

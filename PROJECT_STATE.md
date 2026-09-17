@@ -31,10 +31,10 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `13b6acd` audit fixes (2026-09-17); circles slice 2 follows it.
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **383 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `6dc5527` circles slice 2 (2026-09-17); circles audit fixes follow it.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **385 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
-- Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*`.
+- Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
 
 ## 3. Phase
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Circles slice 2 — built, tests green, committing (2026-09-17).** Chip + "Same circle first" sort + `/metrics` totals; 3 tests → 383.
+**Circles audit-fix unit — built, tests green, committing (2026-09-17).** Auditor verdict yes; P2 (unmetered/uncapped create+join) and all P3s closed; QA walk done. +2 tests → 385. Circles feature complete (both slices, audited, walked).
 
-**Next mandatory action:** QA walk of circles on `profiler-web-qa` (dashboard card, invite page anonymous + signed in, chip and sort on matches), then Release Auditor over `ff03acc..HEAD` (circles slices 1+2 + audit fixes). Then Product Owner review + next bet from §7 (mutual-visibility badge, or circle extras only if the Auditor is clean). Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Next mandatory action:** Product Owner review, then the smallest circle follow-through: the matches empty state's invite box offers the viewer's circle invite link (invitees land in the circle) instead of the bare register URL when they have one, and step 3 on the landing mentions the "Same circle" mark; then §7 item 4 (mutual-visibility badge). Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -102,7 +102,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 
 ## 10. Last Completed Iteration
 
-`ff03acc` 2026-09-17 — circles slice 1 (start / signed invite / join / leave, carry-through on register+login, export, delete, flag, migration `AddCircles`). Earlier today: `d1bbe1c` genre bridge; `58baf17` YouTube Takeout export; `9e0f578` audit fixes; `9c9ff96` onboarding; `e6a0fcb` `/metrics` funnel; `ab80929` go-live data safety.
+`6dc5527` 2026-09-17 — circles slice 2 (chip + "Same circle first" sort + metrics totals); `ff03acc` slice 1 (start / signed invite / join / leave / export / delete / flag / migration). Earlier today: `13b6acd` audit fixes; `d1bbe1c` genre bridge; `58baf17` YouTube Takeout export; `9e0f578`; `9c9ff96`; `e6a0fcb`; `ab80929`.
 
 ## 11. Deploy Status
 

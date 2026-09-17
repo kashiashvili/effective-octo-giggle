@@ -38,7 +38,7 @@ public class AccountController : Controller
         return View(new RegisterViewModel
         {
             FormTicket = _registrationGuard.IssueTicketIfEnabled(),
-            CircleInvite = Security.CircleInvites.LooksLikeToken(circle) ? circle : null,
+            CircleInvite = _flags.CirclesEnabled && Security.CircleInvites.LooksLikeToken(circle) ? circle : null,
         });
     }
 
@@ -119,7 +119,7 @@ public class AccountController : Controller
         // Shown once, before anything else, because it is the only way back into this account and
         // nobody can reissue it for them. An invite the person arrived with waits behind it.
         TempData["RecoveryCode"] = recoveryCode;
-        if (Security.CircleInvites.LooksLikeToken(vm.CircleInvite))
+        if (_flags.CirclesEnabled && Security.CircleInvites.LooksLikeToken(vm.CircleInvite))
             TempData["CircleInvite"] = vm.CircleInvite;
         return RedirectToAction(nameof(ShowRecoveryCode));
     }
@@ -130,7 +130,7 @@ public class AccountController : Controller
     {
         if (User.Identity?.IsAuthenticated == true)
             return RedirectToAction("Dashboard", "Sources");
-        return View(new LoginViewModel { CircleInvite = Security.CircleInvites.LooksLikeToken(circle) ? circle : null });
+        return View(new LoginViewModel { CircleInvite = _flags.CirclesEnabled && Security.CircleInvites.LooksLikeToken(circle) ? circle : null });
     }
 
     [HttpPost("login")]
@@ -158,7 +158,7 @@ public class AccountController : Controller
         }
 
         await SignInUserAsync(user);
-        if (Security.CircleInvites.LooksLikeToken(vm.CircleInvite))
+        if (_flags.CirclesEnabled && Security.CircleInvites.LooksLikeToken(vm.CircleInvite))
             return Redirect($"/circles/join/{Uri.EscapeDataString(vm.CircleInvite!)}");
         return RedirectToAction("Dashboard", "Sources");
     }
@@ -171,6 +171,10 @@ public class AccountController : Controller
     [HttpGet("recovery-code")]
     public IActionResult ShowRecoveryCode()
     {
+        // Read (and so consume) the carried invite with the code: it belongs to this one page render,
+        // not to every later recovery-code page.
+        ViewBag.CircleInvite = _flags.CirclesEnabled && TempData["CircleInvite"] is string invite
+            && Security.CircleInvites.LooksLikeToken(invite) ? invite : null;
         if (TempData["RecoveryCode"] is not string code)
         {
             TempData["Error"] = "That recovery code can only be shown once. Generate a new one if you didn't save it.";
@@ -576,6 +580,8 @@ public class AccountController : Controller
             return RedirectToAction("Dashboard", "Sources");
         }
 
+        // Everything below is one unit; a failure part-way must not leave a half-deleted account.
+        await using var transaction = await _db.Database.BeginTransactionAsync();
         _db.SourceFingerprints.RemoveRange(_db.SourceFingerprints.Where(s => s.UserId == user.Id));
         _db.Fingerprints.RemoveRange(_db.Fingerprints.Where(f => f.UserId == user.Id));
         // Blocks point both ways: the people you hid, and the people who hid you. The schema cascades
@@ -593,6 +599,7 @@ public class AccountController : Controller
         await _db.SaveChangesAsync();
         foreach (var circleId in myCircles)
             await CirclesController.RemoveIfEmptyAsync(_db, circleId);
+        await transaction.CommitAsync();
 
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         TempData["Success"] = "Your account and all associated data have been permanently deleted.";

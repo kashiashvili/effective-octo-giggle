@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Profiler.Web.Data;
 using Profiler.Web.Data.Models;
@@ -20,6 +21,12 @@ public class CirclesController : Controller
 {
     public const int MaxNameLength = 40;
 
+    /// <summary>
+    /// Hard cap on circles one account can be in (started or joined). Nobody needs more, and without a
+    /// cap one account could grow the tables — and the operator's counts — without limit.
+    /// </summary>
+    public const int MaxCirclesPerUser = 20;
+
     private readonly AppDbContext _db;
     private readonly CircleInvites _invites;
     private readonly FeatureFlags _flags;
@@ -35,9 +42,11 @@ public class CirclesController : Controller
 
     [HttpPost("create")]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("circles")]
     public async Task<IActionResult> Create(string? name)
     {
         if (!_flags.CirclesEnabled) return NotFound();
+        if (await AtCapAsync()) return RedirectToAction("Dashboard", "Sources");
 
         var trimmed = (name ?? "").Trim();
         if (trimmed.Length == 0 || trimmed.Length > MaxNameLength)
@@ -51,11 +60,14 @@ public class CirclesController : Controller
             return RedirectToAction("Dashboard", "Sources");
         }
 
+        // The circle and its first membership are one unit: a circle nobody is in must never exist.
+        await using var transaction = await _db.Database.BeginTransactionAsync();
         var circle = new Circle { Name = trimmed };
         _db.Circles.Add(circle);
         await _db.SaveChangesAsync();
         _db.CircleMemberships.Add(new CircleMembership { CircleId = circle.Id, UserId = CurrentUserId });
         await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         TempData["Success"] = $"Circle \"{trimmed}\" started. Share its invite link from your dashboard.";
         return RedirectToAction("Dashboard", "Sources");
@@ -88,6 +100,7 @@ public class CirclesController : Controller
 
     [HttpPost("join")]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("circles")]
     public async Task<IActionResult> JoinConfirm(string? token)
     {
         if (!_flags.CirclesEnabled) return NotFound();
@@ -98,6 +111,8 @@ public class CirclesController : Controller
         var userId = CurrentUserId;
         if (!await _db.CircleMemberships.AnyAsync(m => m.CircleId == circle.Id && m.UserId == userId))
         {
+            if (await AtCapAsync()) return RedirectToAction("Dashboard", "Sources");
+
             _db.CircleMemberships.Add(new CircleMembership { CircleId = circle.Id, UserId = userId });
             try
             {
@@ -105,7 +120,11 @@ public class CirclesController : Controller
             }
             catch (DbUpdateException)
             {
-                // Two submits racing: the unique index kept one membership, which is the intended state.
+                // Either two submits raced (the unique index kept one membership — the intended state)
+                // or the last member left and the circle vanished under this join. Tell them apart.
+                _db.ChangeTracker.Clear();
+                if (!await _db.CircleMemberships.AnyAsync(m => m.CircleId == circle.Id && m.UserId == userId))
+                    return View("InviteExpired");
             }
         }
 
@@ -137,10 +156,20 @@ public class CirclesController : Controller
         return id == null ? null : await _db.Circles.FirstOrDefaultAsync(c => c.Id == id);
     }
 
-    /// <summary>A circle nobody is in any more has no reason to exist; its name is the only thing left.</summary>
-    public static async Task RemoveIfEmptyAsync(AppDbContext db, int circleId)
+    /// <summary>
+    /// A circle nobody is in any more has no reason to exist; its name is the only thing left. One
+    /// conditional statement, so a join racing the last leave cannot see the check pass and then lose
+    /// its fresh membership to the delete.
+    /// </summary>
+    public static Task RemoveIfEmptyAsync(AppDbContext db, int circleId) =>
+        db.Circles
+            .Where(c => c.Id == circleId && !db.CircleMemberships.Any(m => m.CircleId == c.Id))
+            .ExecuteDeleteAsync();
+
+    private async Task<bool> AtCapAsync()
     {
-        if (await db.CircleMemberships.AnyAsync(m => m.CircleId == circleId)) return;
-        await db.Circles.Where(c => c.Id == circleId).ExecuteDeleteAsync();
+        if (await _db.CircleMemberships.CountAsync(m => m.UserId == CurrentUserId) < MaxCirclesPerUser) return false;
+        TempData["Error"] = $"You can be in at most {MaxCirclesPerUser} circles. Leave one to start or join another.";
+        return true;
     }
 }

@@ -125,7 +125,7 @@ public class MatchesController : Controller
                 .GroupBy(x => x.UserId)
                 .ToDictionary(g => g.Key, g => g.Select(x => x.Name).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList())
             : new Dictionary<int, List<string>>();
-        ViewBag.HasOwnCircles = myCircleIds.Count > 0;
+        ViewBag.HasOwnCircles = myCircleIds.Count > 0 && viewerVisible;
 
         var viewModels = matches.Select(m =>
         {
@@ -254,7 +254,7 @@ public class MatchesController : Controller
         // the viewer has the matching signal set, so the sort always means something.
         var viewerHasIntent = !string.IsNullOrEmpty(myIntent);
         var viewerHasValues = myValues.HasValue;
-        var viewerHasCircles = myCircleIds.Count > 0;
+        var viewerHasCircles = myCircleIds.Count > 0 && viewerVisible;
         ViewBag.HasOwnValues = viewerHasValues;
 
         var sortMode = sort switch
