@@ -42,7 +42,7 @@
 
 ## 4. Active Task
 
-**None active. Stopped under `CLAUDE.md` §10 condition 3** — every remaining bet is owner-gated (§5, §6) and evidence-independent work is exhausted. Docs consolidation + optimisation completed 2026-09-17 (`fca4d0c`, `1feb8bf`, `ebb481c`, and the optimisation commit). Product Owner review after it: last evidence-independent candidate (music/film genre bridge) rejected as low value before a pool exists — fuzzy mapping with no density to validate against. No new assumption test or structural inspection identified that real usage would not answer better.
+**None active. Stopped under `CLAUDE.md` §10 condition 3** — every remaining bet is owner-gated (§5, §6) and evidence-independent work is exhausted. Docs consolidation + optimisation completed 2026-09-17 (`fca4d0c`, `1feb8bf`, `ebb481c`, `b43aad9`). Product Owner review after it: last evidence-independent candidate (music/film genre bridge) rejected as low value before a pool exists — fuzzy mapping with no density to validate against. No new assumption test or structural inspection identified that real usage would not answer better.
 
 **Exact resume action:** on any owner reply to `docs/OWNER_DECISIONS.md` (even one decision), implement it immediately, log it in `PRODUCT_LOG.md`, close the brief entry, resume the loop. Recommended first reply: Decision 4 (go live) — it unblocks the evidence every other bet needs. Owner-only steps in that decision (`az login`, bootstrap, repo secrets, `main` promotion) are the owner's to run; the loop prepares and verifies everything else.
 
