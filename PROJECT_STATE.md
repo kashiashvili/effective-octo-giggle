@@ -31,9 +31,9 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler`; `main` fast-forwarded from it. Last product commit `bb4e70b` (2026-09-12, Azure deploy path).
-- `dotnet build -warnaserror` clean (0 warnings). `dotnet test`: **349 passed, 0 failed**. 16 migrations, auto-applied; integration suite boots on fresh DB.
-- Commands: `dotnet build`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; `deploy/smoke.sh` against running container.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last non-docs commit `bb4e70b` (2026-09-12, Azure deploy path); later commits are docs/config.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **349 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
+- Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `ForwardedHeaders:*`, `RateLimiting:*`.
 
 ## 3. Phase
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**None — awaiting owner input (termination rule 3).** Docs consolidation completed 2026-09-17 (`fca4d0c`, `1feb8bf`, `ebb481c`). Product Owner review after it: every remaining bet is gated (§5, §6); the last evidence-independent candidate (music/film genre bridge) was weighed and rejected as low value before a pool exists — fuzzy mapping with no density to validate against. No new assumption test or structural inspection identified that real usage would not answer better.
+**None active. Stopped under `CLAUDE.md` §10 condition 3** — every remaining bet is owner-gated (§5, §6) and evidence-independent work is exhausted. Docs consolidation + optimisation completed 2026-09-17 (`fca4d0c`, `1feb8bf`, `ebb481c`, and the optimisation commit). Product Owner review after it: last evidence-independent candidate (music/film genre bridge) rejected as low value before a pool exists — fuzzy mapping with no density to validate against. No new assumption test or structural inspection identified that real usage would not answer better.
 
-**Next mandatory action:** on any owner reply to `docs/OWNER_DECISIONS.md` (even one decision), implement it immediately, log it in `PRODUCT_LOG.md`, close the brief entry, resume the loop. Recommended first reply: Decision 4 (go live) — it unblocks the evidence every other bet needs.
+**Exact resume action:** on any owner reply to `docs/OWNER_DECISIONS.md` (even one decision), implement it immediately, log it in `PRODUCT_LOG.md`, close the brief entry, resume the loop. Recommended first reply: Decision 4 (go live) — it unblocks the evidence every other bet needs. Owner-only steps in that decision (`az login`, bootstrap, repo secrets, `main` promotion) are the owner's to run; the loop prepares and verifies everything else.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 

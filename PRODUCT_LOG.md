@@ -451,6 +451,19 @@ Each entry: what changed and why it mattered.
   sections 2–10 were brought up to date with everything shipped since July (signals, self-described
   interests, safety loop, operations, deploy paths); the test count is reconciled everywhere to the
   real figure (349).
+- **Operating rules optimised after an independent cold-start review.** A fresh-session reviewer
+  confirmed the two-file resume works, then found the real gap: the rules governed the loop but never
+  bounded the agent's *external* authority. Fixed: `CLAUDE.md` now forbids pushing, promoting `main`
+  (which deploys), running `az`/`gh`/`docker push`, rewriting history, or writing any secret into any
+  file unless the owner asks in chat for that specific action; `.claude/settings.json` enforces it
+  (push/deploy commands prompt, force-push and history-destroying git commands are denied, build/test
+  and read-only git are pre-allowed so an unattended run does not stall) and now fires the loop
+  reminder on startup as well as after compaction. Also fixed: one priority scale instead of two, one
+  build gate (`dotnet build -warnaserror`, now also in CI), a test-count-regression rule, an explicit
+  "unanswered owner brief = stop condition 3" tiebreak, a state-vs-git reconciliation rule, rule-file
+  edit discipline, ready-to-use Auditor/Critic/delegation prompts and state/owner-brief templates in
+  `docs/PRODUCT_AGENT.md`, and `GOAL_COMMAND.md` reduced to a pointer so it cannot drift again.
+  `docs/OWNER_DECISIONS.md` entries now all carry context, evidence, options and a recommendation.
 
 ### 2026-09-12
 - **Azure App Service deploy path.** Owner chose App Service (Linux container) with publish-profile

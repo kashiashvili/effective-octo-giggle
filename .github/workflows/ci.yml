@@ -21,7 +21,7 @@ jobs:
         run: dotnet restore Profiler.sln
 
       - name: Build
-        run: dotnet build Profiler.sln --no-restore --configuration Release
+        run: dotnet build Profiler.sln --no-restore --configuration Release -warnaserror
 
       # The suite is fully offline (connectors are stubbed, integration tests use a
       # temporary database), so it needs no secrets and no network access.

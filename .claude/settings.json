@@ -1,15 +1,51 @@
- {
+{
   "hooks": {
     "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'AUTONOMOUS PRODUCT LOOP ACTIVE. Read CLAUDE.md, then PROJECT_STATE.md, then git status + git log --oneline -10. Resume the Active Task; if done, validate, commit, persist state, Product Owner review, Opportunity Discovery. Completing the previous task is not completion of the mission. Caveman mode stays on for you and every subagent.'"
+          }
+        ]
+      },
       {
         "matcher": "compact",
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'AUTONOMOUS PRODUCT LOOP IS ACTIVE. Read PROJECT_STATE.md immediately. Completing the previous task is not completion of the overall mission. Resume from the current state, return to Product Owner mode when appropriate, select the next highest-value work, and continue the Product Owner → Architect → Developer → QA → Product Owner cycle.'"
+            "command": "echo 'AUTONOMOUS PRODUCT LOOP ACTIVE. Read CLAUDE.md, then PROJECT_STATE.md, then git status + git log --oneline -10. Resume the Active Task; if done, validate, commit, persist state, Product Owner review, Opportunity Discovery. Completing the previous task is not completion of the mission. Caveman mode stays on for you and every subagent.'"
           }
         ]
       }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build*)",
+      "Bash(dotnet test*)",
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git show*)",
+      "Bash(git rev-parse*)",
+      "Bash(git add*)",
+      "Bash(git commit*)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(az *)",
+      "Bash(docker push*)",
+      "Bash(gh workflow run*)",
+      "Bash(gh release*)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -f*)",
+      "Bash(git branch -D*)"
     ]
   }
 }

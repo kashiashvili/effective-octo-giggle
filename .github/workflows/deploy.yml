@@ -31,7 +31,7 @@ jobs:
         with:
           dotnet-version: "9.0.x"
       - run: dotnet restore Profiler.sln
-      - run: dotnet build Profiler.sln --no-restore --configuration Release
+      - run: dotnet build Profiler.sln --no-restore --configuration Release -warnaserror
       # Offline suite — no secrets, no network.
       - run: dotnet test Profiler.sln --no-build --configuration Release
 

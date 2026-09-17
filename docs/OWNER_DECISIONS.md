@@ -1,6 +1,6 @@
 # Owner Decision Brief
 
-_Prepared by the autonomous product loop, 2026-07-25._
+_Prepared by the autonomous product loop, 2026-07-25. Updated 2026-09-17 (Azure path added 2026-09-12; counts re-verified). All four decisions still open._
 
 The build/validate/deploy work that can be justified **without owner strategy input or real usage
 data** is done: multi-source matching (interests + intent + values), self-described + free-text
@@ -21,6 +21,10 @@ similarity **drives ranking**, with connection intent and a values/outlook bucke
 explainable** lines (never a blended score). The "Potential Better Vision" is now implemented under all
 its recorded constraints — consent, data minimization, user control, explainability, no clinical claims,
 no raw retention.
+
+**Evidence.** All three signals are shipped, integration-tested and independently audited (no P0–P2);
+the privacy constraints are asserted against the database. No real users yet, so adoption of the extra
+signals is unmeasured — `/metrics` will show it once live.
 
 **Options.** (a) Promote the framing to "compatibility matching." (b) Keep "interest matching" and treat
 intent/values as optional add-ons.
@@ -69,7 +73,14 @@ and the sort — keeping the code and any stored buckets for a clean re-enable.
 tested** (honeypot + signed single-use form ticket; no third-party CAPTCHA, no PII), **off by default** so
 dev/tests are undisturbed.
 
-**Recommendation: enable it for a public launch** — set `AntiAbuse:GuardRegistration=true` (optionally
+**Evidence.** Six unit tests plus `deploy/smoke.sh` confirm the honeypot rejects and the ticket is enforced
+when on; the per-IP register limit was seen returning 429 in the live compose run. Cost of leaving it off:
+nothing stops a scripted sign-up loop beyond the rate limit.
+
+**Options.** (a) Leave off (private cohort only). (b) Enable for public launch. (c) Enable plus a
+privacy-respecting CAPTCHA in front for very-high-value protection.
+
+**Recommendation: (b) — enable it for a public launch** — set `AntiAbuse:GuardRegistration=true` (optionally
 `AntiAbuse:MinFormSeconds`). The per-IP register rate limit is the always-on cap regardless. Trivial flip.
 
 **Unblocks.** Opening registration to the public.
@@ -78,7 +89,7 @@ dev/tests are undisturbed.
 
 ## Decision 4 — Go live (unblocks everything data-gated)
 
-Every remaining *product* bet — connector-side rarity weighting, a second values axis, interest
+**Context.** Every remaining *product* bet — connector-side rarity weighting, a second values axis, interest
 **clusters**, a return channel — is gated on **real usage evidence**, which only a live deployment with
 real users produces (surfaced privately via token-gated `/metrics`). The loop cannot generate that here.
 
@@ -88,6 +99,16 @@ real users produces (surfaced privately via token-gated `/metrics`). The loop ca
 3. Run the image with a **persistent `/data` volume** (SQLite db + Data Protection keys).
 4. Set **`Metrics:Token`** (operator/moderation access) and, for public launch, **`AntiAbuse:GuardRegistration=true`**.
 5. Front it with **TLS** and set the **forwarded-headers** options so rate limiting / HTTPS see the real client.
+
+**Evidence.** Compose deployment verified 2026-08-08: production image boots, migrations apply, smoke test
+16/16, data and key ring survive a restart. The Azure workflow is present and skipped until the repo variable
+exists, so it cannot fire by accident.
+
+**Options.** (a) Azure App Service via the bootstrap script (chosen path, below). (b) Any Docker host running
+the compose stack behind TLS. (c) Stay private/local and gather no evidence.
+
+**Recommendation: (a), starting on the free F1 tier with a small private cohort.** Reversible: the plan
+upgrades in place and the data lives on the persistent volume.
 
 **Azure path (chosen 2026-09-12): App Service Linux container, publish-profile auth, GHCR image.**
 Run `./deploy/azure-bootstrap.sh` once (it needs your `az login`); it creates everything, sets every
