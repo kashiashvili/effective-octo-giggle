@@ -31,7 +31,7 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit: go-live data-safety unit (2026-09-17, snapshots + healthcheck + `/health`; hash in §10 once recorded).
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `ab80929` (2026-09-17, go-live data safety: snapshots + healthcheck + `/health`).
 - `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **357 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*`.
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Go-live data-safety unit — built, validated, committing (2026-09-17).** Fresh-session Product Owner review reopened the stop-3 idle: structural inspection of the recommended go-live path found evidence-independent defects, all fixed in one unit: rolling SQLite snapshots (`Backup:*`, SQLite online-backup API, cadence anchored to disk, pre-migration snapshot, per-kind retention, honest retention disclosure on Privacy + delete panel); compose healthcheck that can actually pass (runtime image has no `wget`/`curl`; bash `/dev/tcp` probe); `/health` for Azure health-check path + deploy readiness poll; README backup/restore runbook (compose + Kudu). 8 tests → 357. Live compose verification: see §11.
+**Discovery: first-cohort match experience (started 2026-09-17).** Product Owner review of `ab80929`: unit complete, restore drill passed, group-onboarding register-limit foot-gun documented. Next inspection on the go-live path: what a 5–20 person private cohort sees — minimum-similarity cutoff on the matches page, tier reachability at small pool sizes (existing calibration used synthetic populations; pool size assumption to verify). Outcome decides whether a "closest people anyway" fallback below the Good tier is warranted before Decision 4 lands, or whether the empty state already covers it.
 
-**Next mandatory action:** Product Owner review of this unit, then discovery pass (fresh structural inspection of go-live path proved productive; continue on the same vein: SQLite-on-Azure-Files semantics, restore drill, operator runbook gaps) before re-declaring stop condition 3. Owner replies to `docs/OWNER_DECISIONS.md` still pre-empt everything.
+Owner replies to `docs/OWNER_DECISIONS.md` still pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -98,10 +98,10 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 
 ## 10. Last Completed Iteration
 
-`bb4e70b` 2026-09-12 — Azure App Service deploy path: `deploy/azure-bootstrap.sh` (RG, Linux plan F1, container app, persistent `/home` storage, forwarded-headers with platform networks, single worker, prints pepper/token/publish profile) + `deploy-azure` job in `deploy.yml` (sha-pinned image, polls URL until 200, skipped until `AZURE_WEBAPP_NAME` set).
+`ab80929` 2026-09-17 — go-live data safety: `Backup:*` rolling SQLite snapshots (online-backup API, disk-anchored cadence, pre-migration snapshot, per-kind retention, in-product retention disclosure), compose healthcheck that can pass (bash `/dev/tcp`), `/health` for Azure health path + deploy poll, README backup/restore runbook; 8 tests → 357; live compose verification incl. restore drill.
 
 ## 11. Deploy Status
 
-- **Compose (local/VPS):** re-verified 2026-09-17 — rebuilt image boots, container reports `healthy` (new bash `/dev/tcp` probe on `/health`), startup snapshot written to `/data/backups` as `app`, `deploy/smoke.sh` 16/16, snapshot copied off via `docker cp` passes `PRAGMA integrity_check` with all 16 migrations, restart adds no duplicate snapshot, privacy page shows the 7-day retention line. Secrets in gitignored `deploy/.env.production`.
+- **Compose (local/VPS):** re-verified 2026-09-17 — rebuilt image boots, container reports `healthy` (new bash `/dev/tcp` probe on `/health`), startup snapshot written to `/data/backups` as `app`, `deploy/smoke.sh` 16/16, snapshot copied off via `docker cp` passes `PRAGMA integrity_check` with all 16 migrations, restart adds no duplicate snapshot, privacy page shows the 7-day retention line; restore drill with the README command verbatim rolled 1 user back to 0, `/health` 200. Secrets in gitignored `deploy/.env.production`.
 - **GHCR:** every push to `main` / `v*` tag builds + publishes `ghcr.io/kashiashvili/effective-octo-giggle`. Needs repo Actions permission "Read and write".
 - **Azure:** workflow present, skipped until owner completes Decision 4 steps. Not yet live.

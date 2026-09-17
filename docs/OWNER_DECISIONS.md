@@ -101,6 +101,10 @@ real users produces (surfaced privately via token-gated `/metrics`). The loop ca
 5. Front it with **TLS** and set the **forwarded-headers** options so rate limiting / HTTPS see the real client.
 6. Copy the app's rolling database snapshots (`/data/backups`, on Azure `/home/data/backups`) off the host
    now and then — the volume is the only copy (`README.md` "Back up and restore").
+7. Onboarding a group from one network (an office, a meetup's Wi-Fi)? The register limit is **5 per IP per
+   hour** (`RateLimiting:RegisterPermitLimit`); the sixth person sees "Too many sign-up attempts" for an hour.
+   Raise it for the session (`az webapp config appsettings set … RateLimiting__RegisterPermitLimit=50`, restart)
+   and put it back afterwards.
 
 **Evidence.** Compose deployment verified 2026-08-08: production image boots, migrations apply, smoke test
 16/16, data and key ring survive a restart. The Azure workflow is present and skipped until the repo variable

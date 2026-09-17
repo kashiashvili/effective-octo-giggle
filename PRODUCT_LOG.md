@@ -484,7 +484,11 @@ Each entry: what changed and why it mattered.
   `healthy`, startup snapshot lands on the volume owned by `app`, `deploy/smoke.sh` 16/16, the
   copied-out snapshot passes `PRAGMA integrity_check` with all 16 migrations, a restart adds no
   duplicate, the privacy page shows "7 days". Independent reviewer (read-only) found one docs gap
-  (Kudu VFS root), fixed.
+  (Kudu VFS root), fixed. Restore drill executed with the README's compose command verbatim: live
+  database (1 user) replaced by the earlier snapshot (0 users), `/health` 200, container healthy,
+  `/metrics` confirms the rollback. Also documented in the owner checklist and README: onboarding a
+  group from one network hits the 5-per-IP-per-hour register limit — raise
+  `RateLimiting:RegisterPermitLimit` for the session.
 
 ### 2026-09-17
 - **Documentation consolidated so the loop and the owner read one truth each.** `CLAUDE.md`

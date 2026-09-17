@@ -142,6 +142,10 @@ Defaults: free **F1** tier (sleeps when idle, 60 CPU-min/day), `westeurope`, ima
 **single worker** (SQLite corrupts if App Service scales out) and stores the database and key ring
 under the persistent `/home` path.
 
+Onboarding a group from one network (office, meetup Wi-Fi)? Registrations are limited to 5 per IP per
+hour, so raise `RateLimiting__RegisterPermitLimit` for the session (`az webapp config appsettings set`,
+then restart) and put it back afterwards.
+
 Then in the GitHub repo → Settings → Secrets and variables → Actions, add the variable
 `AZURE_WEBAPP_NAME` and the secret `AZURE_WEBAPP_PUBLISH_PROFILE` (the XML the script prints), and
 make the GHCR package public so App Service can pull it (the image holds no secrets). From then on
