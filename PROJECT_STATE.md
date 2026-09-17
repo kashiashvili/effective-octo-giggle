@@ -25,14 +25,14 @@
 4. Ranked matches: tier (Good ≥15%, Strong ≥35%), shared source types, closest source, freshness, "in their top matches too" badge, "Same circle" chip, shared-interest reveal if opted in, intent line, outlook line. Filter by theme, sort Best / Same circle / Same intent / Similar outlook. Never a blended score.
 5. Optional: set intent, take values questionnaire (consent-gated, answers discarded), choose interests to show.
 6. Read bio/contact, reach out off-platform. Hide or report a match.
-7. Manage sources, profile, password, sessions, visibility, blocks, signals, circles (start/invite/leave), export, deletion.
+7. Manage sources, profile, password, sessions, visibility, blocks, signals, circles (start/invite/leave; circle page shows every member), export, deletion.
 
 **Success criteria:** new user reaches real match list with credentials they actually have; raw interests never persisted; connector/fingerprint/empty/rate-limit/auth/deletion failures explained; privacy asserted by DB tests; build/tests/migrations/security healthy.
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `8dd315c` badge audit fixes (2026-09-17); privacy inventory follows it.
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **391 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `227d268` privacy inventory (2026-09-17); circle page follows it.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **392 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Privacy inventory — built, tests green, committing (2026-09-17).** Critic #4's honesty defect: privacy page claimed "that's the whole database". Now a schema-backed table (`Data/DataInventory`, held to the EF model by a test). +2 tests → 391.
+**Circle page — built, tests green, committing (2026-09-17, Critic #4 bet 1).** `/circles/{id}` for members: every member whatever the overlap, honest labels below the floor, reciprocity, invite + leave; design revised. +1 test → 392.
 
-**Next mandatory action:** circle view (§7 item 1): revise `docs/DESIGN_CIRCLES.md` (members see members; separate view, not a filter of the global list; withhold hidden/suspended; honor blocks both ways; bio/contact by reciprocity), then build `GET /circles/{id}`, link from dashboard + chip, tests (mate below floor appears in the circle view but not the main list; outsider 404; hidden withheld; block honoured; flag off 404), QA walk, Release Auditor. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Next mandatory action:** QA walk of the circle page on `profiler-web-qa`, Release Auditor over `227d268..HEAD` (privacy inventory + circle page), then §7 item 5 (fold token connectors, S) and item 3 (organiser health card, S). Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 

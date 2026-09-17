@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Profiler.Web.Data;
 using Profiler.Web.Data.Models;
+using Profiler.Web.Profile;
+using System.Text.Json;
 using Profiler.Web.Security;
 using Profiler.Web.ViewModels;
 
@@ -71,6 +73,77 @@ public class CirclesController : Controller
 
         TempData["Success"] = $"Circle \"{trimmed}\" started. Share its invite link from your dashboard.";
         return RedirectToAction("Dashboard", "Sources");
+    }
+
+    /// <summary>
+    /// The circle itself, for its members: everyone in it, with how much each overlaps the viewer —
+    /// including people below the match list's floor or outside its top 20, who would otherwise never
+    /// be seen. A separate page, not a filter of the global list.
+    /// </summary>
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> View(int id)
+    {
+        if (!_flags.CirclesEnabled) return NotFound();
+        var userId = CurrentUserId;
+        var circle = await _db.Circles.FirstOrDefaultAsync(c => c.Id == id);
+        if (circle == null || !await _db.CircleMemberships.AnyAsync(m => m.CircleId == id && m.UserId == userId))
+            return NotFound();
+
+        var hidden = (await _db.UserBlocks
+                .Where(b => b.BlockerId == userId || b.BlockedId == userId)
+                .Select(b => b.BlockerId == userId ? b.BlockedId : b.BlockerId)
+                .ToListAsync()).ToHashSet();
+
+        var members = await _db.CircleMemberships
+            .Where(m => m.CircleId == id)
+            .Join(_db.Users, m => m.UserId, u => u.Id, (m, u) => u)
+            .Where(u => u.SuspendedAt == null)
+            .Select(u => new { u.Id, u.Username, u.IsDiscoverable, u.Bio, u.Contact, Fingerprint = u.Fingerprint })
+            .ToListAsync();
+
+        var me = members.FirstOrDefault(m => m.Id == userId);
+        var viewerVisible = me?.IsDiscoverable ?? true;
+        var myFp = me?.Fingerprint != null ? ProfileFingerprint.FromJson(me.Fingerprint.FingerprintJson) : null;
+        var mySources = me?.Fingerprint != null
+            ? JsonSerializer.Deserialize<List<string>>(me.Fingerprint.SourcesJson) ?? new List<string>()
+            : new List<string>();
+
+        var rows = members
+            .Where(m => m.Id != userId && m.IsDiscoverable && !hidden.Contains(m.Id))
+            .Select(m =>
+            {
+                var theirFp = m.Fingerprint != null ? ProfileFingerprint.FromJson(m.Fingerprint.FingerprintJson) : null;
+                var hasFingerprint = theirFp != null && !theirFp.IsEmpty;
+                var similarity = hasFingerprint && myFp != null && !myFp.IsEmpty ? myFp.Similarity(theirFp!) : 0.0;
+                var theirSources = m.Fingerprint != null
+                    ? JsonSerializer.Deserialize<List<string>>(m.Fingerprint.SourcesJson) ?? new List<string>()
+                    : new List<string>();
+                return new CircleMemberViewModel
+                {
+                    Username = m.Username,
+                    HasFingerprint = hasFingerprint,
+                    Similarity = similarity,
+                    SharedSources = mySources.Intersect(theirSources).ToList(),
+                    // Reciprocal, like the match list: hidden viewers read nobody's personal lines.
+                    Bio = viewerVisible ? m.Bio : null,
+                    Contact = viewerVisible ? m.Contact : null,
+                };
+            })
+            .OrderByDescending(r => r.HasFingerprint)
+            .ThenByDescending(r => r.Similarity)
+            .ThenBy(r => r.Username, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return View(new CircleViewModel
+        {
+            Id = circle.Id,
+            Name = circle.Name,
+            MemberCount = members.Count,
+            InviteUrl = $"{Request.Scheme}://{Request.Host}/circles/join/{_invites.Issue(circle.Id)}",
+            ViewerVisible = viewerVisible,
+            ViewerHasFingerprint = myFp != null && !myFp.IsEmpty,
+            Members = rows,
+        });
     }
 
     /// <summary>

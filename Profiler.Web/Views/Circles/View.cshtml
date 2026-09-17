@@ -1,0 +1,118 @@
+@model Profiler.Web.ViewModels.CircleViewModel
+@{
+    ViewBag.Title = Model.Name;
+}
+
+<div class="page-wrap">
+    <div class="container">
+        <div class="matches-header">
+            <h1>👥 @Model.Name</h1>
+            <p class="matches-meta">@Model.MemberCount member@(Model.MemberCount == 1 ? "" : "s") · everyone in this circle, whatever the overlap — a circle never filters your matches or changes a score.</p>
+        </div>
+
+        @if (!Model.ViewerVisible)
+        {
+            <div class="alert alert-info">
+                <span class="alert-icon">🙈</span>
+                <span>You're currently <strong>hidden</strong> — you can see your circle, but you won't appear to them, and their bios and contact details stay hidden from you while you're hidden from them. Change this on your <a href="/sources/dashboard">dashboard</a>.</span>
+            </div>
+        }
+        @if (!Model.ViewerHasFingerprint)
+        {
+            <div class="alert alert-info">
+                <span class="alert-icon">✏️</span>
+                <span>You have no fingerprint yet, so overlap can't be shown. <a href="/sources/interests">Pick your interests</a> or <a href="/sources/connect">connect a source</a>.</span>
+            </div>
+        }
+
+        <div class="invite-box mb-4">
+            <label class="invite-label">Invite someone to @Model.Name</label>
+            <div class="invite-row">
+                <input type="text" class="form-control invite-input" value="@Model.InviteUrl" readonly aria-label="Invite link for @Model.Name" />
+                <button type="button" class="btn btn-primary" data-copy="@Model.InviteUrl" data-no-busy aria-label="Copy invite link for @Model.Name" aria-live="polite">Copy link</button>
+            </div>
+            <small class="text-muted">Anyone with this link can join for the next @Profiler.Web.Security.CircleInvites.Lifetime.TotalDays days. We never see who you sent it to.</small>
+        </div>
+
+        @if (!Model.Members.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-icon">👥</div>
+                <h2>Nobody else here yet</h2>
+                <p>Share the link above — people who join appear here, whether or not your interests overlap yet.</p>
+            </div>
+        }
+        else
+        {
+            <div class="matches-grid">
+                @for (var i = 0; i < Model.Members.Count; i++)
+                {
+                    var member = Model.Members[i];
+                    <div class="match-card">
+                        <div class="match-card-body">
+                            <div class="match-user">
+                                <span class="avatar a@(i % 6 + 1)">@member.Username.Substring(0, 1).ToUpper()</span>
+                                <div>
+                                    <div class="match-username">@member.Username</div>
+                                    @if (member.SharedSources.Any())
+                                    {
+                                        <div class="match-sources">
+                                            @foreach (var s in member.SharedSources)
+                                            {
+                                                <span class="badge badge-gray">@s</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="compat-row">
+                                @if (!member.HasFingerprint)
+                                {
+                                    <span class="compat-pct low">No fingerprint yet</span>
+                                }
+                                else if (!Model.ViewerHasFingerprint)
+                                {
+                                    <span class="compat-pct low">Overlap unknown</span>
+                                }
+                                else if (member.AboveFloor)
+                                {
+                                    <span class="compat-pct @member.Tier">@member.TierLabel</span>
+                                    <span class="text-muted">~@member.SimilarityPercent% shared</span>
+                                }
+                                else
+                                {
+                                    <span class="compat-pct low">No overlap yet</span>
+                                }
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(member.Bio))
+                            {
+                                <p class="match-bio">@member.Bio</p>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(member.Contact))
+                            {
+                                <p class="match-contact">📮 @member.Contact</p>
+                            }
+                            else if (!Model.ViewerVisible)
+                            {
+                                <p class="match-contact text-muted">🙈 Hidden while you are.</p>
+                            }
+                            else
+                            {
+                                <p class="match-contact text-muted">📭 @member.Username hasn't shared a way to be reached.</p>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        <p class="mt-4 flex items-center gap-3">
+            <a href="/matches" class="btn btn-outline">Your matches</a>
+            <a href="/sources/dashboard" class="btn btn-outline">Dashboard</a>
+            <form asp-action="Leave" asp-controller="Circles" method="post" class="ms-auto">
+                <input type="hidden" name="circleId" value="@Model.Id" />
+                <button type="submit" class="btn btn-outline btn-sm" aria-label="Leave @Model.Name">Leave this circle</button>
+            </form>
+        </p>
+    </div>
+</div>

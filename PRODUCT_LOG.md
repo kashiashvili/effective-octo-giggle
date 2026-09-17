@@ -120,6 +120,11 @@ match on shared channels.
 - **Inviting**: once you are in a circle, the match list's empty-state invite box shares your newest
   circle's link instead of the bare register link, and says so — a friend you invite lands in your
   circle and is marked on your matches.
+- **The circle page** (`/circles/{id}`, members only): everyone in the circle, ordered by overlap
+  with you — a tier where there is one, "No overlap yet" below the match list's floor, "No
+  fingerprint yet" for people who have not built one — with no top-20 cut, bio/contact by the same
+  reciprocity rule, the invite link and Leave. The global match list is untouched: this is a second
+  view, not a filter. Linked from the dashboard card and from the empty match list.
 - **On matches** (slice 2): people from a circle you share carry a "Same circle: <name>" chip, and
   "Same circle first" is offered as a sort whenever you are in a circle — chip + sort only, never a
   filter (outsiders still appear), never part of a score (interest order is kept within each group),
@@ -387,7 +392,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 391 tests, fully offline
+dotnet test                           # 392 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -517,6 +522,17 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Circle page: the circle keeps its promise for mixed groups.** Opportunity Critic #4's structural
+  finding: the chip and sort decorate the global list, which is cut at the 5% floor and the top 20,
+  so a circle-mate below the floor or outside the top 20 was invisible — exactly the members a
+  team or a course cohort has. `/circles/{id}` is now a page for members: everyone in the circle
+  (discoverable, not suspended, not hidden between you), ordered by overlap, with a tier at or
+  above the floor, "No overlap yet" below it (no percentage — no false precision), "No fingerprint
+  yet" for those without one, bio/contact by reciprocity, the invite link and Leave. Members see
+  members; nobody else sees the page (404). The global list is untouched. Design revised in
+  `docs/DESIGN_CIRCLES.md`; dashboard names link to the page; the empty match list links to it.
+  One end-to-end test (below-floor mate present, no-fingerprint mate labelled, outsider 404, hide
+  both ways, hidden member withheld but still sees the circle, flag off 404): 392.
 - **Privacy page made literally true, and kept true by a test.** Opportunity Critic #4 found the
   page still said "username and password hash… that's the whole database" and "we never store
   any contact details" — false since bios, contact lines, intent, values buckets, shown interests,

@@ -10,7 +10,9 @@ Every remaining product bet is "gated on pool density", and Decision 4 assumes "
 
 A **circle** is a named group with a shareable invite link. Joining tags your account with membership. On the match list, people in a circle you are also in carry a **"Same circle: <name>"** chip and there is a **"Same circle first"** sort. Nothing else changes: registration stays open, the pool stays global, similarity ranking stays the default, and a circle is never a filter, never part of any score.
 
-Deliberately **not** in v1: owners/admins, private circles, per-circle matching (no floor change), inviter links (who invited whom is never recorded), circle discovery/search, member lists visible to non-members.
+**Circle view (added after Opportunity Critic #4).** The chip and sort decorate the global list, which is cut at a 5% similarity floor and the top 20 — so a circle-mate below the floor or outside the top 20 was invisible, and the promise "your own group finds each other first" failed exactly for mixed groups (a team, a course cohort). `/circles/{id}` is a separate page for members only: every discoverable, not-suspended member (minus anyone hidden between the viewer and them), with a tier where there is overlap and "No overlap yet" below the floor, no top-20 cut, and bio/contact by the same reciprocity rule as the match list. Members see members — that is what joining a group means, and it is stated on the join page; nobody outside the circle sees the list. The global list is untouched: this is a second view, not a filter of the first.
+
+Deliberately **not** in v1: owners/admins, private circles, inviter links (who invited whom is never recorded), circle discovery/search, member lists visible to non-members.
 
 ## Data (new-data checklist applied)
 
@@ -35,6 +37,10 @@ CircleMembership  { Id, CircleId (FK cascade), UserId (FK cascade), JoinedAt }  
 `/circles/join/<token>` where `token = DataProtection(purpose "circle-invite.v1").Protect("<circleId>|<issued>", 30 days)`. Any member can show the current link on their dashboard (a fresh token each time; old ones stay valid until they expire). Nothing about the token is stored. A tampered or expired token renders "This invite link has expired — ask for a new one."
 
 Register and login accept an optional `circle` query parameter (only while circles are enabled) and carry it as a hidden field. Login redirects straight to the join page; registration shows the recovery code first, with "join the circle I was invited to" as its continue button, consumed on that one render. The join page shows the member count to whoever holds the link — the link is the credential, and joining would reveal the count anyway. Starting or joining is metered per IP (`RateLimiting:CirclesPermitLimit`) and capped at 20 circles per account.
+
+## Circle view
+
+`GET /circles/{id}` (members only, else 404; 404 while circles are disabled). Members ordered by similarity to the viewer, then username; members without a fingerprint listed last as "No fingerprint yet". A percentage is shown only at or above the floor (no false precision below it). The viewer's own hides apply; a hidden (non-discoverable) member is withheld from others but still sees the circle. The page carries the invite link and Leave. Linked from the dashboard card, and from the match list's empty state ("see who's in your circle").
 
 ## Matches
 

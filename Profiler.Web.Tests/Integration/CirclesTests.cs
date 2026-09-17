@@ -73,7 +73,7 @@ public class CirclesTests : IClassFixture<ProfilerWebFactory>
         var a = NewClient();
         await RegisterAsync(a, "circ_a_" + tag);
         var token = await StartCircleAsync(a, circleName);
-        Assert.Contains("1 member<", await a.GetStringAsync("/sources/dashboard"));
+        Assert.Contains("1 member ·", await a.GetStringAsync("/sources/dashboard"));
 
         var b = NewClient();
         await RegisterAsync(b, "circ_b_" + tag);
@@ -110,7 +110,7 @@ public class CirclesTests : IClassFixture<ProfilerWebFactory>
         // Leave: B first (circle stays), then A (circle disappears with its last member).
         Assert.Equal(HttpStatusCode.Redirect, (await PostAsync(b, "/circles/leave", new() { ["circleId"] = circleId.ToString() })).StatusCode);
         Assert.DoesNotContain(circleName, await b.GetStringAsync("/sources/dashboard"));
-        Assert.Contains("1 member<", await a.GetStringAsync("/sources/dashboard"));
+        Assert.Contains("1 member ·", await a.GetStringAsync("/sources/dashboard"));
         await PostAsync(a, "/circles/leave", new() { ["circleId"] = circleId.ToString() });
         using (var scope = _factory.Services.CreateScope())
         {
@@ -453,6 +453,77 @@ public class CirclesTests : IClassFixture<ProfilerWebFactory>
         Assert.Contains("/circles/join/", withCircle);
         Assert.Contains("joins <strong>Invite box " + tag + "</strong>", withCircle);
         Assert.DoesNotContain("/account/register\"", withCircle);
+    }
+
+    [Fact]
+    public async Task TheCircleView_ShowsEveryMember_EvenBelowTheFloor_ToMembersOnly_HonouringHidesAndVisibility()
+    {
+        var tag = Guid.NewGuid().ToString("N")[..6];
+        var (aName, bName, cName, dName) = ("circ_va_" + tag, "circ_vb_" + tag, "circ_vc_" + tag, "circ_vd_" + tag);
+        var a = NewClient(); await RegisterAsync(a, aName);
+        var b = NewClient(); await RegisterAsync(b, bName);
+        var c = NewClient(); await RegisterAsync(c, cName);
+        var d = NewClient(); await RegisterAsync(d, dName);
+        // B shares nothing with A (below the floor), C has no fingerprint at all.
+        await SeedFingerprintAsync(aName, $"{tag}:a1", $"{tag}:a2", $"{tag}:a3");
+        await SeedFingerprintAsync(bName, $"{tag}:b1", $"{tag}:b2", $"{tag}:b3");
+
+        var token = await StartCircleAsync(a, "Mixed group " + tag);
+        await PostAsync(b, "/circles/join", new() { ["token"] = token }, tokenPage: $"/circles/join/{token}");
+        await PostAsync(c, "/circles/join", new() { ["token"] = token }, tokenPage: $"/circles/join/{token}");
+        int circleId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            circleId = (await db.Circles.SingleAsync(x => x.Name == "Mixed group " + tag)).Id;
+        }
+
+        // Invisible on the global list, present in the circle view, honestly labelled.
+        Assert.DoesNotContain(bName, await a.GetStringAsync("/matches"));
+        var view = await a.GetStringAsync($"/circles/{circleId}");
+        Assert.Contains("Mixed group " + tag, view);
+        Assert.Contains("3 members", view);
+        Assert.Contains("No overlap yet", CardOf(view, bName));
+        Assert.Contains("No fingerprint yet", CardOf(view, cName));
+        Assert.DoesNotContain("% shared", CardOf(view, bName)); // no false precision below the floor
+        Assert.Contains("/circles/join/", view);
+        Assert.Contains($"/circles/{circleId}", await a.GetStringAsync("/sources/dashboard"));
+
+        // Members only.
+        Assert.Equal(HttpStatusCode.NotFound, (await d.GetAsync($"/circles/{circleId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await a.GetAsync("/circles/999999")).StatusCode);
+
+        // A hide applies both ways; a hidden member is withheld from others but still sees the circle.
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var aId = (await db.Users.SingleAsync(u => u.Username == aName)).Id;
+            var bId = (await db.Users.SingleAsync(u => u.Username == bName)).Id;
+            db.UserBlocks.Add(new UserBlock { BlockerId = bId, BlockedId = aId });
+            await db.SaveChangesAsync();
+        }
+        Assert.DoesNotContain(bName, await a.GetStringAsync($"/circles/{circleId}"));
+        Assert.DoesNotContain(aName, await b.GetStringAsync($"/circles/{circleId}"));
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.UserBlocks.RemoveRange(db.UserBlocks.Where(x => db.Users.Any(u => u.Id == x.BlockerId && u.Username == bName)));
+            await db.SaveChangesAsync();
+        }
+        await PostAsync(b, "/account/visibility", new() { ["discoverable"] = "false" });
+        Assert.DoesNotContain(bName, await a.GetStringAsync($"/circles/{circleId}"));
+        Assert.Contains(aName, await b.GetStringAsync($"/circles/{circleId}"));
+        Assert.Contains("hidden", await b.GetStringAsync($"/circles/{circleId}"), StringComparison.OrdinalIgnoreCase);
+
+        // Flag off: 404.
+        using var off = _factory.WithWebHostBuilder(h => h.UseSetting("Signals:CirclesEnabled", "false"));
+        var aOff = NewClient(off);
+        var loginPage = await aOff.GetStringAsync("/account/login");
+        await aOff.PostAsync("/account/login", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["Username"] = aName, ["Password"] = "Tr0ubad0ur-x9", ["__RequestVerificationToken"] = AntiforgeryIn(loginPage)
+        }));
+        Assert.Equal(HttpStatusCode.NotFound, (await aOff.GetAsync($"/circles/{circleId}")).StatusCode);
     }
 
     [Fact]

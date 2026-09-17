@@ -267,8 +267,8 @@
                             {
                                 <li class="source-row" style="display:block">
                                     <div class="flex items-center gap-3">
-                                        <span class="source-badge">@circle.Name</span>
-                                        <small class="text-muted">@circle.MemberCount member@(circle.MemberCount == 1 ? "" : "s")</small>
+                                        <a href="/circles/@circle.Id" class="source-badge">@circle.Name</a>
+                                        <small class="text-muted">@circle.MemberCount member@(circle.MemberCount == 1 ? "" : "s") · <a href="/circles/@circle.Id">see who's here</a></small>
                                         <form asp-action="Leave" asp-controller="Circles" method="post" class="ms-auto">
                                             <input type="hidden" name="circleId" value="@circle.Id" />
                                             <button type="submit" class="btn btn-outline btn-sm" aria-label="Leave @circle.Name">Leave</button>

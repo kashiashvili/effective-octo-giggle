@@ -16,7 +16,7 @@ public class MatchesController : Controller
 {
     // Below this estimated Jaccard similarity a "match" is within MinHash sampling noise of
     // having nothing in common, so we don't present it as a match.
-    private const double MinMatchSimilarity = 0.05;
+    public const double MinMatchSimilarity = 0.05;
 
     /// <summary>How many people a match list holds, in either direction.</summary>
     private const int TopMatches = 20;
@@ -296,6 +296,7 @@ public class MatchesController : Controller
             {
                 ViewBag.InviteUrl = $"{Request.Scheme}://{Request.Host}/circles/join/{_invites.Issue(newest.Id)}";
                 ViewBag.InviteCircleName = newest.Name;
+                ViewBag.InviteCircleId = newest.Id;
             }
         }
 
