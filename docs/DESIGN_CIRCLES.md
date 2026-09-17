@@ -40,7 +40,7 @@ Register and login accept an optional `circle` query parameter (only while circl
 
 ## Circle view
 
-`GET /circles/{id}` (members only, else 404; 404 while circles are disabled). Members ordered by similarity to the viewer, then username; members without a fingerprint listed last as "No fingerprint yet". A percentage is shown only at or above the floor (no false precision below it). The viewer's own hides apply; a hidden (non-discoverable) member is withheld from others but still sees the circle. The page carries the invite link and Leave. Linked from the dashboard card, and from the match list's empty state ("see who's in your circle").
+`GET /circles/{id}` (members only, else 404; 404 while circles are disabled). Members ordered by similarity to the viewer, then username; members without a fingerprint listed last as "No fingerprint yet". A percentage is shown only at or above the floor (no false precision below it). The viewer's own hides apply; a hidden (non-discoverable) member is withheld from others but still sees the circle. The page carries the invite link and Leave. Linked from the dashboard card, and from the match list's empty state ("see who's in your circle"). Member cards show overlap and the personal block (bio, contact) only; the intent, values and shown-interest lines stay on the match list, where each is introduced and explained — adding them here is a follow-up once circles have users. "Members" everywhere means memberships whose account is not suspended; the page lists the ones discoverable to the viewer.
 
 ## Matches
 

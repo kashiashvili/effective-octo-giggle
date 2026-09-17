@@ -31,8 +31,8 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `394fbb5` circle page (2026-09-17); token fold follows it.
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **394 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `8a1ab42` token fold (2026-09-17); audit fixes follow it.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **393 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Token fold — built, tests green, committing (2026-09-17, Critic #4 bet 5).** Five no-token sources up front; thirteen token sources folded on landing and connect. +2 tests → 394.
+**Audit-fix unit (privacy inventory + circle page) — built, tests green, committing (2026-09-17).** P1 join-page copy, P2 column-level inventory + test, P2 one member-count definition, P3s, plus the red fold assertion. 393.
 
-**Next mandatory action:** QA walk (circle page + folds) on `profiler-web-qa`; integrate the Release Auditor on `227d268..394fbb5` (running); then §7 item 3 (organiser circle-health card: members / with fingerprint / Good+ pairs inside, shown ≥5 members, counts only). Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Next mandatory action:** Product Owner review, then §7 item 3 (organiser circle-health card: members / with fingerprint / Good+ pairs inside, shown ≥5 members, counts only, request-time) or item 4 (try-before-register preview, design first). Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -66,12 +66,12 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 
 ## 7. Opportunities Under Evaluation (ranked; Critic #4 2026-09-17 evening — "day coherent, nothing to revert")
 
-1. **Circle view** — `/circles/{id}` for members: every discoverable member, tier or "no overlap yet" below the floor, no top-20 cut; the global list untouched. Fixes the one promise circles make and cannot keep (mates below 0.05 or outside top 20 are invisible today). Gate: design revision (`docs/DESIGN_CIRCLES.md`). M. **Active next.**
+1. **Circle view** — shipped `394fbb5` (members see every discoverable member, honest labels below the floor, no top-20 cut; global list untouched).
 2. **Vision revision: introductions inside groups/gatherings you already belong to** — Decision 5 (owner, copy). Increments 1, 3, 4 are ungated.
 3. **Organiser circle-health card** — members / with fingerprint / Good+ pairs inside (shown ≥5 members, counts only). Gate: none, after 1. S.
 4. **Try-before-register preview** — anonymous picker → lens + coarse band → register to see who. Gate: none, design for the oracle (band, pool ≥10, per-IP limit). M.
 5. **Fold token connectors** — shipped (five no-token cards up front on the landing; token groups folded on both pages).
-6. Retire "Same circle first" sort once 1 lands (half-measure on the wrong primitive). Gate: none, after 1.
+6. Retire "Same circle first" sort — deferred: harmless, cheap, and removing shipped UI without usage evidence buys nothing; revisit with `/metrics`.
 7. Persist 9-theme lens counts ("your interest shape", circle themes ≥5) — new stored derived data → new-data checklist. Gate: design.
 8. Web Push return channel — gate: pool + owner (push relays vs "no trackers").
 9. Real usage evidence via `/metrics` — gate: deployment (Decision 4). Hide values signal — owner (Decision 2). Connector-side weighting — scheme versioning.

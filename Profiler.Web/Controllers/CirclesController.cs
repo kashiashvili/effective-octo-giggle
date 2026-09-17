@@ -81,7 +81,7 @@ public class CirclesController : Controller
     /// be seen. A separate page, not a filter of the global list.
     /// </summary>
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> View(int id)
+    public async Task<IActionResult> Show(int id)
     {
         if (!_flags.CirclesEnabled) return NotFound();
         var userId = CurrentUserId;
@@ -134,11 +134,11 @@ public class CirclesController : Controller
             .ThenBy(r => r.Username, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        return View(new CircleViewModel
+        return View("View", new CircleViewModel
         {
             Id = circle.Id,
             Name = circle.Name,
-            MemberCount = members.Count,
+            MemberCount = members.Count, // already excludes suspended accounts — the shared definition
             InviteUrl = $"{Request.Scheme}://{Request.Host}/circles/join/{_invites.Issue(circle.Id)}",
             ViewerVisible = viewerVisible,
             ViewerHasFingerprint = myFp != null && !myFp.IsEmpty,
@@ -163,7 +163,7 @@ public class CirclesController : Controller
         {
             CircleName = circle.Name,
             Token = token,
-            MemberCount = await _db.CircleMemberships.CountAsync(m => m.CircleId == circle.Id),
+            MemberCount = await MemberCountAsync(_db, circle.Id),
             IsSignedIn = User.Identity?.IsAuthenticated == true,
         };
         if (vm.IsSignedIn)
@@ -201,7 +201,7 @@ public class CirclesController : Controller
             }
         }
 
-        TempData["Success"] = $"You're in \"{circle.Name}\". People from the same circle are marked on your matches.";
+        TempData["Success"] = $"You're in \"{circle.Name}\". Its members can see each other on the circle's page, and are marked on each other's matches.";
         return RedirectToAction("Dashboard", "Sources");
     }
 
@@ -228,6 +228,13 @@ public class CirclesController : Controller
         var id = _invites.TryRead(token);
         return id == null ? null : await _db.Circles.FirstOrDefaultAsync(c => c.Id == id);
     }
+
+    /// <summary>The one definition of "members" shown anywhere: memberships whose account is not suspended.</summary>
+    public static Task<int> MemberCountAsync(AppDbContext db, int circleId) =>
+        db.CircleMemberships
+            .Where(m => m.CircleId == circleId)
+            .Join(db.Users, m => m.UserId, u => u.Id, (m, u) => u)
+            .CountAsync(u => u.SuspendedAt == null);
 
     /// <summary>
     /// A circle nobody is in any more has no reason to exist; its name is the only thing left. One

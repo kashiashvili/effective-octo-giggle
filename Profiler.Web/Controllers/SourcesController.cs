@@ -75,7 +75,7 @@ public class SourcesController : Controller
                 .Where(m => m.UserId == userId)
                 .Join(_db.Circles, m => m.CircleId, c => c.Id, (m, c) => c)
                 .OrderBy(c => c.Name)
-                .Select(c => new { c.Id, c.Name, MemberCount = _db.CircleMemberships.Count(m => m.CircleId == c.Id) })
+                .Select(c => new { c.Id, c.Name, MemberCount = _db.CircleMemberships.Where(m => m.CircleId == c.Id).Join(_db.Users, m => m.UserId, u => u.Id, (m, u) => u).Count(u => u.SuspendedAt == null) })
                 .ToListAsync()
             : new();
         ViewBag.Circles = circleRows.Select(c => new CircleSummaryViewModel

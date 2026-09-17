@@ -6,8 +6,8 @@
 <div class="page-wrap">
     <div class="container">
         <div class="matches-header">
-            <h1>👥 @Model.Name</h1>
-            <p class="matches-meta">@Model.MemberCount member@(Model.MemberCount == 1 ? "" : "s") · everyone in this circle, whatever the overlap — a circle never filters your matches or changes a score.</p>
+            <h1><span aria-hidden="true">👥</span> @Model.Name</h1>
+            <p class="matches-meta">@Model.MemberCount member@(Model.MemberCount == 1 ? "" : "s") · the ones discoverable to you appear below, whatever the overlap — a circle never filters your matches or changes a score.</p>
         </div>
 
         @if (!Model.ViewerVisible)
@@ -26,9 +26,9 @@
         }
 
         <div class="invite-box mb-4">
-            <label class="invite-label">Invite someone to @Model.Name</label>
+            <label class="invite-label" for="circle-invite-url">Invite someone to @Model.Name</label>
             <div class="invite-row">
-                <input type="text" class="form-control invite-input" value="@Model.InviteUrl" readonly aria-label="Invite link for @Model.Name" />
+                <input type="text" id="circle-invite-url" class="form-control invite-input" value="@Model.InviteUrl" readonly />
                 <button type="button" class="btn btn-primary" data-copy="@Model.InviteUrl" data-no-busy aria-label="Copy invite link for @Model.Name" aria-live="polite">Copy link</button>
             </div>
             <small class="text-muted">Anyone with this link can join for the next @Profiler.Web.Security.CircleInvites.Lifetime.TotalDays days. We never see who you sent it to.</small>
@@ -90,15 +90,15 @@
                             }
                             @if (!string.IsNullOrWhiteSpace(member.Contact))
                             {
-                                <p class="match-contact">📮 @member.Contact</p>
+                                <p class="match-contact"><span aria-hidden="true">📮</span> @member.Contact</p>
                             }
                             else if (!Model.ViewerVisible)
                             {
-                                <p class="match-contact text-muted">🙈 Hidden while you are.</p>
+                                <p class="match-contact text-muted"><span aria-hidden="true">🙈</span> Hidden while you are.</p>
                             }
                             else
                             {
-                                <p class="match-contact text-muted">📭 @member.Username hasn't shared a way to be reached.</p>
+                                <p class="match-contact text-muted"><span aria-hidden="true">📭</span> @member.Username hasn't shared a way to be reached.</p>
                             }
                         </div>
                     </div>
@@ -106,13 +106,13 @@
             </div>
         }
 
-        <p class="mt-4 flex items-center gap-3">
+        <div class="mt-4 flex items-center gap-3">
             <a href="/matches" class="btn btn-outline">Your matches</a>
             <a href="/sources/dashboard" class="btn btn-outline">Dashboard</a>
             <form asp-action="Leave" asp-controller="Circles" method="post" class="ms-auto">
                 <input type="hidden" name="circleId" value="@Model.Id" />
                 <button type="submit" class="btn btn-outline btn-sm" aria-label="Leave @Model.Name">Leave this circle</button>
             </form>
-        </p>
+        </div>
     </div>
 </div>

@@ -34,9 +34,13 @@ public class CircleMemberViewModel
 
     /// <summary>At or above the match list's floor the usual tier applies; below it there is nothing honest to say but "not yet".</summary>
     public bool AboveFloor => Similarity >= Controllers.MatchesController.MinMatchSimilarity;
-    public string TierLabel => new MatchViewModel { Similarity = Similarity }.TierLabel;
-    public string Tier => new MatchViewModel { Similarity = Similarity }.Tier;
-    public int SimilarityPercent => new MatchViewModel { Similarity = Similarity }.SimilarityPercent;
+
+    // The tier thresholds live on the match card; one instance reuses them.
+    private MatchViewModel? _asMatch;
+    private MatchViewModel AsMatch => _asMatch ??= new MatchViewModel { Similarity = Similarity };
+    public string TierLabel => AsMatch.TierLabel;
+    public string Tier => AsMatch.Tier;
+    public int SimilarityPercent => AsMatch.SimilarityPercent;
 }
 
 /// <summary>One of the viewer's circles on the dashboard, with its current invite link.</summary>

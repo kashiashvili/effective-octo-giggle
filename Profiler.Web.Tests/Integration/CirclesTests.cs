@@ -510,10 +510,22 @@ public class CirclesTests : IClassFixture<ProfilerWebFactory>
             db.UserBlocks.RemoveRange(db.UserBlocks.Where(x => db.Users.Any(u => u.Id == x.BlockerId && u.Username == bName)));
             await db.SaveChangesAsync();
         }
+        // Reciprocity: A's contact line is on B's view while B is discoverable, withheld once B hides.
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var aUser = await db.Users.SingleAsync(u => u.Username == aName);
+            aUser.Bio = "bio " + tag; aUser.Contact = "contact-" + tag;
+            await db.SaveChangesAsync();
+        }
+        Assert.Contains("contact-" + tag, CardOf(await b.GetStringAsync($"/circles/{circleId}"), aName));
         await PostAsync(b, "/account/visibility", new() { ["discoverable"] = "false" });
         Assert.DoesNotContain(bName, await a.GetStringAsync($"/circles/{circleId}"));
-        Assert.Contains(aName, await b.GetStringAsync($"/circles/{circleId}"));
-        Assert.Contains("hidden", await b.GetStringAsync($"/circles/{circleId}"), StringComparison.OrdinalIgnoreCase);
+        var hiddenView = await b.GetStringAsync($"/circles/{circleId}");
+        Assert.Contains(aName, hiddenView);
+        Assert.DoesNotContain("contact-" + tag, hiddenView);
+        Assert.DoesNotContain("bio " + tag, hiddenView);
+        Assert.Contains("Hidden while you are.", hiddenView);
 
         // Flag off: 404.
         using var off = _factory.WithWebHostBuilder(h => h.UseSetting("Signals:CirclesEnabled", "false"));

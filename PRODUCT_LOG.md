@@ -392,7 +392,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 394 tests, fully offline
+dotnet test                           # 393 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -522,13 +522,27 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Release Auditor on the privacy inventory and the circle page: P1 and two P2s fixed.** P1: the
+  join page still said the chip and sort were "all a circle does", false since the circle page shows
+  members to members — the join page and the join confirmation now say exactly what members see.
+  P2: the inventory prose skipped six columns (comparison-form username, session cut-off, values
+  scheme, suspension time, two timestamps) and the test checked tables only — every entry now names
+  its columns and the test holds them to the model column by column; the page says "held to the
+  schema by a test" rather than "generated from it". P2: three different member counts (all
+  memberships / non-suspended / discoverable-to-you) — one definition everywhere (memberships whose
+  account is not suspended) and the page says "the ones discoverable to you appear below". P3s: the
+  Leave row is a div, emoji hidden from screen readers, the invite label is wired to its input, one
+  tier computation per member, the action is `Show`, the design records why intent/values lines stay
+  on the match list. Also fixed a red assertion committed by mistake in the token-fold unit (it took
+  the navbar's sign-out form for the connect form's close; the loop now runs test chains with
+  `pipefail`). Reciprocity on the circle page is tested. 393.
 - **Token connectors folded, not removed.** Opportunity Critic #4: the 18-card source grid was still
   ~60% of the landing page and the connect form led with 14 token cards, against the product's own
   "you never need a token" line. The landing now shows the five no-token sources (GitHub, Goodreads,
   Netflix, RSS, YouTube Takeout) and folds the thirteen token sources behind "13 more sources that
   take an API token you create yourself"; the connect form folds its token group the same way,
   inside the same form so nothing changes for anyone who has a token. Nothing is removed — culling
-  connectors stays the owner's call. Two tests (order and fold on both pages): 394.
+  connectors stays the owner's call. Two assertions sets (order and fold on both pages): 393.
 - **Circle page: the circle keeps its promise for mixed groups.** Opportunity Critic #4's structural
   finding: the chip and sort decorate the global list, which is cut at the 5% floor and the top 20,
   so a circle-mate below the floor or outside the top 20 was invisible — exactly the members a

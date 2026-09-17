@@ -203,7 +203,8 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
         Assert.True(html.IndexOf("name=\"GitHubUser\"", StringComparison.Ordinal) < fold, "no-token sources come first");
         Assert.True(html.IndexOf("name=\"YouTubeSubscriptionsCsv\"", StringComparison.Ordinal) < fold, "the Takeout upload is a no-token source");
         Assert.True(html.IndexOf("name=\"SpotifyToken\"", StringComparison.Ordinal) > fold, "token fields are inside the fold, still submitted by the same form");
-        Assert.True(html.IndexOf("</details>", StringComparison.Ordinal) < html.IndexOf("</form>", StringComparison.Ordinal), "the fold closes inside the form");
+        // The navbar carries a sign-out form, so look for the connect form's close after the fold.
+        Assert.True(html.IndexOf("</details>", fold, StringComparison.Ordinal) < html.IndexOf("</form>", fold, StringComparison.Ordinal), "the fold closes inside the form");
     }
 
     [Fact]

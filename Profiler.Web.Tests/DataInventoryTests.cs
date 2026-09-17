@@ -27,6 +27,12 @@ public class DataInventoryTests
             Assert.False(string.IsNullOrWhiteSpace(k.Name));
             Assert.False(string.IsNullOrWhiteSpace(k.What));
             Assert.False(string.IsNullOrWhiteSpace(k.Control));
+
+            // Column by column: a column nobody described, or a described column that is gone, fails here.
+            var actual = db.Model.FindEntityType(k.Entity)!.GetProperties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal).ToArray();
+            var described = k.Columns.OrderBy(n => n, StringComparer.Ordinal).ToArray();
+            Assert.True(actual.SequenceEqual(described),
+                $"{k.Entity.Name}: undescribed [{string.Join(", ", actual.Except(described))}], stale [{string.Join(", ", described.Except(actual))}]");
         });
     }
 }
