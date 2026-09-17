@@ -49,6 +49,9 @@ az webapp config appsettings set -g "$RG" -n "$APP_NAME" -o none --settings \
   WEBSITES_ENABLE_APP_SERVICE_STORAGE=true \
   "ConnectionStrings__Default=Data Source=/home/data/profiler.db" \
   DataProtection__KeyPath=/home/data/keys \
+  `# Rolling database snapshots (daily, 7 kept) — F1/B1 have no platform backup. Download them with` \
+  `# the Kudu zip API; see README "Back up and restore".` \
+  Backup__Directory=/home/data/backups \
   "Fingerprint__Pepper=$PEPPER" \
   "Metrics__Token=$METRICS_TOKEN" \
   AntiAbuse__GuardRegistration=true \
@@ -61,7 +64,9 @@ az webapp config appsettings set -g "$RG" -n "$APP_NAME" -o none --settings \
 
 echo "==> Single instance (SQLite corrupts if App Service scales out) + health check"
 az appservice plan update -g "$RG" -n "$PLAN" --number-of-workers 1 -o none 2>/dev/null || true
-az webapp config set -g "$RG" -n "$APP_NAME" --generic-configurations '{"healthCheckPath":"/"}' -o none 2>/dev/null || true
+# /health is 200 only when the database is reachable, so a container that boots but cannot open its
+# database is restarted instead of serving errors. (Ignored on the free tier, which has no health check.)
+az webapp config set -g "$RG" -n "$APP_NAME" --generic-configurations '{"healthCheckPath":"/health"}' -o none 2>/dev/null || true
 
 echo
 echo "=================================================================="

@@ -31,10 +31,10 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last non-docs commit `bb4e70b` (2026-09-12, Azure deploy path); later commits are docs/config.
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **349 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit: go-live data-safety unit (2026-09-17, snapshots + healthcheck + `/health`; hash in §10 once recorded).
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **357 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
-- Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `ForwardedHeaders:*`, `RateLimiting:*`.
+- Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*`.
 
 ## 3. Phase
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**None active. Stopped under `CLAUDE.md` §10 condition 3** — every remaining bet is owner-gated (§5, §6) and evidence-independent work is exhausted. Docs consolidation + optimisation completed 2026-09-17 (`fca4d0c`, `1feb8bf`, `ebb481c`, `b43aad9`). Product Owner review after it: last evidence-independent candidate (music/film genre bridge) rejected as low value before a pool exists — fuzzy mapping with no density to validate against. No new assumption test or structural inspection identified that real usage would not answer better.
+**Go-live data-safety unit — built, validated, committing (2026-09-17).** Fresh-session Product Owner review reopened the stop-3 idle: structural inspection of the recommended go-live path found evidence-independent defects, all fixed in one unit: rolling SQLite snapshots (`Backup:*`, SQLite online-backup API, cadence anchored to disk, pre-migration snapshot, per-kind retention, honest retention disclosure on Privacy + delete panel); compose healthcheck that can actually pass (runtime image has no `wget`/`curl`; bash `/dev/tcp` probe); `/health` for Azure health-check path + deploy readiness poll; README backup/restore runbook (compose + Kudu). 8 tests → 357. Live compose verification: see §11.
 
-**Exact resume action:** on any owner reply to `docs/OWNER_DECISIONS.md` (even one decision), implement it immediately, log it in `PRODUCT_LOG.md`, close the brief entry, resume the loop. Recommended first reply: Decision 4 (go live) — it unblocks the evidence every other bet needs. Owner-only steps in that decision (`az login`, bootstrap, repo secrets, `main` promotion) are the owner's to run; the loop prepares and verifies everything else.
+**Next mandatory action:** Product Owner review of this unit, then discovery pass (fresh structural inspection of go-live path proved productive; continue on the same vein: SQLite-on-Azure-Files semantics, restore drill, operator runbook gaps) before re-declaring stop condition 3. Owner replies to `docs/OWNER_DECISIONS.md` still pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -59,7 +59,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 
 - **P0** — none.
 - **P1** — none evidence-independent. Gated: second values axis (evidence + owner); connector-side rarity weighting (needs fingerprint-scheme versioning design first — `SchemeVerifier` covers pepper only, so old/new connector signatures would silently stop matching; plus privacy-safe common-feature source); community-scoped pools (needs real community partner).
-- **P2** — extend canonical bridge to music/film genres (fuzzy multi-vocabulary mapping); shared single-use ticket cache if ever multi-instance (in-process today; single worker on App Service anyway).
+- **P2** — extend canonical bridge to music/film genres (fuzzy multi-vocabulary mapping); shared single-use ticket cache if ever multi-instance (in-process today; single worker on App Service anyway); off-host snapshot shipping (needs a destination = owner credentials → gated).
 - **P3** — interest clusters / community formation (density-gated); opt-in Web Push return channel (needs pool); privacy-respecting CAPTCHA option (provider); client-side fingerprinting for self-describe path (pepper-on-client problem, premature).
 - **P4** — LSH banding past few thousand users; pagination; match-card redesign closed as not warranted after worst-case walk.
 
@@ -88,6 +88,8 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 ## 9. Known Risks
 
 - `Fingerprint:Pepper` rotation wipes every signature (detected at startup, users must reconnect). Back it up.
+- Database snapshots live on the same volume as the database: they cover bad migration/release/data damage, not loss of the volume. Off-host copy is a manual owner step (README "Back up and restore"). Deleted rows survive in snapshots ≤7 days (disclosed in-product).
+- SQLite on App Service `/home` is an SMB share: keep the default rollback journal (never WAL — needs shared memory, breaks on network filesystems); single worker already pinned.
 - SQLite: App Service must stay at one worker; bootstrap pins it. Scaling out corrupts.
 - Registration ticket single-use cache is in-process (fine single-instance).
 - Values signal = most sensitive data, least validated signal; default still on pending Decision 2.
@@ -100,6 +102,6 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 
 ## 11. Deploy Status
 
-- **Compose (local/VPS):** verified 2026-08-08 — production image boots, migrations apply, `deploy/smoke.sh` 16/16, data + key ring survive restart, register rate limit fires. Secrets in gitignored `deploy/.env.production`.
+- **Compose (local/VPS):** re-verified 2026-09-17 — rebuilt image boots, container reports `healthy` (new bash `/dev/tcp` probe on `/health`), startup snapshot written to `/data/backups` as `app`, `deploy/smoke.sh` 16/16, snapshot copied off via `docker cp` passes `PRAGMA integrity_check` with all 16 migrations, restart adds no duplicate snapshot, privacy page shows the 7-day retention line. Secrets in gitignored `deploy/.env.production`.
 - **GHCR:** every push to `main` / `v*` tag builds + publishes `ghcr.io/kashiashvili/effective-octo-giggle`. Needs repo Actions permission "Read and write".
 - **Azure:** workflow present, skipped until owner completes Decision 4 steps. Not yet live.

@@ -27,6 +27,12 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.CookieTempDataProviderOption
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=profiler.db"));
 
+// Rolling SQLite snapshots (off unless "Backup:Directory" is set). The only recovery path on hosts
+// without platform backups; see Data.DatabaseSnapshots and the README's backup/restore runbook.
+var snapshotOptions = builder.Configuration.GetSection(SnapshotOptions.Section).Get<SnapshotOptions>() ?? new SnapshotOptions();
+builder.Services.AddSingleton(snapshotOptions);
+builder.Services.AddHostedService<DatabaseSnapshotService>();
+
 // Persist the Data Protection key ring to disk so auth cookies stay valid across restarts and
 // redeploys. The default location is ephemeral in containers, which would silently sign everyone
 // out on every deploy. Override the folder with "DataProtection:KeyPath".
@@ -235,6 +241,9 @@ if (forwardedHeaders != null) app.UseForwardedHeaders(forwardedHeaders);
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    // A migration that goes wrong is the one moment data can be lost with nothing to fall back on, so an
+    // established database is snapshotted first (no-op for a fresh or already-current database).
+    DatabaseSnapshots.BeforeMigrate(db, snapshotOptions, app.Logger);
     db.Database.Migrate();
 
     // Backfill the normalized username for rows that predate the column. The migration can only

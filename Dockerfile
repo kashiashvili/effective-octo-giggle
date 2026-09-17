@@ -17,9 +17,10 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 COPY --from=build /app .
 
-# The SQLite database and the Data Protection key ring live under /data — mount a volume here so they
-# survive restarts and redeploys (lose the keys and every auth cookie is invalidated; lose the db and
-# everyone's fingerprints are gone). Owned by the image's non-root "app" user.
+# The SQLite database, the Data Protection key ring and rolling database snapshots live under /data —
+# mount a volume here so they survive restarts and redeploys (lose the keys and every auth cookie is
+# invalidated; lose the db and everyone's fingerprints are gone). Owned by the image's non-root "app"
+# user. Copy /data/backups off the host now and then: see README "Back up and restore".
 RUN mkdir -p /data && chown -R app:app /data
 VOLUME /data
 USER app
@@ -27,7 +28,8 @@ USER app
 ENV ASPNETCORE_ENVIRONMENT=Production \
     ASPNETCORE_URLS=http://+:8080 \
     ConnectionStrings__Default="Data Source=/data/profiler.db" \
-    DataProtection__KeyPath=/data/keys
+    DataProtection__KeyPath=/data/keys \
+    Backup__Directory=/data/backups
 # Fingerprint__Pepper is deliberately NOT baked into the image — it is a per-deployment secret and the
 # app refuses to start without one outside Development. Provide it at runtime, e.g.:
 #   docker run -e Fingerprint__Pepper="$(openssl rand -base64 32)" -v profiler-data:/data -p 8080:8080 <image>

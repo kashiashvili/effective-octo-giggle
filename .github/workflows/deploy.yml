@@ -104,11 +104,12 @@ jobs:
 
       # A container that cannot boot still "deploys" — App Service just serves 503. The app is also
       # configured to refuse to start on a bad ForwardedHeaders/pepper setup, which is exactly the
-      # failure this catches. On the free tier the first request also wakes a sleeping app, so allow
-      # a generous window.
+      # failure this catches. /health answers 200 only once migrations ran and the database opens, so
+      # it also catches a lost or unwritable /home volume. On the free tier the first request also
+      # wakes a sleeping app, so allow a generous window.
       - name: Wait for the app to answer
         run: |
-          URL="https://${{ vars.AZURE_WEBAPP_NAME }}.azurewebsites.net/"
+          URL="https://${{ vars.AZURE_WEBAPP_NAME }}.azurewebsites.net/health"
           for i in $(seq 1 40); do
             code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$URL" || echo 000)
             echo "attempt $i: HTTP $code"

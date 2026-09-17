@@ -303,6 +303,10 @@ Schema changes are made with EF migrations and applied on startup via
 5. Signal counts are aggregate numbers only — not the underlying interests.
 6. Other users only ever see your **username, a match tier/approximate %, the source
    types you share, and whatever bio/contact you chose to make public.**
+7. Where the operator turns on database snapshots (`Backup:Directory`; the shipped container
+   and Azure setups do), a deleted account survives in them for at most `Backup:Keep ×
+   Backup:IntervalHours` (7 days by default). The snapshots are copies of the same signature-only
+   database on the same volume; the privacy page and the delete-account panel state the number.
 
 Two signatures are compared to estimate how much two people's interests overlap
 (Jaccard similarity) without either side revealing what those interests are.
@@ -328,6 +332,9 @@ All settings come from `appsettings.json` or environment variables.
 | `AntiAbuse:GuardRegistration` | `false` | Enforce the signed single-use registration form ticket. Turn on for a public launch |
 | `AntiAbuse:MinFormSeconds` | `3` | With the guard on, reject a registration submitted faster than this after the form loaded |
 | `Signals:ValuesEnabled` | `true` | Set `false` to hide the values questionnaire, the match-card alignment line and the "Similar outlook first" sort; stored buckets are kept for a clean re-enable |
+| `Backup:Directory` | — (off) | Folder for rolling SQLite snapshots. Image sets `/data/backups`, Azure bootstrap `/home/data/backups`; unset in dev/tests |
+| `Backup:Keep` | `7` | Snapshots kept per kind (`scheduled`, `premigrate`) |
+| `Backup:IntervalHours` | `24` | Scheduled cadence, anchored to the newest snapshot on disk |
 
 ---
 
@@ -335,7 +342,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 349 tests, fully offline
+dotnet test                           # 357 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -349,6 +356,16 @@ dotnet test                           # 349 tests, fully offline
   reconnect).
 - **Schema changes** ship as EF migrations and apply automatically on startup.
 - Add a migration: `dotnet ef migrations add <Name> --project Profiler.Web`.
+- **Back up.** `Data/DatabaseSnapshots` + `DatabaseSnapshotService` write consistent snapshots via
+  SQLite's online-backup API whenever `Backup:Directory` is set: a scheduled one every
+  `Backup:IntervalHours` (cadence anchored to the newest file, so a host that recycles the process
+  — App Service F1 sleeps — neither piles up copies nor skips a day) and one right before a
+  migration touches an established database; `Backup:Keep` newest per kind. Failures log and retry,
+  never crash the app. Copy them off-host (`docker cp profiler:/data/backups .`; Kudu
+  `/api/zip/data/backups/` on Azure) and restore by stop → replace file → start — exact commands in
+  `README.md` "Back up and restore". `/health` (DB reachability) is what the compose healthcheck
+  (bash `/dev/tcp`, since the runtime image has no `wget`/`curl`), the Azure health-check path and
+  the deploy workflow's readiness poll all hit.
 
 ### Container (any Docker host) — verified 2026-08-08
 `Dockerfile` (multi-stage, non-root, `/data` volume, pepper injected at runtime) and
@@ -411,6 +428,9 @@ data loss: `az appservice plan update -g <rg> -n <plan> --sku B1`.
   user's fingerprint, then compares against all of them. Fine at current scale; past a few
   thousand users this needs LSH banding (bucket candidates by signature bands) so each request
   only compares against plausible neighbours.
+- **Snapshots live on the same volume as the database.** They cover a bad migration, a bad
+  release or accidental data damage, not the loss of the volume itself; copying `backups/` off-host
+  is a manual operator step (README "Back up and restore").
 - **SQLite means one instance.** Run a single worker (the Azure bootstrap pins it); the
   registration ticket's single-use cache is in-process too, so a multi-instance deployment would
   need a shared cache and a different database.
@@ -439,6 +459,32 @@ pool); client-side fingerprinting (pepper-on-client problem).
 ## 11. Changelog (newest first)
 
 Each entry: what changed and why it mattered.
+
+### 2026-09-17 (later)
+- **Go-live data safety: rolling database snapshots, a working container healthcheck, `/health`
+  everywhere.** A fresh-session structural inspection of the recommended go-live path found that
+  nothing backed the database up — the state file said "back it up" with no tooling, App Service
+  F1/B1 has no platform backup, and the permanent pepper makes lost signatures unrebuildable — and
+  that the compose healthcheck called `wget`, which the runtime image does not ship, so the
+  container reported `unhealthy` forever (verified in the built image). Shipped: `Backup:Directory`-
+  gated snapshots through SQLite's online-backup API (a plain copy of a live database can be torn),
+  scheduled every `Backup:IntervalHours` with the cadence anchored to the newest file on disk so a
+  sleeping/recycling host neither duplicates nor skips, plus an automatic snapshot of an established
+  database right before migrations run; `Backup:Keep` newest per kind; failures log and retry. The
+  image and the Azure bootstrap point it at the persistent volume; dev and tests stay off. Because
+  "permanently deleted" must stay true including backups, the privacy page and the delete-account
+  panel now state the retention window whenever snapshots are on. The compose probe speaks HTTP over
+  bash's `/dev/tcp` to `/health`; the Azure health-check path and the deploy workflow's readiness
+  poll moved from `/` to `/health`, so a container that boots but cannot open its database (lost or
+  unwritable volume) fails the deploy instead of serving errors. README gained a backup/restore
+  runbook for compose (`docker cp`, `docker compose run` restore) and Azure (Kudu zip/vfs API with
+  the publish-profile credentials). 8 tests (consistent copy, no-op paths, per-kind prune, UTC stamp
+  parsing, pre-migration only when pending on an established DB, retention arithmetic, host boots
+  and writes a snapshot, disclosure on/off): 357. Live compose verification: rebuilt image reports
+  `healthy`, startup snapshot lands on the volume owned by `app`, `deploy/smoke.sh` 16/16, the
+  copied-out snapshot passes `PRAGMA integrity_check` with all 16 migrations, a restart adds no
+  duplicate, the privacy page shows "7 days". Independent reviewer (read-only) found one docs gap
+  (Kudu VFS root), fixed.
 
 ### 2026-09-17
 - **Documentation consolidated so the loop and the owner read one truth each.** `CLAUDE.md`

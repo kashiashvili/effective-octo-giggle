@@ -1,3 +1,4 @@
+@inject Profiler.Web.Data.SnapshotOptions Snapshots
 @{
     ViewBag.Title = "Privacy";
 }
@@ -61,6 +62,15 @@
                     delete your entire account from the dashboard, which permanently removes your
                     user record, fingerprint, and every per-source signature.
                 </p>
+                @if (Snapshots.Enabled)
+                {
+                    <p class="text-muted mb-0">
+                        For disaster recovery this server keeps rolling snapshots of its database for up to
+                        <strong>@Snapshots.RetentionDays days</strong>. They hold the same signatures as the live
+                        database — never raw data — stay on the same server, and anything you delete leaves
+                        them on that schedule.
+                    </p>
+                }
             </div>
         </div>
     </div>

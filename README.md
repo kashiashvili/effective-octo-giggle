@@ -170,6 +170,9 @@ All settings can be supplied via `appsettings.json` or environment variables.
 | `AntiAbuse:GuardRegistration`    | `false`              | Enforce the signed single-use registration form ticket (blocks blind/replayed POSTs). Turn on for a public launch |
 | `AntiAbuse:MinFormSeconds`       | `3`                  | When the guard is on, reject a registration submitted faster than this after the form loaded |
 | `Signals:ValuesEnabled`          | `true`               | The optional values/outlook signal (questionnaire, match-card alignment line, "Similar outlook first" sort). Set `false` to hide all three — the data-minimizing default until the signal is strengthened; stored buckets are kept for a clean re-enable |
+| `Backup:Directory`               | — (off)              | Folder for rolling SQLite snapshots (the container image sets `/data/backups`, the Azure bootstrap `/home/data/backups`). Unset = no snapshots |
+| `Backup:Keep`                    | `7`                  | Snapshots kept per kind (scheduled / pre-migration); older ones are deleted |
+| `Backup:IntervalHours`           | `24`                 | Hours between scheduled snapshots, anchored to the newest file on disk so restarts neither skip nor duplicate |
 | `ForwardedHeaders:Enabled`       | `false`              | Believe `X-Forwarded-For`/`-Proto` (set this behind a proxy) |
 | `ForwardedHeaders:KnownProxies`  | —                    | Proxy IPs to trust, comma-separated. Required when enabled |
 | `ForwardedHeaders:KnownNetworks` | —                    | Proxy networks to trust in CIDR form, e.g. `10.0.0.0/8` |
@@ -203,7 +206,10 @@ All settings can be supplied via `appsettings.json` or environment variables.
   (`dotnet ef migrations add <Name> --project Profiler.Web`), applied automatically
   on startup — no manual database steps.
 - **Health probe:** `GET /health` returns `200 {"status":"healthy"}` when the database
-  is reachable, `503` otherwise. Anonymous, and reports nothing beyond reachability.
+  is reachable, `503` otherwise. Anonymous, and reports nothing beyond reachability. The compose
+  healthcheck, the Azure health-check path and the deploy workflow's readiness poll all use it.
+- **Back up the database — see below.** Neither a bare Docker host nor App Service F1/B1 backs
+  anything up for you, and the pepper makes lost signatures unrebuildable.
 - **Moderation is operator-token-gated.** Users can `Report` a match (recorded with a
   closed-set reason, and the reported user is hidden from the reporter). To act on reports,
   set `Metrics:Token` and call `GET /metrics/reports` (reported users ranked by distinct
@@ -221,6 +227,59 @@ All settings can be supplied via `appsettings.json` or environment variables.
   shared cache (fine for a single instance). For very high-value protection you can still add a
   privacy-respecting CAPTCHA in front as well.
 
+### Back up and restore
+
+With `Backup:Directory` set (the image and the Azure bootstrap both set it) the app writes a
+**consistent snapshot** of its SQLite database through SQLite's online-backup API — a plain copy of a
+database that is being written can be torn — every `Backup:IntervalHours` (24) and keeps the newest
+`Backup:Keep` (7), as `profiler-scheduled-<UTC stamp>.db`. It also snapshots an **established database
+right before applying a migration** (`profiler-premigrate-…`, same retention), the one moment a bad
+release could lose data with nothing to fall back on. Snapshots hold exactly what the live database
+holds — signatures, never raw data — and a deleted account leaves them within `Keep × Interval` days;
+the privacy page and the delete-account panel state that number when snapshots are on.
+
+Snapshots live on the same volume as the database, so **copy them off the host** now and then:
+
+```bash
+# Docker / compose (container name "profiler")
+docker cp profiler:/data/backups ./profiler-backups
+```
+
+```bash
+# Azure App Service: the Kudu zip API serves /home. Credentials = userName / userPWD from the
+# publish profile the bootstrap printed (az webapp deployment list-publishing-profiles --xml).
+curl -u '$<app-name>:<userPWD>' "https://<app-name>.scm.azurewebsites.net/api/zip/data/backups/" -o profiler-backups.zip
+```
+
+Restore = stop the app, replace the database file (and drop any stale `-journal`), start the app.
+Never write the file while the app is running. Cookies stay valid (the key ring is untouched) and
+the pepper is unchanged, so restored signatures keep matching.
+
+Docker / compose, restoring a snapshot that is already on the volume:
+
+```bash
+docker compose stop profiler
+docker compose run --rm --no-deps --user root --entrypoint bash profiler -c \
+  'cp /data/backups/profiler-scheduled-YYYYMMDD-HHMMSS.db /data/profiler.db && rm -f /data/profiler.db-journal && chown app:app /data/profiler.db'
+docker compose start profiler
+```
+
+(To restore a file from your machine instead, add `-v "$PWD:/restore:ro"` to the `run` line and copy
+from `/restore/<file>.db`.)
+
+Azure App Service, from a file on your machine. Both Kudu APIs are rooted at `/home`, so
+`/api/vfs/data/profiler.db` is the persistent `/home/data/profiler.db` the bootstrap configured:
+
+```bash
+az webapp stop -g profiler-rg -n <app-name>
+curl -u '$<app-name>:<userPWD>' -X PUT -H 'If-Match: *' --data-binary @profiler-scheduled-YYYYMMDD-HHMMSS.db \
+  "https://<app-name>.scm.azurewebsites.net/api/vfs/data/profiler.db"
+curl -u '$<app-name>:<userPWD>' -X DELETE -H 'If-Match: *' "https://<app-name>.scm.azurewebsites.net/api/vfs/data/profiler.db-journal" || true
+az webapp start -g profiler-rg -n <app-name>
+```
+
+Then `GET /health` must answer 200 and `deploy/smoke.sh` should pass against the restored deployment.
+
 ---
 
 ## Running tests
@@ -229,7 +288,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 dotnet test
 ```
 
-The suite (349 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (357 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 

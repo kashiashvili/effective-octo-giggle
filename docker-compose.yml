@@ -18,11 +18,14 @@ services:
     env_file:
       - deploy/.env.production
     volumes:
-      # The SQLite database AND the Data Protection key ring live here. Keep this volume across
-      # redeploys: losing it logs everyone out and (without the same pepper) invalidates fingerprints.
+      # The SQLite database, the Data Protection key ring AND rolling database snapshots (/data/backups)
+      # live here. Keep this volume across redeploys: losing it logs everyone out and (without the same
+      # pepper) invalidates fingerprints. Copy the snapshots off-host: `docker cp profiler:/data/backups .`
       - profiler-data:/data
+    # The runtime image ships neither wget nor curl, so the probe speaks HTTP over bash's /dev/tcp.
+    # /health answers 200 only when the database is reachable.
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/ >/dev/null 2>&1 || exit 1"]
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200 '"]
       interval: 30s
       timeout: 5s
       retries: 3

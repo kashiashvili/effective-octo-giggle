@@ -7,7 +7,7 @@ data** is done: multi-source matching (interests + intent + values), self-descri
 interests, cross-pool bridging, rarity weighting, evidence-recalibrated tiers, the shared-interest
 reveal, the full trust-&-safety loop (report → operator review → reversible suspend), privacy-preserving
 anti-sybil, token-gated measurement, and a containerized deploy pipeline on `main`. Three independent
-Release Audits and two Opportunity Critics; 349 tests, 0 warnings (re-verified 2026-09-17).
+Release Audits and two Opportunity Critics; 357 tests, 0 warnings (re-verified 2026-09-17).
 
 What remains needs **you**. Each decision below has the evidence, the options, a recommendation, and
 what it unblocks. None require reading code — the loop can execute whichever way you decide.
@@ -99,6 +99,8 @@ real users produces (surfaced privately via token-gated `/metrics`). The loop ca
 3. Run the image with a **persistent `/data` volume** (SQLite db + Data Protection keys).
 4. Set **`Metrics:Token`** (operator/moderation access) and, for public launch, **`AntiAbuse:GuardRegistration=true`**.
 5. Front it with **TLS** and set the **forwarded-headers** options so rate limiting / HTTPS see the real client.
+6. Copy the app's rolling database snapshots (`/data/backups`, on Azure `/home/data/backups`) off the host
+   now and then — the volume is the only copy (`README.md` "Back up and restore").
 
 **Evidence.** Compose deployment verified 2026-08-08: production image boots, migrations apply, smoke test
 16/16, data and key ring survive a restart. The Azure workflow is present and skipped until the repo variable
