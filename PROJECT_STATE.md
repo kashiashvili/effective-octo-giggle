@@ -32,7 +32,7 @@
 ## 2. Baseline (2026-09-17)
 
 - Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `ab80929` (2026-09-17, go-live data safety: snapshots + healthcheck + `/health`).
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **357 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **358 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*`.
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Discovery: first-cohort match experience (started 2026-09-17).** Product Owner review of `ab80929`: unit complete, restore drill passed, group-onboarding register-limit foot-gun documented. Next inspection on the go-live path: what a 5–20 person private cohort sees — minimum-similarity cutoff on the matches page, tier reachability at small pool sizes (existing calibration used synthetic populations; pool size assumption to verify). Outcome decides whether a "closest people anyway" fallback below the Good tier is warranted before Decision 4 lands, or whether the empty state already covers it.
+**Evidence-capture unit — built, validated, committing (2026-09-17).** First-cohort inspection closed: matches list shows anyone ≥0.05 estimated Jaccard labelled "Some overlap", empty state covers the rest — no fallback needed. `/metrics` gained the funnel + return counters the assumptions table needs (`fingerprintsBySource`, `viewedMatches`, `returnedAfterFirstDay`, `activeLast7Days`, `registeredLast7Days`), aggregate only, no new tracking; boot-time EF warning 10103 silenced. 1 test → 358.
 
-Owner replies to `docs/OWNER_DECISIONS.md` still pre-empt everything.
+**Next mandatory action:** Product Owner review, then continue discovery on the go-live path (remaining veins: Data Protection keys unencrypted at rest on the volume — document or brief; Azure Files + SQLite cannot be tested here; operator runbook for reading `/metrics` over time). Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -81,8 +81,8 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 | Outlook sort is worth its reorder | Tested: ~66% top-1 change from weak signal (`ValuesSortImpactTests`) → owner brief |
 | Rarity weighting separates niche from common | Tested: 6.4× (`InterestWeightingExperimentTests`) → shipped self-described side |
 | Self-described + connector users can match | Tested for languages (bridge integration test); genres unbridged |
-| Interest similarity motivates real outreach | Untested — needs live users |
-| Privacy-conscious users will connect sources / self-describe | Untested — needs `/metrics` adoption counts |
+| Interest similarity motivates real outreach | Untested — proxy live via `/metrics` `returnedAfterFirstDay`, `withContact` |
+| Privacy-conscious users will connect sources / self-describe | Untested — live via `/metrics` `withFingerprint`, `fingerprintsBySource` |
 | Users understand separate signals vs one score | Untested — needs live users |
 
 ## 9. Known Risks

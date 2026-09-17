@@ -58,11 +58,37 @@ public class MetricsController : ControllerBase
                 .ToDictionaryAsync(x => x.Bucket.ToString(), x => x.Count)
             : null;
 
+        // The funnel and the return signal — the questions a live cohort has to answer before any
+        // further signal investment: did people get as far as a fingerprint, did they ever open the
+        // match list, and did they come back to it after the first day? Computed from the two
+        // timestamps already stored per account (registration, last plain match-list visit), so this
+        // adds no tracking. The return check runs in memory over just the two dates of users who
+        // viewed matches, rather than trusting date arithmetic translation to SQLite.
+        var now = DateTime.UtcNow;
+        var weekAgo = now.AddDays(-7);
+        var viewers = await users.Where(u => u.LastMatchesViewedAt != null)
+            .Select(u => new { u.CreatedAt, LastViewed = u.LastMatchesViewedAt!.Value })
+            .ToListAsync();
+        var returnedAfterFirstDay = viewers.Count(v => v.LastViewed - v.CreatedAt >= TimeSpan.FromDays(1));
+
+        // How people fingerprint: self-described vs each connector, as a count of accounts per source.
+        // Source types are already shown to every match ("shared source types"), so unlike intent and
+        // values this is not sensitive and is not withheld below the cohort.
+        var fingerprintsBySource = await _db.SourceFingerprints
+            .GroupBy(s => s.Source)
+            .Select(g => new { Source = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Source, x => x.Count);
+
         return Ok(new
         {
-            GeneratedAtUtc = DateTime.UtcNow,
+            GeneratedAtUtc = now,
             TotalUsers = totalUsers,
+            RegisteredLast7Days = await users.CountAsync(u => u.CreatedAt >= weekAgo),
             WithFingerprint = await _db.Fingerprints.CountAsync(),
+            FingerprintsBySource = fingerprintsBySource,
+            ViewedMatches = viewers.Count,
+            ReturnedAfterFirstDay = returnedAfterFirstDay,
+            ActiveLast7Days = await users.CountAsync(u => u.LastMatchesViewedAt >= weekAgo),
             Discoverable = await users.CountAsync(u => u.IsDiscoverable),
             WithBio = await users.CountAsync(u => u.Bio != null),
             WithContact = await users.CountAsync(u => u.Contact != null),

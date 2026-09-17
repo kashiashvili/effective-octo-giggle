@@ -263,7 +263,7 @@ using (var scope = app.Services.CreateScope())
     // against anybody, forever and silently. Clearing them puts everyone back to "connect a source",
     // which is recoverable; the raw interests needed to rebuild them are deliberately gone.
     var verifier = app.Services.GetRequiredService<FingerprintGenerator>().SchemeVerifier;
-    var scheme = db.FingerprintSchemes.FirstOrDefault();
+    var scheme = db.FingerprintSchemes.OrderBy(s => s.Id).FirstOrDefault();
     if (scheme == null)
     {
         // No record of a scheme, but signatures present, means they predate the pepper and were

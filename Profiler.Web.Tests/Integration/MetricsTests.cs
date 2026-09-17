@@ -83,6 +83,61 @@ public class MetricsTests : IClassFixture<ProfilerWebFactory>
     }
 
     [Fact]
+    public async Task FunnelAndReturnCounts_AreAggregatesOfStoredTimestamps_AndNameNobody()
+    {
+        var client = WithToken();
+        var before = await ReadAsync(client);
+
+        // Three accounts: one registered days ago who came back to the match list today (returned),
+        // one who registered and looked today (viewed, not returned), one who never looked.
+        var tag = Guid.NewGuid().ToString("N")[..8];
+        var now = DateTime.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var returned = new AppUser { Username = "ret_" + tag, PasswordHash = "x", CreatedAt = now.AddDays(-3), LastMatchesViewedAt = now };
+            var viewed = new AppUser { Username = "vw_" + tag, PasswordHash = "x", CreatedAt = now, LastMatchesViewedAt = now };
+            var never = new AppUser { Username = "nv_" + tag, PasswordHash = "x", CreatedAt = now.AddDays(-10) };
+            db.Users.AddRange(returned, viewed, never);
+            db.SourceFingerprints.Add(new SourceFingerprintRecord
+            {
+                User = returned, Source = SourcesController.SelfDescribedSource, FeatureCount = 5
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var (after, body) = await ReadWithBodyAsync(client);
+
+        Assert.Equal(3, after.TotalUsers - before.TotalUsers);
+        Assert.Equal(2, after.RegisteredLast7Days - before.RegisteredLast7Days);
+        Assert.Equal(2, after.ViewedMatches - before.ViewedMatches);
+        Assert.Equal(1, after.ReturnedAfterFirstDay - before.ReturnedAfterFirstDay);
+        Assert.Equal(2, after.ActiveLast7Days - before.ActiveLast7Days);
+        var selfBefore = before.FingerprintsBySource.GetValueOrDefault(SourcesController.SelfDescribedSource);
+        Assert.Equal(1, after.FingerprintsBySource[SourcesController.SelfDescribedSource] - selfBefore);
+        // Aggregates only: no account is named anywhere in the payload.
+        Assert.DoesNotContain(tag, body);
+    }
+
+    private sealed record Snapshot(
+        int TotalUsers, int RegisteredLast7Days, int ViewedMatches, int ReturnedAfterFirstDay, int ActiveLast7Days,
+        Dictionary<string, int> FingerprintsBySource);
+
+    private async Task<Snapshot> ReadAsync(HttpClient client) => (await ReadWithBodyAsync(client)).Snapshot;
+
+    private async Task<(Snapshot Snapshot, string Body)> ReadWithBodyAsync(HttpClient client)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Get, "/metrics");
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Token);
+        var resp = await client.SendAsync(req);
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var body = await resp.Content.ReadAsStringAsync();
+        var snapshot = System.Text.Json.JsonSerializer.Deserialize<Snapshot>(body,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        return (snapshot, body);
+    }
+
+    [Fact]
     public async Task AnOrdinarySession_DoesNotGrantAccess()
     {
         var client = WithToken();

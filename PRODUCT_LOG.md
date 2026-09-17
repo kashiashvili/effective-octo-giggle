@@ -198,8 +198,11 @@ and the two CSV uploads need no account credentials.
 
 ### Trust, safety & operations (operator-token-gated)
 - Setting `Metrics:Token` enables three operator endpoints, all `404` until then:
-  `GET /metrics` (aggregate adoption counts — how many users set an intent, took the questionnaire,
-  etc.; breakdowns withheld below a 10-user cohort so nobody is identifiable),
+  `GET /metrics` (aggregate adoption counts: the funnel — registered, registered last 7 days, with
+  fingerprint, fingerprints by source (self-described vs each connector), ever viewed matches,
+  returned to the match list ≥1 day after registering, active last 7 days — plus bio/contact/intent/
+  values adoption; intent and values breakdowns withheld below a 10-user cohort so nobody is
+  identifiable; all computed from columns already stored, no new tracking),
   `GET /metrics/reports` (reported users ranked by distinct reporters, with suspension status) and
   `POST /metrics/suspend` (`{"username":"…","suspend":true|false}`).
 - **Suspension is a reversible flag** (`AppUser.SuspendedAt`): a suspended account is removed from
@@ -342,7 +345,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 357 tests, fully offline
+dotnet test                           # 358 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -461,6 +464,17 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **`/metrics` now answers the questions the first cohort exists to answer.** The state file's untested
+  assumptions — do privacy-conscious people fingerprint at all, self-described or via a connector;
+  does interest similarity bring anyone back — were "needs live users", but the live endpoint only
+  reported adoption of the extra signals. Added, all as aggregate counts over the two timestamps and
+  the source names already stored (no new tracking): `registeredLast7Days`, `fingerprintsBySource`,
+  `viewedMatches`, `returnedAfterFirstDay` (last plain match-list visit ≥1 day after registration —
+  the "try-but-not-return" number), `activeLast7Days`. Source breakdown is not cohort-withheld because
+  source types are already shown to every match. Return arithmetic runs in memory over the viewers'
+  two dates rather than trusting date translation to SQLite. Also silenced the boot-time EF warning
+  10103 (`FirstOrDefault` without ordering on the single-row scheme table). One delta-based
+  integration test (three seeded accounts, exact deltas, tag never in payload): 358.
 - **Go-live data safety: rolling database snapshots, a working container healthcheck, `/health`
   everywhere.** A fresh-session structural inspection of the recommended go-live path found that
   nothing backed the database up — the state file said "back it up" with no tooling, App Service
