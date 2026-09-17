@@ -147,7 +147,7 @@ For each candidate, in order:
 ## 8. Validation Ladder (this repo)
 
 1. `dotnet build -warnaserror` — same flag CI uses.
-2. `dotnet test` — green; count ≥ baseline in `PROJECT_STATE.md` §2, or the drop explained in `PRODUCT_LOG.md`; record new count.
+2. `dotnet test` — green; count ≥ baseline in `PROJECT_STATE.md` §2, or the drop explained in `PRODUCT_LOG.md`; record new count. Never chain a commit behind a piped/filtered test run: the pipe's exit status hides a red test (`set -o pipefail`, or check the `Failed!` line first) — a red test was committed once this way on 2026-09-17.
 3. New migration → integration suite (boots fresh DB).
 4. UI/journey change → QA server walk (`profiler-web-qa`, preview tools).
 5. Deploy/config/auth change → `deploy/smoke.sh` against running container.

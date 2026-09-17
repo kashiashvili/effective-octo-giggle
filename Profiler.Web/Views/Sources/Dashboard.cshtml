@@ -257,8 +257,9 @@
                 <div class="card-header teal">👥 Your circles</div>
                 <div class="card-body">
                     <p class="text-muted mb-3">
-                        A circle is a group you invite with a link — a meetup, a course, a team. People from the same
-                        circle are marked on your matches and can be sorted first. Never a filter, never part of a score.
+                        A circle is a group you invite with a link — a meetup, a course, a team. Members see each other
+                        on the circle's page, whatever the overlap, and are marked on each other's matches. Never a
+                        filter, never part of a score.
                     </p>
                     @if (circles.Any())
                     {
@@ -270,14 +271,18 @@
                                         <a href="/circles/@circle.Id" class="source-badge">@circle.Name</a>
                                         <small class="text-muted">
                                             @circle.MemberCount member@(circle.MemberCount == 1 ? "" : "s") ·
-                                            @circle.WithFingerprint with a fingerprint ·
+                                            @circle.WithFingerprint discoverable with a fingerprint ·
                                             @if (circle.GoodPairs is { } pairs)
                                             {
-                                                <text>@pairs good-match pair@(pairs == 1 ? "" : "s") inside ·</text>
+                                                <text>@pairs good-match pair@(pairs == 1 ? "" : "s") among them ·</text>
                                             }
-                                            else if (circle.MemberCount < Profiler.Web.ViewModels.CircleSummaryViewModel.PairStatsMinMembers)
+                                            else if (circle.WithFingerprint < Profiler.Web.ViewModels.CircleSummaryViewModel.PairStatsMinEligible)
                                             {
-                                                <text>pair counts appear at @Profiler.Web.ViewModels.CircleSummaryViewModel.PairStatsMinMembers members ·</text>
+                                                <text>pair counts appear once @Profiler.Web.ViewModels.CircleSummaryViewModel.PairStatsMinEligible have a fingerprint ·</text>
+                                            }
+                                            else
+                                            {
+                                                <text>too many to count pairs ·</text>
                                             }
                                             <a href="/circles/@circle.Id">see who's here</a>
                                         </small>

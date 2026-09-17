@@ -205,6 +205,9 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
         Assert.True(html.IndexOf("name=\"SpotifyToken\"", StringComparison.Ordinal) > fold, "token fields are inside the fold, still submitted by the same form");
         // The navbar carries a sign-out form, so look for the connect form's close after the fold.
         Assert.True(html.IndexOf("</details>", fold, StringComparison.Ordinal) < html.IndexOf("</form>", fold, StringComparison.Ordinal), "the fold closes inside the form");
+        // Nothing inside a closed fold may carry a browser constraint: Firefox would block submit silently.
+        var folded = html[fold..html.IndexOf("</details>", fold, StringComparison.Ordinal)];
+        Assert.False(Regex.IsMatch(folded, @"<(input|textarea|select)[^>]*\s(required|pattern)\b"), "a browser constraint on a control inside the fold");
     }
 
     [Fact]

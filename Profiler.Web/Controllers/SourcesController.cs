@@ -75,6 +75,7 @@ public class SourcesController : Controller
                 .Where(m => m.UserId == userId)
                 .Join(_db.Circles, m => m.CircleId, c => c.Id, (m, c) => c)
                 .OrderBy(c => c.Name)
+                // Same definition as CirclesController.MemberCountAsync (memberships whose account is not suspended), inlined so it translates inside this projection.
                 .Select(c => new { c.Id, c.Name, MemberCount = _db.CircleMemberships.Where(m => m.CircleId == c.Id).Join(_db.Users, m => m.UserId, u => u.Id, (m, u) => u).Count(u => u.SuspendedAt == null) })
                 .ToListAsync()
             : new();
@@ -85,27 +86,29 @@ public class SourcesController : Controller
             // many discoverable pairs already overlap at the Good tier. Counts only, computed here and
             // discarded; the pair count is withheld for small circles, where it would say who overlaps
             // with whom, and skipped for very large ones.
-            var fingerprints = await _db.CircleMemberships
+            // "Eligible" = discoverable, not suspended, with a fingerprint: the people whose pairs the
+            // circle page would show. Only their count is needed unless the pair count will be shown.
+            var eligible = _db.CircleMemberships
                 .Where(m => m.CircleId == c.Id)
-                .Join(_db.Users.Where(u => u.SuspendedAt == null), m => m.UserId, u => u.Id, (m, u) => u)
-                .Where(u => u.Fingerprint != null)
-                .Select(u => new { u.IsDiscoverable, u.Fingerprint!.FingerprintJson })
-                .ToListAsync();
+                .Join(_db.Users.Where(u => u.SuspendedAt == null && u.IsDiscoverable && u.Fingerprint != null),
+                      m => m.UserId, u => u.Id, (m, u) => u);
+            var eligibleCount = await eligible.CountAsync();
             int? goodPairs = null;
-            if (c.MemberCount >= CircleSummaryViewModel.PairStatsMinMembers && c.MemberCount <= CircleSummaryViewModel.PairStatsMaxMembers)
+            if (eligibleCount >= CircleSummaryViewModel.PairStatsMinEligible && eligibleCount <= CircleSummaryViewModel.PairStatsMaxEligible)
             {
-                var visible = fingerprints.Where(f => f.IsDiscoverable).Select(f => ProfileFingerprint.FromJson(f.FingerprintJson)).Where(f => !f.IsEmpty).ToList();
+                var signatures = (await eligible.Select(u => u.Fingerprint!.FingerprintJson).ToListAsync())
+                    .Select(ProfileFingerprint.FromJson).Where(f => !f.IsEmpty).ToList();
                 var good = 0;
-                for (var i = 0; i < visible.Count; i++)
-                    for (var j = i + 1; j < visible.Count; j++)
-                        if (visible[i].Similarity(visible[j]) * 100 >= MatchViewModel.GoodMatchPercent) good++;
+                for (var i = 0; i < signatures.Count; i++)
+                    for (var j = i + 1; j < signatures.Count; j++)
+                        if (new MatchViewModel { Similarity = signatures[i].Similarity(signatures[j]) }.Tier != "low") good++;
                 goodPairs = good;
             }
             circles.Add(new CircleSummaryViewModel
             {
                 Id = c.Id, Name = c.Name, MemberCount = c.MemberCount,
                 InviteUrl = $"{Request.Scheme}://{Request.Host}/circles/join/{_invites.Issue(c.Id)}",
-                WithFingerprint = fingerprints.Count,
+                WithFingerprint = eligibleCount,
                 GoodPairs = goodPairs,
             });
         }

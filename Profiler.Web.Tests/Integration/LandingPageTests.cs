@@ -41,6 +41,9 @@ public class LandingPageTests : IClassFixture<ProfilerWebFactory>
             Assert.True(sources.IndexOf($"<h3>{open}</h3>", StringComparison.Ordinal) < fold, $"{open} should be shown before the fold");
         foreach (var folded in new[] { "Spotify", "Reddit", "Steam", "Twitch", "LinkedIn" })
             Assert.True(sources.IndexOf($"<h3>{folded}</h3>", StringComparison.Ordinal) > fold, $"{folded} should be inside the fold");
+        // Five up front, thirteen folded: the whole grid, nothing lost or duplicated.
+        Assert.Equal(5, sources[..fold].Split("class=\"source-card").Length - 1);
+        Assert.Equal(13, sources[fold..].Split("class=\"source-card").Length - 1);
     }
 
     [Fact]

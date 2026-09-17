@@ -542,7 +542,7 @@ public class CirclesTests : IClassFixture<ProfilerWebFactory>
     public async Task TheDashboard_TellsAnOrganiserWhetherTheCircleWorks_InCountsOnly_FromFiveMembers()
     {
         var tag = Guid.NewGuid().ToString("N")[..6];
-        var names = new[] { "a", "b", "c", "d", "e" }.Select(n => $"circ_org_{n}_{tag}").ToArray();
+        var names = new[] { "a", "b", "c", "d", "e", "f", "g" }.Select(n => $"circ_org_{n}_{tag}").ToArray();
         var clients = new List<HttpClient>();
         foreach (var n in names) { var cl = NewClient(); await RegisterAsync(cl, n); clients.Add(cl); }
         var shared = new[] { $"{tag}:s1", $"{tag}:s2", $"{tag}:s3", $"{tag}:s4" };
@@ -550,25 +550,30 @@ public class CirclesTests : IClassFixture<ProfilerWebFactory>
         await SeedFingerprintAsync(names[1], shared);
         await SeedFingerprintAsync(names[2], shared);                       // a, b, c: three Good pairs
         await SeedFingerprintAsync(names[3], $"{tag}:d1", $"{tag}:d2");    // d: overlaps nobody
-        // e: no fingerprint
+        await SeedFingerprintAsync(names[4], $"{tag}:e1", $"{tag}:e2");    // e: overlaps nobody
+        await SeedFingerprintAsync(names[5], $"{tag}:f1", $"{tag}:f2");    // f: overlaps nobody
+        // g: no fingerprint
 
         var token = await StartCircleAsync(clients[0], "Org " + tag);
-        for (var i = 1; i < 4; i++)
+        for (var i = 1; i < 5; i++)
             await PostAsync(clients[i], "/circles/join", new() { ["token"] = token }, tokenPage: $"/circles/join/{token}");
 
-        var four = await clients[0].GetStringAsync("/sources/dashboard");
-        Assert.Contains("4 members", four);
-        Assert.Contains("4 with a fingerprint", four);
-        Assert.Contains("pair counts appear at 5 members", four);
-        Assert.DoesNotContain("good-match pair", four);
-
-        await PostAsync(clients[4], "/circles/join", new() { ["token"] = token }, tokenPage: $"/circles/join/{token}");
+        // Five members with a fingerprint: a viewer already knows their own four pairs, so a count over
+        // the remaining six would say too much — withheld until six such members.
         var five = await clients[0].GetStringAsync("/sources/dashboard");
         Assert.Contains("5 members", five);
-        Assert.Contains("4 with a fingerprint", five);
-        Assert.Contains("3 good-match pairs inside", five);
+        Assert.Contains("5 discoverable with a fingerprint", five);
+        Assert.Contains("pair counts appear once 6 have a fingerprint", five);
+        Assert.DoesNotContain("good-match pair", five);
+
+        await PostAsync(clients[5], "/circles/join", new() { ["token"] = token }, tokenPage: $"/circles/join/{token}");
+        await PostAsync(clients[6], "/circles/join", new() { ["token"] = token }, tokenPage: $"/circles/join/{token}");
+        var seven = await clients[0].GetStringAsync("/sources/dashboard");
+        Assert.Contains("7 members", seven);
+        Assert.Contains("6 discoverable with a fingerprint", seven);
+        Assert.Contains("3 good-match pairs among them", seven);
         // Counts only: no member is named on the organiser's card.
-        var card = five[five.IndexOf("Org " + tag, StringComparison.Ordinal)..];
+        var card = seven[seven.IndexOf("Org " + tag, StringComparison.Ordinal)..];
         foreach (var other in names.Skip(1)) Assert.DoesNotContain(other, card);
     }
 

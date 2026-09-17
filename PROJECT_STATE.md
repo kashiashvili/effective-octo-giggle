@@ -31,10 +31,10 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `e5efb6f` audit fixes (2026-09-17); organiser card follows it.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `d48979e` organiser card (2026-09-17); its audit fixes follow it.
 - `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **394 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
-- Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
+- Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `Build:Sha` (CI-stamped, footer), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
 
 ## 3. Phase
 
@@ -103,7 +103,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 
 ## 10. Last Completed Iteration
 
-Organiser health card (this commit), 2026-09-17. Same day, newest first: `e5efb6f` audit fixes (join copy, column-level inventory, one member count, red fold assertion); `8a1ab42` token fold; `394fbb5` circle page; `227d268` privacy inventory; `8dd315c`+`96429b7` mutual badge; `9231952` circle invite follow-through; `d7002bc`+`6dc5527`+`ff03acc` circles; `d1bbe1c` genre bridge; `58baf17` YouTube Takeout; `9e0f578`+`9c9ff96`+`e6a0fcb`+`ab80929` go-live safety, metrics, onboarding.
+`d48979e` organiser health card, 2026-09-17. Same day, newest first: `e5efb6f` audit fixes (join copy, column-level inventory, one member count, red fold assertion); `8a1ab42` token fold; `394fbb5` circle page; `227d268` privacy inventory; `8dd315c`+`96429b7` mutual badge; `9231952` circle invite follow-through; `d7002bc`+`6dc5527`+`ff03acc` circles; `d1bbe1c` genre bridge; `58baf17` YouTube Takeout; `9e0f578`+`9c9ff96`+`e6a0fcb`+`ab80929` go-live safety, metrics, onboarding.
 
 ## 11. Deploy Status
 

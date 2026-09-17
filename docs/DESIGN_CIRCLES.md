@@ -38,6 +38,10 @@ CircleMembership  { Id, CircleId (FK cascade), UserId (FK cascade), JoinedAt }  
 
 Register and login accept an optional `circle` query parameter (only while circles are enabled) and carry it as a hidden field. Login redirects straight to the join page; registration shows the recovery code first, with "join the circle I was invited to" as its continue button, consumed on that one render. The join page shows the member count to whoever holds the link — the link is the credential, and joining would reveal the count anyway. Starting or joining is metered per IP (`RateLimiting:CirclesPermitLimit`) and capped at 20 circles per account.
 
+## Organiser's read (dashboard card)
+
+"N members · M discoverable with a fingerprint · P good-match pairs among them". The pair count is shown only from six such members (a viewer already sees their own tiers on the circle page, so the count must span at least ten pairs they cannot see) and only up to sixty; counts only, computed per request, discarded. Accepted disclosure: a member watching the count move as people join or leave can infer a joiner's overlap with the group in aggregate — no more than the circle page would show once that joiner is on it.
+
 ## Circle view
 
 `GET /circles/{id}` (members only, else 404; 404 while circles are disabled). Members ordered by similarity to the viewer, then username; members without a fingerprint listed last as "No fingerprint yet". A percentage is shown only at or above the floor (no false precision below it). The viewer's own hides apply; a hidden (non-discoverable) member is withheld from others but still sees the circle. The page carries the invite link and Leave. Linked from the dashboard card, and from the match list's empty state ("see who's in your circle"). Member cards show overlap and the personal block (bio, contact) only; the intent, values and shown-interest lines stay on the match list, where each is introduced and explained — adding them here is a follow-up once circles have users. "Members" everywhere means memberships whose account is not suspended; the page lists the ones discoverable to the viewer.

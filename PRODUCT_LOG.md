@@ -117,9 +117,9 @@ match on shared channels.
 - **Only membership is stored** (`CircleMembership`: circle, user, when); it cascades and is removed
   explicitly on account deletion; the export lists circle names; `Signals:CirclesEnabled=false`
   hides start/join/leave (404) and the dashboard card, keeping rows.
-- **Organiser's read** on the dashboard card: members · with a fingerprint · good-match pairs inside
-  (pairs counted only from five members, so the number never says who overlaps with whom, and only
-  among discoverable members; skipped above sixty). Counts only, computed per request, discarded.
+- **Organiser's read** on the dashboard card: members · discoverable with a fingerprint · good-match
+  pairs among them (pairs counted only from six such members, so the count spans at least ten pairs
+  the viewer cannot see themselves; skipped above sixty). Counts only, computed per request, discarded.
 - **Inviting**: once you are in a circle, the match list's empty-state invite box shares your newest
   circle's link instead of the bare register link, and says so — a friend you invite lands in your
   circle and is marked on your matches.
@@ -388,6 +388,7 @@ All settings come from `appsettings.json` or environment variables.
 | `Backup:Directory` | — (off) | Folder for rolling SQLite snapshots. Image sets `/data/backups`, Azure bootstrap `/home/data/backups`; unset in dev/tests |
 | `Backup:Keep` | `7` | Snapshots kept per kind (`scheduled`, `premigrate`) |
 | `Backup:IntervalHours` | `24` | Scheduled cadence, anchored to the newest snapshot on disk |
+| `Build:Sha` | `dev` (image) | Commit the image was built from; CI passes `--build-arg BUILD_SHA=<sha>`; the footer shows `build <sha7>` unless `dev` |
 
 ---
 
@@ -525,12 +526,31 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Build stamp (arrived in the working tree, committed with the token fold `8a1ab42`, documented
+  here).** The Dockerfile takes `--build-arg BUILD_SHA` (CI passes the commit sha) into `Build:Sha`,
+  and the page footer shows `build <sha7>` unless the value is the local default `dev`, so anyone can
+  confirm which commit a deployment is running without shell access. These three edits (Dockerfile,
+  `deploy.yml`, `_Layout.cshtml`) were not authored by the loop: they were present in the working
+  tree when the fold unit was committed with `git add -A`, and were noticed by the next Release
+  Auditor. Kept — no secrets, no behaviour change beyond the footer line — and now listed in the
+  config tables.
+- **Release Auditor on the token fold, the audit fixes and the organiser card: two P2s fixed.** The
+  pair count was gated on total members (including hidden and fingerprint-less ones), so with five
+  members and two eligible it named a pair; it is now gated on *eligible* members (discoverable, with
+  a fingerprint) at six, so it always spans at least ten pairs the viewer cannot see, and the copy
+  says "discoverable with a fingerprint". The dashboard also pulled every member's fingerprint for
+  every circle on every load; it now counts, and loads signatures only inside the window. P3s: the
+  tier threshold on the card is the match card's own rounding; ">60" has copy; the dashboard and
+  join copy match what members actually see; the connect pointer names the fold; the token group
+  keeps its heading inside the summary; the fold summaries no longer hard-code "13"; tests assert
+  the grid splits 5 + 13 and that nothing inside the closed fold carries a browser constraint; the
+  accepted delta disclosure is recorded in the design. 394.
 - **The organiser can tell whether the circle is working.** Opportunity Critic #4, bet 3: the
   dashboard card showed a name, a count, a link and Leave — nothing an organiser could act on. Each
   circle row now reads "N members · M with a fingerprint · P good-match pairs inside", pairs counted
   only from five members (below that the number would say who overlaps with whom) and only among
   discoverable members, skipped above sixty; counts only, computed per request and discarded.
-  Test: four members → pair count withheld, five → three pairs, nobody named. 394.
+  Test: five eligible → pair count withheld, six → three pairs, nobody named. 394.
 - **Release Auditor on the privacy inventory and the circle page: P1 and two P2s fixed.** P1: the
   join page still said the chip and sort were "all a circle does", false since the circle page shows
   members to members — the join page and the join confirmation now say exactly what members see.
@@ -543,8 +563,8 @@ Each entry: what changed and why it mattered.
   Leave row is a div, emoji hidden from screen readers, the invite label is wired to its input, one
   tier computation per member, the action is `Show`, the design records why intent/values lines stay
   on the match list. Also fixed a red assertion committed by mistake in the token-fold unit (it took
-  the navbar's sign-out form for the connect form's close; the loop now runs test chains with
-  `pipefail`). Reciprocity on the circle page is tested. 393.
+  the navbar's sign-out form for the connect form's close; `docs/PRODUCT_AGENT.md` §8 now forbids
+  chaining a commit behind a piped test run). Reciprocity on the circle page is tested. 393.
 - **Token connectors folded, not removed.** Opportunity Critic #4: the 18-card source grid was still
   ~60% of the landing page and the connect form led with 14 token cards, against the product's own
   "you never need a token" line. The landing now shows the five no-token sources (GitHub, Goodreads,

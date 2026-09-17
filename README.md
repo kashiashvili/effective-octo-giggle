@@ -213,6 +213,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 | `Backup:Directory`               | — (off)              | Folder for rolling SQLite snapshots (the container image sets `/data/backups`, the Azure bootstrap `/home/data/backups`). Unset = no snapshots |
 | `Backup:Keep`                    | `7`                  | Snapshots kept per kind (scheduled / pre-migration); older ones are deleted |
 | `Backup:IntervalHours`           | `24`                 | Hours between scheduled snapshots, anchored to the newest file on disk so restarts neither skip nor duplicate |
+| `Build:Sha`                      | `dev` in the image   | Commit the image was built from, stamped by CI (`--build-arg BUILD_SHA`). Shown in the page footer as `build <sha7>` unless it is `dev`, so anyone can confirm which commit a deployment runs |
 | `ForwardedHeaders:Enabled`       | `false`              | Believe `X-Forwarded-For`/`-Proto` (set this behind a proxy) |
 | `ForwardedHeaders:KnownProxies`  | —                    | Proxy IPs to trust, comma-separated. Required when enabled |
 | `ForwardedHeaders:KnownNetworks` | —                    | Proxy networks to trust in CIDR form, e.g. `10.0.0.0/8` |
