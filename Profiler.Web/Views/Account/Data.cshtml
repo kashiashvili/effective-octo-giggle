@@ -60,6 +60,29 @@
         </div>
 
         <div class="card mb-4">
+            <div class="card-header indigo">Circles you're in</div>
+            <div class="card-body">
+                @if (Model.Circles.Any())
+                {
+                    <p class="mb-2">
+                        Membership is the only fact stored: no record of who invited you, and nothing about the
+                        invite links you shared. Leave any circle from your dashboard.
+                    </p>
+                    <ul class="action-list">
+                        @foreach (var circle in Model.Circles)
+                        {
+                            <li class="source-row"><span class="source-badge">@circle</span></li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="mb-0 text-muted">You're not in any circle.</p>
+                }
+            </div>
+        </div>
+
+        <div class="card mb-4">
             <div class="card-header indigo">People you've hidden</div>
             <div class="card-body">
                 @if (Model.HiddenPeople.Any())

@@ -36,6 +36,9 @@ public class DataExportViewModel
     /// </summary>
     public List<string> HiddenPeople { get; set; } = new();
 
+    /// <summary>Circles you have joined, by name. Membership is the only fact stored: no inviter, no activity.</summary>
+    public List<string> Circles { get; set; } = new();
+
     /// <summary>Always true — stated explicitly so the export makes the privacy guarantee legible.</summary>
     public bool RawInterestsStored => false;
 }

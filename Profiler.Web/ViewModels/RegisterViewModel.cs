@@ -35,4 +35,8 @@ public class RegisterViewModel
     /// fills it and is rejected. Never shown, never stored — its only value is being blank.
     /// </summary>
     public string? Website { get; set; }
+
+    /// <summary>A circle invite token carried through from the invite page, so the new account lands
+    /// back on the join confirmation. Validated only by shape here; the join page verifies it.</summary>
+    public string? CircleInvite { get; set; }
 }

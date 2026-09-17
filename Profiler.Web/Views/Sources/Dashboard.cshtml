@@ -250,6 +250,48 @@
             </div>
         }
 
+        @if (ViewBag.CirclesEnabled == true)
+        {
+            var circles = ViewBag.Circles as List<Profiler.Web.ViewModels.CircleSummaryViewModel> ?? new();
+            <div class="card mt-4">
+                <div class="card-header teal">👥 Your circles</div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        A circle is a group you invite with a link — a meetup, a course, a team. People from the same
+                        circle are marked on your matches and can be sorted first. Never a filter, never part of a score.
+                    </p>
+                    @if (circles.Any())
+                    {
+                        <ul class="action-list">
+                            @foreach (var circle in circles)
+                            {
+                                <li class="source-row" style="display:block">
+                                    <div class="flex items-center gap-3">
+                                        <span class="source-badge">@circle.Name</span>
+                                        <small class="text-muted">@circle.MemberCount member@(circle.MemberCount == 1 ? "" : "s")</small>
+                                        <form asp-action="Leave" asp-controller="Circles" method="post" class="ms-auto">
+                                            <input type="hidden" name="circleId" value="@circle.Id" />
+                                            <button type="submit" class="btn btn-outline btn-sm">Leave</button>
+                                        </form>
+                                    </div>
+                                    <div class="invite-row mt-2">
+                                        <input type="text" class="form-control invite-input" value="@circle.InviteUrl" readonly aria-label="Invite link for @circle.Name" />
+                                        <button type="button" class="btn btn-primary btn-sm" data-copy="@circle.InviteUrl" data-no-busy>Copy link</button>
+                                    </div>
+                                    <small class="text-muted">Anyone with this link can join for the next @Profiler.Web.Security.CircleInvites.Lifetime.TotalDays days. We never see who you sent it to.</small>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    <form asp-action="Create" asp-controller="Circles" method="post" class="flex items-center gap-3 mt-3">
+                        <input type="text" name="name" class="form-control" placeholder="Name a new circle, e.g. Tuesday book club"
+                               maxlength="@ViewBag.MaxCircleNameLength" required style="max-width: 320px" aria-label="New circle name" />
+                        <button type="submit" class="btn btn-outline">Start a circle</button>
+                    </form>
+                </div>
+            </div>
+        }
+
         <details class="danger-zone mt-4">
             <summary>Delete my account</summary>
             <div class="danger-zone-body">

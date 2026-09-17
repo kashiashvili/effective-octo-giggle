@@ -19,4 +19,11 @@ public sealed class FeatureFlags
     /// choice until the signal is strengthened. Stored buckets are kept, so it re-enables cleanly.
     /// </summary>
     public bool ValuesSignalEnabled => _config.GetValue("Signals:ValuesEnabled", true);
+
+    /// <summary>
+    /// Circles (invite-scoped groups: "Same circle" chip and sort on matches). Default ON. Set
+    /// <c>Signals:CirclesEnabled=false</c> to hide creating, joining, the chip and the sort; stored
+    /// memberships are kept for a clean re-enable. See docs/DESIGN_CIRCLES.md.
+    /// </summary>
+    public bool CirclesEnabled => _config.GetValue("Signals:CirclesEnabled", true);
 }

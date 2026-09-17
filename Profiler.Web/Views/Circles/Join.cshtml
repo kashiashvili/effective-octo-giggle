@@ -1,0 +1,45 @@
+@model Profiler.Web.ViewModels.CircleJoinViewModel
+@{
+    ViewBag.Title = "Join a circle";
+    var carried = Uri.EscapeDataString(Model.Token);
+}
+
+<div class="auth-wrap">
+    <div class="auth-card">
+        <h1>👥 You're invited</h1>
+        <p class="text-center text-muted mb-4">
+            Join the circle <strong>@Model.CircleName</strong>
+            (@Model.MemberCount member@(Model.MemberCount == 1 ? "" : "s") so far).
+        </p>
+        <p class="text-muted" style="font-size:.9rem">
+            People from the same circle are marked on each other's match lists and can be sorted first.
+            That is all a circle does: it never filters your matches and never changes a match score.
+            You can leave at any time from your dashboard.
+        </p>
+
+        @if (!Model.IsSignedIn)
+        {
+            <a href="/account/register?circle=@carried" class="btn btn-primary btn-block">Create an account and join</a>
+            <hr class="auth-divider" />
+            <div class="auth-footer">
+                <p>Already have an account? <a href="/account/login?circle=@carried">Sign in to join</a></p>
+            </div>
+        }
+        else if (Model.AlreadyMember)
+        {
+            <div class="alert alert-info"><span class="alert-icon">✅</span><span>You're already in this circle.</span></div>
+            <a href="/matches" class="btn btn-primary btn-block">See your matches</a>
+        }
+        else
+        {
+            <form asp-action="JoinConfirm" asp-controller="Circles" method="post">
+                <input type="hidden" name="token" value="@Model.Token" />
+                <button type="submit" class="btn btn-primary btn-block">Join @Model.CircleName</button>
+            </form>
+            <hr class="auth-divider" />
+            <div class="auth-footer">
+                <p><a href="/sources/dashboard">Not now — back to dashboard</a></p>
+            </div>
+        }
+    </div>
+</div>

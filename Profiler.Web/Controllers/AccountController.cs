@@ -31,11 +31,15 @@ public class AccountController : Controller
 
     [HttpGet("register")]
     [AllowAnonymous]
-    public IActionResult Register()
+    public IActionResult Register(string? circle = null)
     {
         if (User.Identity?.IsAuthenticated == true)
             return RedirectToAction("Dashboard", "Sources");
-        return View(new RegisterViewModel { FormTicket = _registrationGuard.IssueTicketIfEnabled() });
+        return View(new RegisterViewModel
+        {
+            FormTicket = _registrationGuard.IssueTicketIfEnabled(),
+            CircleInvite = Security.CircleInvites.LooksLikeToken(circle) ? circle : null,
+        });
     }
 
     [HttpPost("register")]
@@ -113,18 +117,20 @@ public class AccountController : Controller
 
         await SignInUserAsync(user);
         // Shown once, before anything else, because it is the only way back into this account and
-        // nobody can reissue it for them.
+        // nobody can reissue it for them. An invite the person arrived with waits behind it.
         TempData["RecoveryCode"] = recoveryCode;
+        if (Security.CircleInvites.LooksLikeToken(vm.CircleInvite))
+            TempData["CircleInvite"] = vm.CircleInvite;
         return RedirectToAction(nameof(ShowRecoveryCode));
     }
 
     [HttpGet("login")]
     [AllowAnonymous]
-    public IActionResult Login()
+    public IActionResult Login(string? circle = null)
     {
         if (User.Identity?.IsAuthenticated == true)
             return RedirectToAction("Dashboard", "Sources");
-        return View();
+        return View(new LoginViewModel { CircleInvite = Security.CircleInvites.LooksLikeToken(circle) ? circle : null });
     }
 
     [HttpPost("login")]
@@ -152,6 +158,8 @@ public class AccountController : Controller
         }
 
         await SignInUserAsync(user);
+        if (Security.CircleInvites.LooksLikeToken(vm.CircleInvite))
+            return Redirect($"/circles/join/{Uri.EscapeDataString(vm.CircleInvite!)}");
         return RedirectToAction("Dashboard", "Sources");
     }
 
@@ -472,6 +480,12 @@ public class AccountController : Controller
             .OrderBy(u => u)
             .ToListAsync();
 
+        var circles = await _db.CircleMemberships
+            .Where(m => m.UserId == userId)
+            .Join(_db.Circles, m => m.CircleId, c => c.Id, (m, c) => c.Name)
+            .OrderBy(n => n)
+            .ToListAsync();
+
         return new DataExportViewModel
         {
             Username = user.Username,
@@ -486,7 +500,8 @@ public class AccountController : Controller
             LastMatchesViewedAt = user.LastMatchesViewedAt,
             FingerprintDimensions = dimensions,
             Sources = sources,
-            HiddenPeople = hidden
+            HiddenPeople = hidden,
+            Circles = circles
         };
     }
 
@@ -570,8 +585,14 @@ public class AccountController : Controller
         // Reports point both ways too — the ones you filed and the ones filed against you. Same reason
         // as blocks: remove them here so the deletion promise holds regardless of FK enforcement.
         _db.UserReports.RemoveRange(_db.UserReports.Where(r => r.ReporterId == user.Id || r.ReportedId == user.Id));
+        // Circle memberships cascade too; removed here for the same reason. A circle this was the last
+        // member of goes with it — its name is the only thing that would remain.
+        var myCircles = await _db.CircleMemberships.Where(m => m.UserId == user.Id).Select(m => m.CircleId).ToListAsync();
+        _db.CircleMemberships.RemoveRange(_db.CircleMemberships.Where(m => m.UserId == user.Id));
         _db.Users.Remove(user);
         await _db.SaveChangesAsync();
+        foreach (var circleId in myCircles)
+            await CirclesController.RemoveIfEmptyAsync(_db, circleId);
 
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         TempData["Success"] = "Your account and all associated data have been permanently deleted.";

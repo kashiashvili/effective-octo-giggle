@@ -25,16 +25,16 @@
 4. Ranked matches: tier (Good ≥15%, Strong ≥35%), shared source types, closest source, freshness, shared-interest reveal if opted in, intent line, outlook line. Filter by theme, sort Best / Same intent / Similar outlook. Never a blended score.
 5. Optional: set intent, take values questionnaire (consent-gated, answers discarded), choose interests to show.
 6. Read bio/contact, reach out off-platform. Hide or report a match.
-7. Manage sources, profile, password, sessions, visibility, blocks, signals, export, deletion.
+7. Manage sources, profile, password, sessions, visibility, blocks, signals, circles (start/invite/leave), export, deletion.
 
 **Success criteria:** new user reaches real match list with credentials they actually have; raw interests never persisted; connector/fingerprint/empty/rate-limit/auth/deletion failures explained; privacy asserted by DB tests; build/tests/migrations/security healthy.
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `58baf17` YouTube Takeout export (2026-09-17); genre bridge follows it.
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **371 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `d1bbe1c` genre bridge (2026-09-17); circles slice 1 follows it.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **378 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
-- Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*`.
+- Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*`.
 
 ## 3. Phase
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Circles, slice 1 (started 2026-09-17).** Design recorded in `docs/DESIGN_CIRCLES.md` (approved under current vision; positioning = Decision 5). Slice 1 DoD: `Circle` + `CircleMembership` (cascade, unique), migration, `CirclesController` (create · join page · join · leave · invite link via Data Protection, 30 days, never stored), dashboard "Your circles" card, export `Circles`, delete removes memberships, register/login carry `circle` through, `Signals:CirclesEnabled` flag, tests per design "Validation". Slice 2: match chip + "Same circle first" sort + metrics + docs. Release Auditor on `9c9ff96..d1bbe1c` running in background — P0–P2 findings pre-empt.
+**Circles slice 1 — built, tests green, committing (2026-09-17).** Start/invite/join/leave, carry-through on register/login, export, delete, flag, migration `AddCircles`; 7 tests → 378.
 
-Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Next mandatory action:** audit-fix unit for the Release Auditor on `9c9ff96..d1bbe1c` (P2: token YouTube + Takeout export in one submit collide on the per-source unique index → merge results by source; P3s: size-limit comment/limit, copy mentions of the YouTube export, privacy-copy qualifier, DB-level raw-title assertion, landing test scoping, dashboard order test). Then circles slice 2 (chip + sort + metrics + docs), QA walk, Release Auditor over circles. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 

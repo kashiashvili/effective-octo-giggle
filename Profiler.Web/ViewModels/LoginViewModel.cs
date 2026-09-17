@@ -9,4 +9,7 @@ public class LoginViewModel
 
     [Required, DataType(DataType.Password)]
     public string Password { get; set; } = "";
+
+    /// <summary>A circle invite token carried through from the invite page (see RegisterViewModel).</summary>
+    public string? CircleInvite { get; set; }
 }

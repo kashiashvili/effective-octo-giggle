@@ -13,6 +13,8 @@ public class AppDbContext : DbContext
     public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
     public DbSet<UserReport> UserReports => Set<UserReport>();
     public DbSet<FingerprintScheme> FingerprintSchemes => Set<FingerprintScheme>();
+    public DbSet<Circle> Circles => Set<Circle>();
+    public DbSet<CircleMembership> CircleMemberships => Set<CircleMembership>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,6 +62,22 @@ public class AppDbContext : DbContext
             entity.HasOne<AppUser>()
                   .WithMany()
                   .HasForeignKey(e => e.BlockedId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CircleMembership>(entity =>
+        {
+            entity.HasIndex(e => new { e.CircleId, e.UserId }).IsUnique();
+
+            // Membership is a fact about a person and a circle and must not outlive either: deleting
+            // an account removes all of that person's data, deleting a circle removes its memberships.
+            entity.HasOne<AppUser>()
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Circle>()
+                  .WithMany()
+                  .HasForeignKey(e => e.CircleId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 

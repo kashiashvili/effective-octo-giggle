@@ -48,6 +48,7 @@ builder.Services.AddDataProtection()
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<Profiler.Web.Security.RegistrationGuard>();
 builder.Services.AddSingleton<Profiler.Web.Security.FeatureFlags>();
+builder.Services.AddSingleton<Profiler.Web.Security.CircleInvites>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(opt =>

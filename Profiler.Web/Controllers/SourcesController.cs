@@ -29,12 +29,15 @@ public class SourcesController : Controller
     private readonly FingerprintGenerator _generator;
     private readonly Security.FeatureFlags _flags;
 
-    public SourcesController(AppDbContext db, IHttpClientFactory httpFactory, FingerprintGenerator generator, Security.FeatureFlags flags)
+    private readonly Security.CircleInvites _invites;
+
+    public SourcesController(AppDbContext db, IHttpClientFactory httpFactory, FingerprintGenerator generator, Security.FeatureFlags flags, Security.CircleInvites invites)
     {
         _db = db;
         _httpFactory = httpFactory;
         _generator = generator;
         _flags = flags;
+        _invites = invites;
     }
 
     private int CurrentUserId => User.GetUserId();
@@ -63,6 +66,23 @@ public class SourcesController : Controller
         // Accounts predating recovery have no code on file, and a used code is not replaced if the
         // replacement was never saved. Either way the account has no way back from a lost password.
         ViewBag.HasRecoveryCode = user.RecoveryCodeHash != null;
+        ViewBag.CirclesEnabled = _flags.CirclesEnabled;
+        ViewBag.MaxCircleNameLength = CirclesController.MaxNameLength;
+        // The viewer's circles with a current invite link each. The link is minted on render and never
+        // stored, so there is no record of who shared it with whom.
+        ViewBag.Circles = _flags.CirclesEnabled
+            ? await _db.CircleMemberships
+                .Where(m => m.UserId == userId)
+                .Join(_db.Circles, m => m.CircleId, c => c.Id, (m, c) => c)
+                .OrderBy(c => c.Name)
+                .Select(c => new { c.Id, c.Name, MemberCount = _db.CircleMemberships.Count(m => m.CircleId == c.Id) })
+                .ToListAsync()
+                .ContinueWith(t => t.Result.Select(c => new CircleSummaryViewModel
+                {
+                    Id = c.Id, Name = c.Name, MemberCount = c.MemberCount,
+                    InviteUrl = $"{Request.Scheme}://{Request.Host}/circles/join/{_invites.Issue(c.Id)}"
+                }).ToList())
+            : new List<CircleSummaryViewModel>();
         return View();
     }
 

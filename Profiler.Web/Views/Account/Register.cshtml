@@ -10,6 +10,7 @@
         <form asp-action="Register" asp-controller="Account" method="post">
             <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
             <input asp-for="FormTicket" type="hidden" />
+            <input asp-for="CircleInvite" type="hidden" />
             @* Honeypot: hidden from people, tempting to form-filling bots. A real submission leaves it
                empty. Kept out of the tab order and hidden from assistive tech. *@
             <div class="hp-field" aria-hidden="true">

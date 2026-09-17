@@ -72,8 +72,9 @@ fingerprint; the underlying interests are discarded after the fingerprint is bui
 6. **See each match's optional bio and contact** and reach out off-platform. Hide anyone you
    don't want to see again; report anyone who misbehaves.
 7. **Manage yourself** from the dashboard: per-source signal counts, disconnect a source, edit
-   your public profile and signals, change your password, sign out other devices, regenerate
-   your recovery code, review and export everything stored about you, or delete your account.
+   your public profile and signals, start or leave a circle and share its invite link, change your
+   password, sign out other devices, regenerate your recovery code, review and export everything
+   stored about you, or delete your account.
 
 ---
 
@@ -102,6 +103,20 @@ client ID), RSS/Blogs (feed URLs), SoundCloud. Most API connectors need an OAuth
 key; GitHub, RSS and the three exports need no account credentials. The YouTube export emits
 the same `youtube-channel:<slug>` features as the token path, so export users and token users
 match on shared channels.
+
+### Circles (invite-scoped groups) — slice 1 shipped 2026-09-17, design `docs/DESIGN_CIRCLES.md`
+- **Start a circle** from the dashboard (name ≤40 chars, `TextPolicy`-validated, rendered plain);
+  every member sees a current **invite link** there (`/circles/join/<token>`, Data-Protection-signed,
+  30 days, minted on render, never stored — no record of who invited whom) and can **leave**; a
+  circle with no members left is deleted.
+- **Joining is explicit**: the invite page names the circle and its member count; nothing happens
+  until "Join" is posted. A visitor without an account registers or signs in from that page — the
+  token rides along as a hidden field, the recovery code still comes first, then the join page.
+- **Only membership is stored** (`CircleMembership`: circle, user, when); it cascades and is removed
+  explicitly on account deletion; the export lists circle names; `Signals:CirclesEnabled=false`
+  hides start/join/leave (404) and the dashboard card, keeping rows.
+- Slice 2 (next): the "Same circle" chip and "Same circle first" sort on matches — chip + sort only,
+  never a filter, never part of a score, withheld while the viewer is hidden.
 
 ### Self-described interests (no account needed)
 - **Curated picker** at `/sources/interests`: ~140 tags across 9 themes. Picks become features
@@ -295,6 +310,8 @@ to `MatchViewModel` (adding the matched user's bio/contact and shared source typ
 | `AppUser` | Id, Username, NormalizedUsername, PasswordHash, CreatedAt, Bio?, Contact?, IsDiscoverable, RecoveryCodeHash?, SessionsValidFrom, LastMatchesViewedAt?, ConnectionIntent?, ValuesOpenness?, ValuesScheme?, ShowableInterestsJson?, SuspendedAt? | `NormalizedUsername` is the compatibility-folded, lower-cased comparison form (non-unique index); display casing stays in `Username`. Username is case-insensitive unique (NOCASE). Bio/Contact/ConnectionIntent/ShowableInterestsJson are the opt-in public profile; `ValuesOpenness` is the derived −2..+2 bucket (raw answers never stored) tagged with the `ValuesScheme` it was derived under; `SuspendedAt` is the reversible operator suspension |
 | `FingerprintRecord` | UserId (PK), FingerprintJson, SourcesJson, UpdatedAt | The **combined** (truncated) signature used for matching |
 | `SourceFingerprintRecord` | Id, UserId, Source, RawSignatureJson, FeatureCount, UpdatedAt | One per (user, source); **raw 64-bit** signature; unique index on (UserId, Source) |
+| `Circle` | Id, Name, CreatedAt | A named group joined by invite link; no owner, no admin; deleted with its last membership (`docs/DESIGN_CIRCLES.md`) |
+| `CircleMembership` | Id, CircleId, UserId, JoinedAt | The only fact stored about a circle and a person — no inviter, no activity; unique (CircleId, UserId); cascades on both ends |
 | `FingerprintScheme` | Id, Verifier, UpdatedAt | One row. Records which pepper the stored signatures were built under, so a rotation is noticed instead of silently breaking every comparison |
 | `UserBlock` | Id, BlockerId, BlockedId, CreatedAt | One person hiding another; unique on (Blocker, Blocked). Cascades from **both** ends, so a block cannot outlive either party's account deletion |
 | `UserReport` | Id, ReporterId, ReportedId, Reason, CreatedAt | One person reporting another with a closed-set reason; unique on (Reporter, Reported); cascades from both ends. Read only through the token-gated operator endpoint |
@@ -344,6 +361,7 @@ All settings come from `appsettings.json` or environment variables.
 | `AntiAbuse:GuardRegistration` | `false` | Enforce the signed single-use registration form ticket. Turn on for a public launch |
 | `AntiAbuse:MinFormSeconds` | `3` | With the guard on, reject a registration submitted faster than this after the form loaded |
 | `Signals:ValuesEnabled` | `true` | Set `false` to hide the values questionnaire, the match-card alignment line and the "Similar outlook first" sort; stored buckets are kept for a clean re-enable |
+| `Signals:CirclesEnabled` | `true` | Set `false` to hide starting/joining circles, the "Same circle" chip and sort; memberships are kept |
 | `Backup:Directory` | — (off) | Folder for rolling SQLite snapshots. Image sets `/data/backups`, Azure bootstrap `/home/data/backups`; unset in dev/tests |
 | `Backup:Keep` | `7` | Snapshots kept per kind (`scheduled`, `premigrate`) |
 | `Backup:IntervalHours` | `24` | Scheduled cadence, anchored to the newest snapshot on disk |
@@ -354,7 +372,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 371 tests, fully offline
+dotnet test                           # 378 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -481,6 +499,19 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Circles, slice 1: invite-scoped groups people can start, share and leave.** Opportunity Critic
+  #3's strongest ungated bet (design `docs/DESIGN_CIRCLES.md`; positioning question = Decision 5):
+  every remaining bet waits on pool density and Decision 4 assumes a "private cohort" that had no
+  mechanism — one global pool and a bare register link. A circle is a named group with a shareable
+  invite link; slice 1 ships start / invite / join / leave and the plumbing the new-data checklist
+  demands: membership is the only stored fact (structurally asserted: `CircleMembership` has exactly
+  circle, user, time), invite tokens are Data-Protection-signed for 30 days and never stored, joining
+  is an explicit POST on a page that names the circle, a visitor without an account is carried
+  through registration (recovery code first) or login back to the join page, leaving removes one
+  row, deletion removes all of them and any circle it emptied, the export lists circle names, and
+  `Signals:CirclesEnabled=false` hides it all while keeping rows. Migration `AddCircles` (two tables,
+  cascades on both ends, unique pair). Seven integration tests: 378. Slice 2 adds the chip and sort
+  on matches.
 - **Genre bridge: common self-described genres now match connector users.** Opportunity Critic #3
   noticed the two vocabularies already coincide (`spotify-genre:indie-rock` vs the catalog's
   `indie-rock`), so the "fuzzy multi-vocabulary mapping" the backlog feared was an exact-string
