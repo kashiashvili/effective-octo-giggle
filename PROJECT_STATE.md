@@ -31,8 +31,8 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit: YouTube Takeout export connector (2026-09-17; hash in §10 next state commit).
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **367 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `58baf17` YouTube Takeout export (2026-09-17); genre bridge follows it.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **371 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*`.
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**YouTube Takeout export unit — built, tests green, committing (2026-09-17, Critic #3 opportunity 2).** `YouTubeSubscriptionsConnector` → same `youtube-channel:*` slugs as the token path; wired into connect form, landing, README; connect page's unbacked "More sources to come" removed. +5 tests → 367.
+**Genre bridge unit — built, tests green, committing (2026-09-17, Critic #3 opportunity 5).** Twelve common genres bridged to Spotify/Netflix/Goodreads strings; weight-1 rule enforced by test. +4 tests → 371.
 
-**Next mandatory action:** Product Owner review; then §7 item 3 (circles) needs a design pass first — write the design (data shape, invite token via Data Protection, new-data checklist, migration) and an owner-brief entry for the vision side before any code; or item 5 (genre slug bridge, S) as the next small increment. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Next mandatory action:** Product Owner review; then circles (§7 item 3): design pass first — data shape (Circle, CircleMembership), invite token minted with Data Protection, new-data checklist (opt-in by joining, leave = delete, in export, cascades, withheld while hidden, chip + sort only, never a filter), migration, tests — written as a short design in `PRODUCT_LOG.md`/state plus Decision 5 (vision: groups-first) in `docs/OWNER_DECISIONS.md`; build the additive increment after the design is recorded. Then a Release Auditor over `9c9ff96..HEAD`. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -59,7 +59,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 
 - **P0** — none.
 - **P1** — none evidence-independent. Gated: second values axis (evidence + owner); connector-side rarity weighting (needs fingerprint-scheme versioning design first — `SchemeVerifier` covers pepper only, so old/new connector signatures would silently stop matching; plus privacy-safe common-feature source); community-scoped pools (needs real community partner).
-- **P2** — extend canonical bridge to music/film genres (fuzzy multi-vocabulary mapping); shared single-use ticket cache if ever multi-instance (in-process today; single worker on App Service anyway); off-host snapshot shipping (needs a destination = owner credentials → gated).
+- **P2** — shared single-use ticket cache if ever multi-instance (in-process today; single worker on App Service anyway); off-host snapshot shipping (needs a destination = owner credentials → gated).
 - **P3** — interest clusters / community formation (density-gated); opt-in Web Push return channel (needs pool); privacy-respecting CAPTCHA option (provider); client-side fingerprinting for self-describe path (pepper-on-client problem, premature).
 - **P4** — LSH banding past few thousand users; pagination; match-card redesign closed as not warranted after worst-case walk.
 
@@ -69,7 +69,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 2. **Bring-your-own-export connectors** — YouTube Takeout shipped (this unit). Further formats (Spotify privacy export, Steam? Letterboxd CSV) only if a matching token vocabulary or self-described theme exists to bridge to. Gate: none. S per format.
 3. **Circles (invite-scoped pools, additive)** — signed invite tags membership; "Same circle" chip + circle-first sort; registration stays open. Only lever on pool *formation*; Decision 4's "private cohort" has no mechanism today (bare invite URL, global pool). New stored social fact → design + new-data checklist + Auditor. Gate: design (build) / owner (vision promotion, Decision 5).
 4. **Mutual-visibility badge** — "you're in their top matches too", request-time only. Gate: none, after 1–3.
-5. **Genre bridge by slug coincidence** — `spotify-genre:indie-rock` vs self-described `indie-rock` already share slugs; bridge is exact-slug, not fuzzy (backlog P2 was over-estimated). Gate: none. S.
+5. **Genre bridge** — shipped (twelve common genres; weight-1 rule enforced by test). Remaining: Last.fm/SoundCloud vocabularies need connector-side emission = scheme versioning first.
 6. Real usage evidence via `/metrics` — gate: deployment (Decision 4). Funnel counters shipped `e6a0fcb`.
 7. Hide values signal by default — gate: owner (Decision 2); mechanism built.
 8. Connector-side weighting — gate: scheme-versioning design; consequential migration.
@@ -83,7 +83,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 | Single openness axis discriminates | Tested: weak, 95% in −1..+1 (`ValuesSignalResolutionTests`) |
 | Outlook sort is worth its reorder | Tested: ~66% top-1 change from weak signal (`ValuesSortImpactTests`) → owner brief |
 | Rarity weighting separates niche from common | Tested: 6.4× (`InterestWeightingExperimentTests`) → shipped self-described side |
-| Self-described + connector users can match | Tested for languages (bridge integration test); genres unbridged |
+| Self-described + connector users can match | Tested for languages and twelve common genres (bridge integration tests); niche genres unbridged by design |
 | Interest similarity motivates real outreach | Untested — proxy live via `/metrics` `returnedAfterFirstDay`, `withContact` |
 | Privacy-conscious users will connect sources / self-describe | Untested — live via `/metrics` `withFingerprint`, `fingerprintsBySource` |
 | Users understand separate signals vs one score | Untested — needs live users |
@@ -101,7 +101,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 
 ## 10. Last Completed Iteration
 
-`9c9ff96` 2026-09-17 — onboarding leads with the no-accounts path (hero/step 1, honest token line, "coming soon" removed, recovery continue → interests, dashboard interests-first). Earlier today: `e6a0fcb` `/metrics` funnel + return counters; `ab80929` go-live data safety (snapshots, healthcheck, `/health`, restore runbook).
+`58baf17` 2026-09-17 — YouTube via Google Takeout `subscriptions.csv`, no token; connect page's unbacked "More sources" list removed. Earlier today: `9e0f578` audit fixes (snapshot service never stops host; age-based retention); `9c9ff96` onboarding leads with the no-accounts path; `e6a0fcb` `/metrics` funnel; `ab80929` go-live data safety.
 
 ## 11. Deploy Status
 

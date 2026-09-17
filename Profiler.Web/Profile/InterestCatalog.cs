@@ -184,8 +184,18 @@ public static class InterestCatalog
     // vocabulary and matches across sources. Emitting instead of (not in addition to) the self-* string
     // avoids double-counting one interest, which would inflate self-to-self similarity and undo the
     // rarity weighting. Only rock-solid 1:1 mappings live here — GitHub always emits a lowercased
-    // `language:*` for every repo. Fuzzy concepts (music/film genres, where each platform uses its own
-    // vocabulary) are deliberately left un-bridged for now.
+    // `language:*` for every repo.
+    //
+    // Genres are bridged under two conditions, both checked by InterestCatalogTests: (1) the connector
+    // emits one deterministic string for the concept — Spotify's own genre label slugged
+    // (`spotify-genre:indie-rock`), Netflix's keyword genre (`netflix-genre:documentary`), a Goodreads
+    // genre shelf (`genre:science-fiction`) — and (2) the tag is already weight 1 (Common), so bridging
+    // trades away no rarity signal among self-describers; a bridged feature hashes at weight 1
+    // regardless. Niche genres (shoegaze, post-rock, jazz-fusion…) stay in `self-*` on purpose: their
+    // rarity weight is worth more to the self-described pool than a chance overlap with a token user.
+    // Concepts whose connector label is not stable ("electronic" vs Spotify's "electronica"/"electro",
+    // "stand-up" vs Netflix's broad "comedy") are not bridged. Changing an entry re-vocabularies new
+    // self-described signatures only — fine before launch; afterwards it needs scheme versioning.
     private static readonly IReadOnlyDictionary<string, string> CanonicalBridge = new Dictionary<string, string>
     {
         ["self-tech:python"] = "language:python",
@@ -193,6 +203,21 @@ public static class InterestCatalog
         ["self-tech:typescript"] = "language:typescript",
         ["self-tech:go"] = "language:go",
         ["self-tech:cpp"] = "language:c++",
+
+        ["self-music:indie-rock"] = "spotify-genre:indie-rock",
+        ["self-music:jazz"] = "spotify-genre:jazz",
+        ["self-music:hip-hop"] = "spotify-genre:hip-hop",
+        ["self-music:classical"] = "spotify-genre:classical",
+
+        ["self-screen:documentaries"] = "netflix-genre:documentary",
+        ["self-screen:anime"] = "netflix-genre:anime",
+        ["self-screen:sci-fi-film"] = "netflix-genre:sci-fi",
+
+        ["self-reading:sci-fi"] = "genre:science-fiction",
+        ["self-reading:fantasy"] = "genre:fantasy",
+        ["self-reading:history"] = "genre:history",
+        ["self-reading:philosophy"] = "genre:philosophy",
+        ["self-reading:non-fiction"] = "genre:non-fiction",
     };
 
     /// <summary>

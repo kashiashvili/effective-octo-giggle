@@ -131,10 +131,11 @@ public class InterestCatalogTests
     [Fact]
     public void CustomFeatures_MapsKnownConceptsToTheCatalog_AndDedupes()
     {
-        // A typed interest that matches a catalog concept unifies with picking it (and, for languages,
+        // A typed interest that matches a catalog concept unifies with picking it (and, where bridged,
         // with a connector user) instead of forming a separate `interest:*` island.
         Assert.Equal(new[] { "language:python" }, InterestCatalog.CustomFeatures(new[] { "Python" }));
-        Assert.Equal(new[] { "self-reading:sci-fi" }, InterestCatalog.CustomFeatures(new[] { "Sci-Fi" }));
+        Assert.Equal(new[] { "genre:science-fiction" }, InterestCatalog.CustomFeatures(new[] { "Sci-Fi" }));
+        Assert.Equal(new[] { "self-music:shoegaze" }, InterestCatalog.CustomFeatures(new[] { "Shoegaze" }));
 
         // Unknown interests become the shared interest: namespace.
         Assert.Equal(new[] { "interest:byzantine-history" }, InterestCatalog.CustomFeatures(new[] { "byzantine history" }));
@@ -158,7 +159,7 @@ public class InterestCatalogTests
     {
         var mapped = InterestCatalog.Canonicalize(new[]
         {
-            "self-tech:python", "self-tech:cpp", "self-music:jazz", "self-outdoors:climbing"
+            "self-tech:python", "self-tech:cpp", "self-music:shoegaze", "self-outdoors:climbing"
         });
 
         // Bridged languages become the exact string GitHub emits (lowercased language:*), so a
@@ -166,11 +167,65 @@ public class InterestCatalogTests
         Assert.Contains("language:python", mapped);
         Assert.Contains("language:c++", mapped);
         Assert.DoesNotContain("self-tech:python", mapped);
-        // Non-bridged interests are untouched — no connector has a single canonical string for them yet.
-        Assert.Contains("self-music:jazz", mapped);
+        // Non-bridged interests are untouched — niche genres keep their rarity weight, and no connector
+        // has a single canonical string for climbing.
+        Assert.Contains("self-music:shoegaze", mapped);
         Assert.Contains("self-outdoors:climbing", mapped);
         // 1:1, so the count never changes (FeatureCount stays the number of picks).
         Assert.Equal(4, mapped.Count);
+    }
+
+    [Fact]
+    public void Canonicalize_BridgesCommonGenres_ToTheConnectorsOwnStrings()
+    {
+        var mapped = InterestCatalog.Canonicalize(new[]
+        {
+            "self-music:jazz", "self-music:hip-hop", "self-screen:documentaries", "self-screen:anime",
+            "self-reading:sci-fi", "self-reading:fantasy",
+        });
+
+        Assert.Equal(new[]
+        {
+            "spotify-genre:jazz", "spotify-genre:hip-hop", "netflix-genre:documentary", "netflix-genre:anime",
+            "genre:science-fiction", "genre:fantasy",
+        }, mapped);
+    }
+
+    [Fact]
+    public void EveryBridgedGenre_IsAlreadyWeightOne_SoBridgingTradesAwayNoRarity()
+    {
+        // The rule that makes genre bridging free: a bridged feature hashes at weight 1 (the connector's
+        // weight), so only tags that are Common (weight 1) anyway may be bridged. Languages predate the
+        // rule and are justified by GitHub being the main connector pool.
+        foreach (var category in InterestCatalog.Categories.Where(c => c.Prefix != "self-tech"))
+        {
+            foreach (var tag in category.Tags)
+            {
+                var feature = InterestCatalog.Feature(category, tag);
+                var bridged = InterestCatalog.Canonicalize(new[] { feature })[0] != feature;
+                if (bridged)
+                    Assert.True(InterestCatalog.WeightOfSlug(tag.Slug) == 1,
+                        $"{feature} is bridged but not weight 1 — bridging it would discard its rarity signal");
+            }
+        }
+    }
+
+    [Fact]
+    public void BridgedGenres_MatchConnectorFeatures_ThroughTheRealPipeline()
+    {
+        var gen = new FingerprintGenerator(128, pepper: "bridge-test");
+        var selfDescribed = gen.Generate(InterestCatalog.Expand(InterestCatalog.Canonicalize(
+            new[] { "self-music:jazz", "self-music:classical", "self-screen:documentaries", "self-reading:fantasy" })));
+
+        var spotifyUser = gen.Generate(new[] { "spotify-genre:jazz", "spotify-genre:classical", "spotify-artist:someone" });
+        var netflixUser = gen.Generate(new[] { "netflix-genre:documentary", "netflix-type:series", "netflix-watched:abc123" });
+        var goodreadsUser = gen.Generate(new[] { "genre:fantasy", "shelf:favorites", "rating-high:def456" });
+        var stranger = gen.Generate(new[] { "language:go", "steam-game:12345" });
+
+        Assert.True(selfDescribed.Similarity(spotifyUser) > 0, "jazz/classical should overlap Spotify's genre features");
+        Assert.True(selfDescribed.Similarity(netflixUser) > 0, "documentaries should overlap Netflix's documentary genre");
+        Assert.True(selfDescribed.Similarity(goodreadsUser) > 0, "fantasy should overlap Goodreads' fantasy shelf");
+        Assert.Equal(0, selfDescribed.Similarity(stranger));
     }
 
     [Fact]

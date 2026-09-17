@@ -163,6 +163,41 @@ public class SelfDescribedInterestsTests : IClassFixture<ProfilerWebFactory>
         Assert.Contains(ghName, matches); // cross-pool match on the bridged languages
     }
 
+    [Fact]
+    public async Task SelfDescriber_MatchesAConnectorUser_OnBridgedGenres()
+    {
+        // Same idea for genres: a self-describer who ticks documentaries and fantasy should reach a
+        // Netflix + Goodreads user through the connectors' own genre strings.
+        var selfName = "sdi_genre_" + Guid.NewGuid().ToString("N")[..6];
+        var mateName = "nf_gr_" + Guid.NewGuid().ToString("N")[..6];
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var gen = scope.ServiceProvider.GetRequiredService<Profiler.Web.Profile.FingerprintGenerator>();
+            var mate = new Profiler.Web.Data.Models.AppUser { Username = mateName, PasswordHash = "x", IsDiscoverable = true };
+            db.Users.Add(mate);
+            await db.SaveChangesAsync();
+            var fp = gen.Generate(new[]
+            {
+                "netflix-genre:documentary", "netflix-type:series", "netflix-watched:0a1b2c",
+                "genre:fantasy", "shelf:favorites", "rating-high:3d4e5f",
+            });
+            db.Fingerprints.Add(new Profiler.Web.Data.Models.FingerprintRecord
+            {
+                UserId = mate.Id, FingerprintJson = fp.ToJson(), SourcesJson = "[\"Netflix\",\"Goodreads\"]", UpdatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var client = NewClient();
+        await RegisterAsync(client, selfName);
+        await PickAsync(client, "self-screen:documentaries", "self-reading:fantasy", "self-music:shoegaze");
+
+        var matches = await (await client.GetAsync("/matches")).Content.ReadAsStringAsync();
+        Assert.Contains(mateName, matches);
+    }
+
     private static async Task<HttpResponseMessage> PickWithCustomAsync(HttpClient client, string custom, params string[] features)
     {
         var page = await client.GetAsync("/sources/interests");

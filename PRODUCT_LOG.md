@@ -113,7 +113,11 @@ match on shared channels.
   accepted v1 limitation.
 - **Cross-pool bridge:** programming-language picks emit the canonical `language:*` feature the
   GitHub connector uses, so a self-describer who picks Python matches a GitHub user who codes
-  Python. Music/film genres are not yet bridged.
+  Python. Twelve common genres bridge the same way into the connectors' own strings — Spotify
+  (`spotify-genre:jazz`, hip-hop, classical, indie-rock), Netflix (`netflix-genre:documentary`,
+  anime, sci-fi) and Goodreads shelves (`genre:science-fiction`, fantasy, history, philosophy,
+  non-fiction). Rule: only tags that are already weight 1, so no rarity signal is traded away
+  (a test enforces it); niche genres stay `self-*` on purpose.
 - **Rarity weighting:** static per-tag weights in `InterestCatalog` replicate rare features in the
   MinHash input, so sharing a niche interest counts for more than sharing a ubiquitous one. No
   frequency oracle, no new retained state. Connector-side weighting is deliberately not applied
@@ -350,7 +354,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 367 tests, fully offline
+dotnet test                           # 371 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -456,8 +460,10 @@ data loss: `az appservice plan update -g <rg> -n <plan> --sku B1`.
   tier) while being the most sensitive data collected. Hiding it by default is recommended and is
   one config flip (`Signals:ValuesEnabled=false`) — an open owner decision. Strengthening it (a
   second Schwartz axis) is gated on real adoption evidence.
-- **Cross-pool bridge covers programming languages only.** Self-described music/film picks and
-  connector genres still live in different vocabularies and cannot match each other.
+- **Cross-pool bridge covers languages and twelve common genres.** Niche genres are deliberately
+  unbridged (their rarity weight is worth more to the self-described pool); concepts without a
+  stable connector label ("electronic", "stand-up") stay unbridged; Last.fm/SoundCloud vocabularies
+  are not bridged (connector-side emission changes need scheme versioning first).
 - **Connector-side rarity weighting is not applied.** It would change established connector
   signatures and `SchemeVerifier` only detects pepper changes, so old and new signatures would
   silently stop matching. Needs a weighting version folded into the scheme first.
@@ -475,6 +481,19 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Genre bridge: common self-described genres now match connector users.** Opportunity Critic #3
+  noticed the two vocabularies already coincide (`spotify-genre:indie-rock` vs the catalog's
+  `indie-rock`), so the "fuzzy multi-vocabulary mapping" the backlog feared was an exact-string
+  bridge like the language one. Twelve entries: four Spotify genres, three Netflix keyword genres,
+  five Goodreads genre shelves. The rule that makes it free — a bridged feature hashes at the
+  connector's weight 1, so only tags that are already Common (weight 1) may be bridged — is
+  enforced by a test; niche genres (shoegaze, post-rock…) keep their rarity weight and stay
+  `self-*`, and labels that are not stable on the connector side ("electronic", "stand-up") are
+  not bridged. Free-text "sci-fi" now unifies with the Goodreads shelf the way "python" unifies
+  with GitHub. Vocabulary change to new self-described signatures only — done before launch on
+  purpose; after launch such changes need scheme versioning. Tests: exact mappings, weight rule
+  across the catalog, real-pipeline overlap with Spotify/Netflix/Goodreads-shaped fingerprints and
+  zero with a stranger, end-to-end self-describer matches a Netflix+Goodreads user: 371.
 - **YouTube without a token: Google Takeout `subscriptions.csv` upload.** Opportunity Critic #3's
   "bring your own export" bet, smallest increment. The token YouTube connector emits
   `youtube-channel:<slug of title>`; the new `YouTubeSubscriptionsConnector` parses the Takeout
