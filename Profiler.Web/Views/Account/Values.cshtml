@@ -73,12 +73,13 @@
                             {
                                 var id = $"{item.Key}_{v}";
                                 <label class="likert-option" for="@id">
-                                    <input type="radio" id="@id" name="Answers[@item.Key]" value="@v" required />
-                                    <span class="likert-num">@v</span>
+                                    <input type="radio" id="@id" name="Answers[@item.Key]" value="@v" required
+                                           aria-label="@item.Name: @v of @ValuesQuestionnaire.MaxAnswer, @ValuesQuestionnaire.ImportanceWord(v)" />
+                                    <span class="likert-num" aria-hidden="true">@v</span>
                                 </label>
                             }
                         </div>
-                        <div class="likert-scale">
+                        <div class="likert-scale" aria-hidden="true">
                             <span>Not important to me</span>
                             <span>Extremely important</span>
                         </div>
@@ -97,12 +98,13 @@
                             {
                                 var id = $"{item.Key}_{v}";
                                 <label class="likert-option" for="@id">
-                                    <input type="radio" id="@id" name="Answers[@item.Key]" value="@v" required />
-                                    <span class="likert-num">@v</span>
+                                    <input type="radio" id="@id" name="Answers[@item.Key]" value="@v" required
+                                           aria-label="@v of @ValuesQuestionnaire.MaxAnswer, @ValuesQuestionnaire.AgreementWord(v)" />
+                                    <span class="likert-num" aria-hidden="true">@v</span>
                                 </label>
                             }
                         </div>
-                        <div class="likert-scale">
+                        <div class="likert-scale" aria-hidden="true">
                             <span>Strongly disagree</span>
                             <span>Strongly agree</span>
                         </div>

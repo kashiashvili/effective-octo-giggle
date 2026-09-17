@@ -236,6 +236,30 @@ public static class ValuesQuestionnaire
         _ => "Enticing world (primal belief)",
     };
 
+    /// <summary>The 1–7 importance scale in words, so a screen reader hears more than a bare number.</summary>
+    public static string ImportanceWord(int answer) => answer switch
+    {
+        1 => "not important to me",
+        2 => "slightly important",
+        3 => "somewhat important",
+        4 => "moderately important",
+        5 => "quite important",
+        6 => "very important",
+        _ => "extremely important",
+    };
+
+    /// <summary>The 1–7 agreement scale in words, for the same reason.</summary>
+    public static string AgreementWord(int answer) => answer switch
+    {
+        1 => "strongly disagree",
+        2 => "disagree",
+        3 => "slightly disagree",
+        4 => "neither agree nor disagree",
+        5 => "slightly agree",
+        6 => "agree",
+        _ => "strongly agree",
+    };
+
     /// <summary>A level in words: relative priorities read as "above / around / below your average".</summary>
     public static string LevelWord(int level) => level switch
     {
