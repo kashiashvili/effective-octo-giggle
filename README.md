@@ -126,6 +126,32 @@ docker run -d -p 8080:8080 \
 
 To build the image yourself: `docker build -t profiler .`
 
+### Deploy to Azure App Service
+
+One-time setup, run under your own Azure login (the script needs `az login`; it creates the
+resource group, a Linux App Service plan, a container web app, and every app setting the app
+needs, then prints the permanent pepper, the operator token and the publish profile):
+
+```bash
+az login && ./deploy/azure-bootstrap.sh
+```
+
+Defaults: free **F1** tier (sleeps when idle, 60 CPU-min/day), `westeurope`, image
+`ghcr.io/kashiashvili/effective-octo-giggle:latest`. Override with env vars, e.g.
+`APP_NAME=my-profiler SKU=B1 ./deploy/azure-bootstrap.sh`. The script pins the plan to a
+**single worker** (SQLite corrupts if App Service scales out) and stores the database and key ring
+under the persistent `/home` path.
+
+Then in the GitHub repo → Settings → Secrets and variables → Actions, add the variable
+`AZURE_WEBAPP_NAME` and the secret `AZURE_WEBAPP_PUBLISH_PROFILE` (the XML the script prints), and
+make the GHCR package public so App Service can pull it (the image holds no secrets). From then on
+the `deploy-azure` job in `.github/workflows/deploy.yml` ships every push to `main` and waits until
+the site answers 200. Upgrade in place, no redeploy, no data loss:
+
+```bash
+az appservice plan update -g profiler-rg -n profiler-plan --sku B1
+```
+
 ---
 
 ## Configuration
@@ -203,7 +229,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 dotnet test
 ```
 
-The suite (271 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (349 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 
