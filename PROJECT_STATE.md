@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Genre bridge unit — built, tests green, committing (2026-09-17, Critic #3 opportunity 5).** Twelve common genres bridged to Spotify/Netflix/Goodreads strings; weight-1 rule enforced by test. +4 tests → 371.
+**Circles, slice 1 (started 2026-09-17).** Design recorded in `docs/DESIGN_CIRCLES.md` (approved under current vision; positioning = Decision 5). Slice 1 DoD: `Circle` + `CircleMembership` (cascade, unique), migration, `CirclesController` (create · join page · join · leave · invite link via Data Protection, 30 days, never stored), dashboard "Your circles" card, export `Circles`, delete removes memberships, register/login carry `circle` through, `Signals:CirclesEnabled` flag, tests per design "Validation". Slice 2: match chip + "Same circle first" sort + metrics + docs. Release Auditor on `9c9ff96..d1bbe1c` running in background — P0–P2 findings pre-empt.
 
-**Next mandatory action:** Product Owner review; then circles (§7 item 3): design pass first — data shape (Circle, CircleMembership), invite token minted with Data Protection, new-data checklist (opt-in by joining, leave = delete, in export, cascades, withheld while hidden, chip + sort only, never a filter), migration, tests — written as a short design in `PRODUCT_LOG.md`/state plus Decision 5 (vision: groups-first) in `docs/OWNER_DECISIONS.md`; build the additive increment after the design is recorded. Then a Release Auditor over `9c9ff96..HEAD`. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -52,6 +52,7 @@
 2. Values signal: keep / **hide by default** (recommended; one flip `Signals:ValuesEnabled=false`) / strengthen with 2nd Schwartz axis (only with real adoption evidence).
 3. Enable `AntiAbuse:GuardRegistration=true` for public launch (recommend yes).
 4. Go live on Azure: owner runs `deploy/azure-bootstrap.sh` under own `az login`, sets repo variable `AZURE_WEBAPP_NAME` + secret `AZURE_WEBAPP_PUBLISH_PROFILE`, makes GHCR package public. Unblocks real `/metrics` evidence, which every further signal bet depends on.
+5. Groups-first positioning once circles ship (copy only; recommend yes). Design: `docs/DESIGN_CIRCLES.md`.
 
 Also owner-only (standing): opt-in contact model stays final; culling paste-a-token connectors (13/18) — security + honesty win but removes advertised capability.
 

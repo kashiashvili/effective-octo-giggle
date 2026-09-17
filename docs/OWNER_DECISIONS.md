@@ -1,6 +1,6 @@
 # Owner Decision Brief
 
-_Prepared by the autonomous product loop, 2026-07-25. Updated 2026-09-17 (Azure path added 2026-09-12; counts re-verified). All four decisions still open._
+_Prepared by the autonomous product loop, 2026-07-25. Updated 2026-09-17 (Azure path added 2026-09-12; Decision 5 added; counts re-verified). All five decisions still open._
 
 The build/validate/deploy work that can be justified **without owner strategy input or real usage
 data** is done: multi-source matching (interests + intent + values), self-described + free-text
@@ -125,6 +125,34 @@ F1 tier ($0; sleeps when idle, 60 CPU-min/day); `az appservice plan update -g <r
 (~$13/mo) upgrades in place with no redeploy and no data loss.
 
 **Unblocks.** Real adoption data → the evidence Decisions 2(c) and the data-gated bets depend on.
+
+---
+
+## Decision 5 — Position the product groups-first ("find your people inside communities you already belong to")?
+
+_Updated: 2026-09-17_
+
+**Context.** Opportunity Critic #3 (2026-09-17) found the vision framed as a standalone network of
+individuals while every remaining bet waits on pool density, and Decision 4 assumes "a small private
+cohort" with no mechanism to form one. The loop is building **circles** — a named group with a
+shareable invite link; members see a "Same circle" chip and can sort by it; registration stays
+open, matching stays global, nothing is filtered or blended (design: `docs/DESIGN_CIRCLES.md`).
+That is additive and needs no decision. What needs you is the **positioning**: whether the landing
+page, the pitch and the go-live plan lead with "host a circle for your meetup / course / team"
+rather than "join and get matched".
+
+**Evidence.** No real users. Structural: the self-described picker became the real funnel; the
+invite link is the only growth lever; all density-gated bets are unchanged for a year of building.
+
+**Options.** (a) Groups-first positioning: landing leads with "start a circle", go-live plan = one
+organiser per cohort. (b) Keep individual positioning; circles stay a feature. (c) Wait for the first
+cohort's `/metrics` to show whether circles are used.
+
+**Recommendation: (a), after the increment ships.** It matches how the first cohort will actually
+arrive (through someone), and it is copy, not code — reversible in an hour.
+
+**Unblocks.** Landing/positioning copy; whether to build circle-scoped extras (member list to members,
+"N in your circle" on the empty state, invite-only mode).
 
 ---
 
