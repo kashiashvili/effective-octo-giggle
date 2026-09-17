@@ -567,6 +567,10 @@ Each entry: what changed and why it mattered.
   universalism description was reworded away from the PVQ phrasing it sat close to, the rollback
   clears the v2 scheme tag, the export page uses plain words, the consent sentence now says that
   matches see which priority you put first, and the metrics data shape is documented. 400 tests.
+  QA re-walk after the fixes: all fourteen legends are the first child of their fieldset, both label
+  styles read correctly ("Loyalty: 7 of 7, extremely important"; "By and large, the world is a safe
+  place. 4 of 7, neither agree nor disagree"), and submitting with the consent box unticked returns
+  all fourteen answers still selected with the consent error shown.
 - **Values & worldview, rebuilt on the research and brought out of hiding (owner instruction).** The
   owner asked for the values profile to be accessible and genuinely science-based; this also answers
   the open Decision 2 as **strengthen** (the loop's earlier "hide by default" recommendation is

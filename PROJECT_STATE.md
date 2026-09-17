@@ -42,9 +42,11 @@
 
 ## 4. Active Task
 
-**Values audit fixes — built, tests green (400), committing (2026-09-17).** Release Auditor on the values rebuild returned seven P2s (unique-top-priority guard, per-breakdown metrics gating, legend/aria on the questionnaire, answers kept on a validation error, flag gating on the profile and landing surfaces, the primals-and-politics overclaim, the promised database scan) and P3s; all closed.
+**None active — values & worldview v2 complete (2026-09-17).** Owner instruction met: researched (`docs/DESIGN_VALUES.md`), implemented (`0fbc35c`), accessibility fixed (`bde7957`, `9a8fd3b`), audited with seven P2s closed (`b47d7e4`), QA-walked twice. 400 tests, clean worktree.
 
-**Next mandatory action:** Product Owner review of the values work, then a QA re-walk of the questionnaire (legend and answer-retention changes are untested in a browser) and the next bet from §7 — item 4, try-before-register preview, needs a design note first. Owner replies to decisions 1, 3, 4, 5 pre-empt everything.
+**Product Owner review of it:** the signal now earns its place — strangers read "similar priorities" 16.7% of the time against 69% for pairs who genuinely share them, and centring holds 76% of generous-vs-stingy pairs together — so the data-minimisation argument for hiding it no longer applies, and Decision 2 is closed as strengthened. More axes (the remaining Schwartz values, or the third primal belief) stay gated on real adoption evidence: adding sensitive items before anyone has answered the current fourteen would repeat the v1 mistake in the other direction. The card's reason line is the part to watch once there are users, since it is the only place one person's priority ordering becomes visible to another.
+
+**Next action:** §7 item 4 — try-before-register preview. Needs a design note first (the match-count oracle: coarse band only, pool floor, per-IP limit, nothing stored, picks discarded in-request), then build. Owner replies to decisions 1, 3, 4, 5 pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -104,7 +106,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 
 ## 10. Last Completed Iteration
 
-`d48979e` organiser health card, 2026-09-17. Same day, newest first: `e5efb6f` audit fixes (join copy, column-level inventory, one member count, red fold assertion); `8a1ab42` token fold; `394fbb5` circle page; `227d268` privacy inventory; `8dd315c`+`96429b7` mutual badge; `9231952` circle invite follow-through; `d7002bc`+`6dc5527`+`ff03acc` circles; `d1bbe1c` genre bridge; `58baf17` YouTube Takeout; `9e0f578`+`9c9ff96`+`e6a0fcb`+`ab80929` go-live safety, metrics, onboarding.
+Values & worldview v2, 2026-09-17: `b47d7e4` audit fixes · `9a8fd3b` accessibility test · `bde7957` accessible names · `0fbc35c` the rebuild (Schwartz ten values → four centred priorities, two primal world beliefs, own wording, answers discarded, own profile shown back, explained card line, five entry points, migration `ValuesProfileV2`). Earlier that day: `d48979e` organiser card · `4533dfa` its audit fixes · circles (`ff03acc`, `6dc5527`, `d7002bc`, `9231952`, `394fbb5`) · `8dd315c`/`96429b7` mutual badge · `227d268` privacy inventory · `8a1ab42` token fold · `d1bbe1c` genre bridge · `58baf17` YouTube Takeout · `ab80929` go-live data safety.
 
 ## 11. Deploy Status
 
