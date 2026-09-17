@@ -37,6 +37,21 @@ az appservice plan create -g "$RG" -n "$PLAN" --is-linux --sku "$SKU" -o none
 echo "==> Web app $APP_NAME  (image: $IMAGE)"
 az webapp create -g "$RG" -p "$PLAN" -n "$APP_NAME" --container-image-name "$IMAGE" -o none
 
+# azure/webapps-deploy authenticates against the SCM (Kudu) endpoint with basic credentials when you
+# hand it a publish profile. Azure now creates apps with those DISABLED, so the action fails with
+# "Failed to get app runtime OS" before it uploads anything. Enable them for this app.
+#
+# Trade-off, deliberately scoped: basic auth on the SCM endpoint is weaker than federated (OIDC)
+# credentials, which is why Microsoft turns it off by default. It is enabled only for this app, and
+# only the SCM endpoint (FTP stays off). If you later move the workflow to OIDC, turn it back off:
+#   az resource update -g "$RG" --namespace Microsoft.Web \
+#     --resource-type basicPublishingCredentialsPolicies --name scm \
+#     --parent "sites/$APP_NAME" --set properties.allow=false
+echo "==> Allowing SCM basic auth (required by publish-profile deploys)"
+az resource update -g "$RG" --namespace Microsoft.Web \
+  --resource-type basicPublishingCredentialsPolicies --name scm \
+  --parent "sites/$APP_NAME" --set properties.allow=true -o none 2>/dev/null || true
+
 # --- secrets -------------------------------------------------------------------------------------
 # The pepper is PERMANENT: changing it invalidates every stored fingerprint and forces every user to
 # reconnect. So on a re-run against an app that already has one, REUSE it rather than minting a new

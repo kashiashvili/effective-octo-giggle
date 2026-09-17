@@ -146,6 +146,20 @@ Defaults: free **F1** tier (sleeps when idle, 60 CPU-min/day), `westeurope`, ima
 **single worker** (SQLite corrupts if App Service scales out) and stores the database and key ring
 under the persistent `/home` path.
 
+**Publish-profile deploys need SCM basic auth.** Azure creates apps with basic publishing
+credentials disabled, and `azure/webapps-deploy` then fails with `Failed to get app runtime OS`
+before uploading anything. The bootstrap enables it for the SCM endpoint of that one app (FTP stays
+off). To check or change it:
+
+```bash
+az resource show -g profiler-rg --namespace Microsoft.Web \
+  --resource-type basicPublishingCredentialsPolicies --name scm \
+  --parent sites/<APP_NAME> --query properties.allow
+```
+
+If you move the workflow to federated (OIDC) credentials instead, set it back to `false` — OIDC needs
+no basic auth and leaks no long-lived secret.
+
 **Free tier caveat.** F1 gives 60 CPU-minutes *per day*. A .NET container that restarts, plus any
 per-minute probing, can spend that in hours — Azure then stops the site and every request returns
 "Error 403 - This web app is stopped" until midnight UTC. The bootstrap therefore leaves the health
