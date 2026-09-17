@@ -405,7 +405,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 396 tests, fully offline
+dotnet test                           # 397 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -579,7 +579,13 @@ Each entry: what changed and why it mattered.
   69% and "different" 0.4%; and a generous rater and a stingy rater with the same priorities still
   read similar 76.1% of the time, which is the centring doing its job. Two real defects the tests
   caught: the stored JSON was carrying the computed priority arrays as extra properties, and Razor
-  encodes non-ASCII from expressions, so the card's em dash arrived as an entity. 396 tests.
+  encodes non-ASCII from expressions, so the card's em dash arrived as an entity. A QA walk then
+  showed the last gap: a screen reader heard only "1" … "7" on fourteen questions, so every scale
+  point now carries its meaning as an accessible name ("Independence: 7 of 7, extremely important")
+  and the decorative numbers and scale ends are hidden from assistive tech. 397 tests.
+  _Correction:_ commit `bde7957` shipped that accessibility fix but its message claimed a test that
+  had not been added — a scripting error dropped the test file edit. The test arrived in the
+  following commit; the count in `bde7957` was 396, not 397.
 - **Build stamp (arrived in the working tree, committed with the token fold `8a1ab42`, documented
   here).** The Dockerfile takes `--build-arg BUILD_SHA` (CI passes the commit sha) into `Build:Sha`,
   and the page footer shows `build <sha7>` unless the value is the local default `dev`, so anyone can

@@ -129,6 +129,27 @@ public class ValuesSignalTests : IClassFixture<ProfilerWebFactory>
     }
 
     [Fact]
+    public async Task EveryScalePoint_CarriesAnAccessibleName_NotJustANumber()
+    {
+        var client = NewClient();
+        await RegisterAsync(client, "vala_" + Guid.NewGuid().ToString("N")[..8]);
+        var html = await client.GetStringAsync("/account/values");
+
+        // Fourteen questions; a screen reader must hear what each point means, and the decorative
+        // numbers and the scale-end captions must not be announced as content.
+        var options = 14 * ValuesQuestionnaire.MaxAnswer;
+        Assert.Equal(options, Regex.Matches(html, "<input type=\"radio\"").Count);
+        Assert.Equal(options, Regex.Matches(html, "aria-label=\"[^\"]*of 7,").Count);
+        Assert.Contains("aria-label=\"Independence: 1 of 7, not important to me\"", html);
+        Assert.Contains("aria-label=\"Independence: 7 of 7, extremely important\"", html);
+        Assert.Contains("aria-label=\"4 of 7, neither agree nor disagree\"", html);
+        Assert.Equal(14, Regex.Matches(html, "<fieldset").Count);
+        Assert.Equal(14, Regex.Matches(html, "<legend").Count);
+        Assert.Equal(options, Regex.Matches(html, "class=\"likert-num\" aria-hidden=\"true\"").Count);
+        Assert.Contains("class=\"likert-scale\" aria-hidden=\"true\"", html);
+    }
+
+    [Fact]
     public async Task WithoutConsent_NothingIsSaved()
     {
         var user = "valc_" + Guid.NewGuid().ToString("N")[..8];
