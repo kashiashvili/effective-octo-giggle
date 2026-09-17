@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Docs consolidation (2026-09-17).** DoD: `CLAUDE.md` + `docs/PRODUCT_AGENT.md` deduped/compressed (done, `fca4d0c`); this file current-only; `PRODUCT_LOG.md` handbook sections + changelog current through Azure; README/OWNER_DECISIONS counts reconciled to 349; committed.
+**None — awaiting owner input (termination rule 3).** Docs consolidation completed 2026-09-17 (`fca4d0c`, `1feb8bf`, `ebb481c`). Product Owner review after it: every remaining bet is gated (§5, §6); the last evidence-independent candidate (music/film genre bridge) was weighed and rejected as low value before a pool exists — fuzzy mapping with no density to validate against. No new assumption test or structural inspection identified that real usage would not answer better.
 
-**Next mandatory action after DoD:** Product Owner review. Expected result: every remaining bet is gated (§5) — do not invent work; continue only with evidence-independent discovery if a genuinely new assumption test or structural inspection is identifiable, else record and stop per termination rule 3 (owner input required).
+**Next mandatory action:** on any owner reply to `docs/OWNER_DECISIONS.md` (even one decision), implement it immediately, log it in `PRODUCT_LOG.md`, close the brief entry, resume the loop. Recommended first reply: Decision 4 (go live) — it unblocks the evidence every other bet needs.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
