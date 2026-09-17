@@ -205,7 +205,18 @@ All settings can be supplied via `appsettings.json` or environment variables.
 - **Persist the key ring.** Auth cookies are protected by the Data Protection key
   ring at `DataProtection:KeyPath`. Mount this on a persistent volume (or point it
   at shared storage for multi-instance deploys) so cookies survive restarts and
-  redeploys. The keys are secret material and are git-ignored.
+  redeploys. The keys are secret material and are git-ignored. They are stored
+  **unencrypted** on that volume (the app logs a one-line warning about it at start):
+  whoever can read the volume can also forge sessions, not only read the database, so
+  treat volume access as root access. Rotating is deleting the folder — everyone is
+  signed out, nothing else is lost. Encrypting keys at rest needs a certificate or a
+  cloud key store and is a deliberate non-goal for a single-instance deployment.
+- **Reading `/metrics` as a funnel.** `totalUsers` → `withFingerprint` (did people get past
+  "connect or self-describe"; `fingerprintsBySource` says which path) → `viewedMatches` →
+  `returnedAfterFirstDay` (came back to the match list a day or more later — the "did they
+  find a reason to return" number) → `withContact` / `withBio` (willing to be reached).
+  `registeredLast7Days` and `activeLast7Days` show the trend. All are counts over columns
+  the app already stores; nothing per-user is reported.
 - **Schema changes** go through EF Core migrations
   (`dotnet ef migrations add <Name> --project Profiler.Web`), applied automatically
   on startup — no manual database steps.

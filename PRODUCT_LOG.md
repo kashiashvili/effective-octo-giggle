@@ -431,6 +431,10 @@ data loss: `az appservice plan update -g <rg> -n <plan> --sku B1`.
   user's fingerprint, then compares against all of them. Fine at current scale; past a few
   thousand users this needs LSH banding (bucket candidates by signature bands) so each request
   only compares against plausible neighbours.
+- **Data Protection keys are unencrypted on the data volume.** Whoever can read the volume can
+  forge sessions as well as read the (signature-only) database; rotation = delete the folder
+  (signs everyone out). Encrypting at rest needs a certificate or cloud key store — non-goal for
+  a single-instance deployment; documented in `README.md` deployment notes.
 - **Snapshots live on the same volume as the database.** They cover a bad migration, a bad
   release or accidental data damage, not the loss of the volume itself; copying `backups/` off-host
   is a manual operator step (README "Back up and restore").
