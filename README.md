@@ -23,7 +23,7 @@ Built with ASP.NET Core MVC, Entity Framework Core, and SQLite.
 - **Similarity matching** – ranked list of users with compatible profiles
   (estimated Jaccard similarity), with a noise floor and qualitative match tiers
   instead of false-precision percentages, and a "you're in their top matches too"
-  badge so you know when reaching out is mutual
+  badge so you know when you're on their list as well
 - **Optional public profile** – add a short bio and a way to be reached, shown only
   to people you match with; rendered as plain text (never a live link)
 - **Circles** – start a named group and share its invite link (signed, 30 days, never stored); people from
@@ -344,7 +344,7 @@ Then `GET /health` must answer 200 and `deploy/smoke.sh` should pass against the
 dotnet test
 ```
 
-The suite (388 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (389 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 

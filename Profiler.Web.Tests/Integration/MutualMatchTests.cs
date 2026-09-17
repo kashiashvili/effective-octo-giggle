@@ -80,11 +80,12 @@ public class MutualMatchTests : IClassFixture<ProfilerWebFactory>
         await SeedUserAsync(me, mine);
         await SeedUserAsync(mutual, mine.Take(9).Concat(new[] { $"{tag}:y1", $"{tag}:y2" }).ToArray());
 
-        // "crowded" shares a little with me but has twenty identical twins, so I fall outside their top 20.
-        var crowdedFeatures = Enumerable.Range(1, 12).Select(i => $"{tag}:c{i}").Concat(mine.Take(3)).ToArray();
-        await SeedUserAsync(crowded, crowdedFeatures);
+        // "crowded" shares a little with me but has twenty people far closer to them (who share nothing
+        // with me, so they never enter my own list), so I fall outside their top 20.
+        var crowdedOwn = Enumerable.Range(1, 12).Select(i => $"{tag}:c{i}").ToArray();
+        await SeedUserAsync(crowded, crowdedOwn.Concat(mine.Take(3)).ToArray());
         for (var i = 0; i < 20; i++)
-            await SeedUserAsync($"mut_twin{i}_{tag}", crowdedFeatures);
+            await SeedUserAsync($"mut_twin{i}_{tag}", crowdedOwn);
 
         var html = await client.GetStringAsync("/matches");
         Assert.Contains(Badge, CardOf(html, mutual));

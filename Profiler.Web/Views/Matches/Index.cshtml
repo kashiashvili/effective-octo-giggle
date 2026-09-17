@@ -145,7 +145,7 @@
                     }
                     else
                     {
-                        <small class="text-muted">Anyone with the link joins <strong>@inviteCircle</strong> and is marked on your matches. We never see who you invited.</small>
+                        <small class="text-muted">Anyone with the link joins <strong>@inviteCircle</strong> and is marked on your matches@(isDiscoverable ? "" : " once you're discoverable"). We never see who you invited.</small>
                     }
                 </div>
 
@@ -211,7 +211,7 @@
                             </div>
                             @if (match.RanksYouToo)
                             {
-                                <p class="match-mutual" title="They would see you on their own match list too">🔁 You're in their top matches too</p>
+                                <p class="match-mutual"><span aria-hidden="true">🔁</span> You're in their top matches too — they'd see you on their own list</p>
                             }
                             <div class="match-freshness text-muted">
                                 @if (match.IsStale)
@@ -232,22 +232,22 @@
                                circle comes first: the most concrete reason two people are on the same list. *@
                             @if (match.SharedCircles.Any())
                             {
-                                <p class="match-circle">👥 Same circle: @string.Join(" · ", match.SharedCircles)</p>
+                                <p class="match-circle"><span aria-hidden="true">👥</span> Same circle: @string.Join(" · ", match.SharedCircles)</p>
                             }
                             @if (!string.IsNullOrWhiteSpace(match.ConnectionIntentLabel))
                             {
                                 @if (match.SharesViewerIntent)
                                 {
-                                    <p class="match-intent match-intent-shared">🎯 You're both here for: @match.ConnectionIntentLabel</p>
+                                    <p class="match-intent match-intent-shared"><span aria-hidden="true">🎯</span> You're both here for: @match.ConnectionIntentLabel</p>
                                 }
                                 else
                                 {
-                                    <p class="match-intent">🎯 Here for: @match.ConnectionIntentLabel</p>
+                                    <p class="match-intent"><span aria-hidden="true">🎯</span> Here for: @match.ConnectionIntentLabel</p>
                                 }
                             }
                             @if (!string.IsNullOrWhiteSpace(match.ValuesAlignmentLabel))
                             {
-                                <p class="match-values">🧭 @match.ValuesAlignmentLabel</p>
+                                <p class="match-values"><span aria-hidden="true">🧭</span> @match.ValuesAlignmentLabel</p>
                             }
                             @* A concrete reason to reach out: interests they chose to show. Shared ones
                                (both of you show them) lead; otherwise their own list is the icebreaker. *@

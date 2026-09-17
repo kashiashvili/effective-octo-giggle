@@ -18,6 +18,9 @@ public class MatchesController : Controller
     // having nothing in common, so we don't present it as a match.
     private const double MinMatchSimilarity = 0.05;
 
+    /// <summary>How many people a match list holds, in either direction.</summary>
+    private const int TopMatches = 20;
+
     private readonly AppDbContext _db;
     private readonly Security.FeatureFlags _flags;
     private readonly Security.CircleInvites _invites;
@@ -45,22 +48,7 @@ public class MatchesController : Controller
 
         // Where a friend would sign up. Built from the current request so it is correct behind a
         // proxy (forwarded headers, when configured, have already rewritten scheme/host by here).
-        // Someone in a circle shares that circle's link instead: the friend then lands in the circle
-        // and is marked on the match list, which is what an invite from a person means.
         ViewBag.InviteUrl = $"{Request.Scheme}://{Request.Host}/account/register";
-        if (_flags.CirclesEnabled)
-        {
-            var newest = await _db.CircleMemberships
-                .Where(m => m.UserId == userId)
-                .OrderByDescending(m => m.JoinedAt).ThenByDescending(m => m.Id)
-                .Join(_db.Circles, m => m.CircleId, c => c.Id, (m, c) => new { c.Id, c.Name })
-                .FirstOrDefaultAsync();
-            if (newest != null)
-            {
-                ViewBag.InviteUrl = $"{Request.Scheme}://{Request.Host}/circles/join/{_invites.Issue(newest.Id)}";
-                ViewBag.InviteCircleName = newest.Name;
-            }
-        }
 
         var myFp = await _db.Fingerprints.FirstOrDefaultAsync(f => f.UserId == userId);
         if (myFp == null)
@@ -112,7 +100,7 @@ public class MatchesController : Controller
 
         var mySources = JsonSerializer.Deserialize<List<string>>(myFp.SourcesJson) ?? new();
 
-        var matches = matcher.FindMatches(userId.ToString(), minSimilarity: MinMatchSimilarity, exclude: HiddenFromMe);
+        var matches = matcher.FindMatches(userId.ToString(), topK: TopMatches, minSimilarity: MinMatchSimilarity, exclude: HiddenFromMe);
 
         // Per-source signatures are only needed for the handful of people who actually matched, so
         // they are loaded after ranking rather than for everyone with a fingerprint.
@@ -159,16 +147,20 @@ public class MatchesController : Controller
                 .Where(b => matchedIds.Contains(b.BlockerId) || matchedIds.Contains(b.BlockedId))
                 .Select(b => new { b.BlockerId, b.BlockedId })
                 .ToListAsync();
-            var myKey = userId.ToString();
-            foreach (var matchedId in matchedIds)
+            // Similarity is symmetric, so the viewer's score in their list is the score already in hand:
+            // the viewer is in their top list when fewer than TopMatches people rank strictly closer to
+            // them (excluding the people hidden between them and others). A count with an early exit —
+            // no list built, no sort, ties in the viewer's favour.
+            foreach (var m in matches)
             {
+                var matchedId = int.Parse(m.UserId);
                 var theirHidden = theirBlocks
                     .Where(b => b.BlockerId == matchedId || b.BlockedId == matchedId)
                     .Select(b => b.BlockerId == matchedId ? b.BlockedId : b.BlockerId)
                     .ToHashSet();
-                var theirTop = matcher.FindMatches(matchedId.ToString(), minSimilarity: MinMatchSimilarity,
-                    exclude: uid => theirHidden.Contains(int.Parse(uid)));
-                if (theirTop.Any(t => t.UserId == myKey)) ranksMeToo.Add(matchedId);
+                var closer = matcher.CountCloserThan(m.UserId, m.Similarity,
+                    exclude: uid => theirHidden.Contains(int.Parse(uid)), stopAt: TopMatches);
+                if (closer < TopMatches) ranksMeToo.Add(matchedId);
             }
         }
 
@@ -288,6 +280,24 @@ public class MatchesController : Controller
         var activeFilter = !string.IsNullOrWhiteSpace(source) && available.Contains(source) ? source : null;
         ViewBag.SourceFilter = activeFilter;
         ViewBag.HasAnyMatch = viewModels.Count > 0;
+
+        // Only the empty state shows the invite box. Someone in a circle shares that circle's link
+        // instead of the plain register link: the friend then lands in the circle and is marked on
+        // the match list, which is what an invite from a person means. Looked up (and a token minted)
+        // only when the box will actually render.
+        if (viewModels.Count == 0 && _flags.CirclesEnabled)
+        {
+            var newest = await _db.CircleMemberships
+                .Where(m => m.UserId == userId)
+                .OrderByDescending(m => m.JoinedAt).ThenByDescending(m => m.Id)
+                .Join(_db.Circles, m => m.CircleId, c => c.Id, (m, c) => new { c.Id, c.Name })
+                .FirstOrDefaultAsync();
+            if (newest != null)
+            {
+                ViewBag.InviteUrl = $"{Request.Scheme}://{Request.Host}/circles/join/{_invites.Issue(newest.Id)}";
+                ViewBag.InviteCircleName = newest.Name;
+            }
+        }
 
         var shown = activeFilter == null
             ? viewModels

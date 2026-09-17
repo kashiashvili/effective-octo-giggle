@@ -385,7 +385,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 388 tests, fully offline
+dotnet test                           # 389 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -515,6 +515,14 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Release Auditor on the badge and the invite follow-through: verdict yes; P3s closed.** The badge
+  is now a count ("fewer than 20 people rank strictly closer to them", early exit, no list built,
+  ties in the viewer's favour) instead of rebuilding each match's list; the list sort breaks ties
+  deterministically so a cut at the 20th place never depends on insertion order; the circle invite
+  is looked up and its token minted only when the empty state will render; the empty-state copy
+  says "once you're discoverable" while the viewer is hidden; emoji on the four signal lines are
+  hidden from screen readers and the badge's explanation is visible text; the landing's circle
+  clause follows the flag; README says "on their list as well" rather than "mutual". 389.
 - **"You're in their top matches too."** The list is cut at the top 20 in each direction, so a
   strong match here could be a stranger to them and a message from the viewer a message from
   nobody they recognise (Opportunity Critic #3, bet 4). For each of the viewer's matches, that
@@ -524,7 +532,7 @@ Each entry: what changed and why it mattered.
   (a hidden account is in nobody's list). The matcher gained a per-query exclusion so one store
   serves every viewpoint; the viewer's own hides moved from store construction to that predicate
   (same result for the viewer's list, verified by the existing hide/suspend tests). Cost: at most
-  twenty extra passes over the fingerprints per page. Tests: badge on the mutual match only, gone
+  twenty extra counting passes over the fingerprints per page (LSH banding, when needed, must cover these passes too). Tests: badge on the mutual match only, gone
   when they hide the viewer, gone while the viewer is hidden; matcher exclusions per query: 388.
 - **Invites lead into your circle; the no-fingerprint state leads with interests.** The match list's
   empty-state invite box now shares the viewer's newest circle link (with "joins <circle> and is

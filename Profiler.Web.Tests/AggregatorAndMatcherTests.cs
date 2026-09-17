@@ -90,6 +90,25 @@ public class AggregatorAndMatcherTests
     }
 
     [Fact]
+    public void CountCloserThan_CountsStrictlyCloserCandidates_WithExclusionsAndEarlyExit()
+    {
+        var gen = new FingerprintGenerator(128);
+        var matcher = new UserMatcher();
+        matcher.Add("q", gen.Generate(new[] { "a", "b", "c", "d" }));
+        matcher.Add("same", gen.Generate(new[] { "a", "b", "c", "d" }));   // similarity 1.0
+        matcher.Add("close", gen.Generate(new[] { "a", "b", "c", "x" }));  // high
+        matcher.Add("far", gen.Generate(new[] { "y", "z" }));             // 0
+
+        var farScore = matcher.FindMatches("q").Single(m => m.UserId == "far").Similarity;
+        Assert.Equal(2, matcher.CountCloserThan("q", farScore));
+        Assert.Equal(1, matcher.CountCloserThan("q", farScore, exclude: uid => uid == "same"));
+        Assert.Equal(1, matcher.CountCloserThan("q", farScore, stopAt: 1));
+        // Ties count in the asker's favour: nobody is strictly closer than a perfect twin.
+        Assert.Equal(0, matcher.CountCloserThan("q", 1.0));
+        Assert.Equal(0, matcher.CountCloserThan("missing", 0.0));
+    }
+
+    [Fact]
     public void FindMatches_AppliesTheCallersExclusions_PerQuery()
     {
         var gen = new FingerprintGenerator(128);

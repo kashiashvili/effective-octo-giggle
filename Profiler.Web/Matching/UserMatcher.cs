@@ -50,7 +50,33 @@ public class UserMatcher
             });
         }
 
-        results.Sort((a, b) => b.Similarity.CompareTo(a.Similarity));
+        // Deterministic on ties, so a cut at the top-K boundary never depends on insertion order.
+        results.Sort((a, b) =>
+        {
+            var bySimilarity = b.Similarity.CompareTo(a.Similarity);
+            return bySimilarity != 0 ? bySimilarity : string.CompareOrdinal(a.UserId, b.UserId);
+        });
         return results.Take(topK).ToList();
+    }
+
+    /// <summary>
+    /// How many candidates rank strictly closer to the query user than <paramref name="similarity"/>,
+    /// stopping early at <paramref name="stopAt"/>. Answers "would someone with this score be in the
+    /// query user's top list?" without building or sorting that list; ties count in the asker's favour.
+    /// </summary>
+    public int CountCloserThan(string queryUserId, double similarity, Func<string, bool>? exclude = null, int stopAt = int.MaxValue)
+    {
+        if (!_store.TryGetValue(queryUserId, out var queryEntry) || queryEntry.fp.IsEmpty)
+            return 0;
+
+        var closer = 0;
+        foreach (var (uid, (fp, _)) in _store)
+        {
+            if (uid == queryUserId) continue;
+            if (fp.IsEmpty) continue;
+            if (exclude != null && exclude(uid)) continue;
+            if (queryEntry.fp.Similarity(fp) > similarity && ++closer >= stopAt) break;
+        }
+        return closer;
     }
 }
