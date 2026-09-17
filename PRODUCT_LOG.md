@@ -11,7 +11,7 @@
 > revise the relevant section above it. Keep it truthful and current. This is not
 > optional; it is how the owner stays in control.
 
-_Last updated: 2026-07-25_
+_Last updated: 2026-09-17_
 
 ---
 
@@ -57,12 +57,21 @@ fingerprint; the underlying interests are discarded after the fingerprint is bui
    at `/sources/interests` you can tick interests from a curated list and get the same
    fingerprint. Connectors that need no tokens: a GitHub username, RSS feed URLs, or a
    Goodreads/Netflix CSV export. The rest accept OAuth tokens / API keys.
-3. Profiler **fetches your interests, builds the fingerprint, and discards the raw data.**
-4. **View your matches** — ranked, with a qualitative tier and the source types you share.
-5. **See each match's optional bio and contact** and reach out off-platform.
-6. **Manage yourself** from the dashboard: see per-source signal counts, disconnect a
-   source, edit your public profile, change your password, regenerate your recovery code, or
-   delete your account.
+3. Profiler **fetches your interests, builds the fingerprint, and discards the raw data** (and
+   the picks, and any tokens).
+4. **View your matches** — ranked by interest similarity, with a qualitative tier, the source
+   types you share, how fresh the other fingerprint is, and — when both of you opted in — the
+   interests you both chose to show. Filter by shared interest theme; sort by best match, same
+   connection intent first, or similar outlook first. Nothing is blended into one score.
+5. **Optionally add compatibility signals** beyond interests: a connection intent (what kind of
+   connection you want), a short values/outlook questionnaire (consent-gated; answers discarded
+   after deriving a coarse bucket), and a list of interests you are happy to show on your card.
+   Each is shown to matches as its own explainable line.
+6. **See each match's optional bio and contact** and reach out off-platform. Hide anyone you
+   don't want to see again; report anyone who misbehaves.
+7. **Manage yourself** from the dashboard: per-source signal counts, disconnect a source, edit
+   your public profile and signals, change your password, sign out other devices, regenerate
+   your recovery code, review and export everything stored about you, or delete your account.
 
 ---
 
@@ -90,6 +99,22 @@ Steam ID), TikTok, Instagram, Twitch (token + client ID), RSS/Blogs (feed URLs),
 SoundCloud, YouTube. Most API connectors need an OAuth token or API key; GitHub, RSS,
 and the two CSV uploads need no account credentials.
 
+### Self-described interests (no account needed)
+- **Curated picker** at `/sources/interests`: ~140 tags across 9 themes. Picks become features
+  through the same `FingerprintGenerator` pipeline as any connector, stored as a "Self-described"
+  source (signature + count); **the picks themselves are discarded** (asserted against the DB).
+- **Free-text interests** for the rare, high-signal ones a fixed list cannot hold. Aggressive
+  normalisation (case, spacing, punctuation) so spellings collide; text matching a catalog concept
+  maps onto it, otherwise `interest:<slug>`. Hashed and discarded, never rendered. Synonyms are an
+  accepted v1 limitation.
+- **Cross-pool bridge:** programming-language picks emit the canonical `language:*` feature the
+  GitHub connector uses, so a self-describer who picks Python matches a GitHub user who codes
+  Python. Music/film genres are not yet bridged.
+- **Rarity weighting:** static per-tag weights in `InterestCatalog` replicate rare features in the
+  MinHash input, so sharing a niche interest counts for more than sharing a ubiquitous one. No
+  frequency oracle, no new retained state. Connector-side weighting is deliberately not applied
+  yet (it would silently invalidate existing signatures — needs scheme versioning first).
+
 ### Fingerprint & sources
 - **Per-source incremental fingerprints:** each connected source is stored as its own
   full-width MinHash signature. Your overall fingerprint is the element-wise minimum of
@@ -105,8 +130,18 @@ and the two CSV uploads need no account credentials.
 - Similarity is the **estimated Jaccard similarity** of two MinHash fingerprints.
 - Matches below a **5% floor** are hidden (below that they are indistinguishable from
   noise).
-- Results use **qualitative tiers** — "Strong match", "Good match", "Some overlap" — with
-  the percentage shown as approximate (`~N% shared`), never as false precision.
+- Results use **qualitative tiers** — "Strong match" (≥35% estimated Jaccard), "Good match"
+  (≥15%), "Some overlap" — with the percentage shown as approximate (`~N% shared`), never as false
+  precision. The cut-offs are calibrated by a synthetic-population test
+  (`InterestSignalResolutionTests`) so that same-niche pairs read Good-or-better ~92% of the time
+  and strangers never do; the test fails if calibration drifts.
+- **Filter** the list by a shared interest theme (count-only chips), and **sort** by best match,
+  "same intent first", or "similar outlook first". Sorting is a stable secondary order on top of
+  interest similarity — signals are never blended into a score.
+- **Shared-interest reveal (opt-in):** if both people chose interests to show on their card, the
+  card leads with the intersection ("You both want to talk about: …"), otherwise with the match's
+  own list ("Ask them about: …"). This list is separate from the discarded fingerprint input, so
+  the raw-data guarantee is intact.
 - Up to 20 matches, ranked. Each card shows the **source types you have in common** and names the
   one you overlap on most ("Closest on RSS/Blogs, ~45% there"), computed by comparing the stored
   per-source signatures. A category, never an interest.
@@ -131,6 +166,22 @@ and the two CSV uploads need no account credentials.
 - Rendered as **plain text** (HTML-escaped by Razor, verified XSS-safe) and **never as a
   clickable link**, to avoid phishing/open-redirect. Blank fields stay private.
 
+### Compatibility signals (each optional, separate, explainable)
+- **Connection intent** (above): closed set, mutual intent is highlighted ("You're both here for:
+  …"). Adoption nudge on the dashboard.
+- **Values / outlook** at `/account/values`: four plainly-worded 5-point items on one axis
+  (openness ↔ conservation, Schwartz's public structure — no licensed instrument, no Big Five, no
+  political/moral items). Consent is required and enforced server-side. Answers are reduced to a
+  signed bucket (−2..+2) and **discarded** (asserted against the DB); retake = re-answer. Matches
+  see only a coarse alignment line ("Similar outlook" / "Some overlap" / "Different outlook"), and
+  only when both sides took it. Withheld while you are hidden; in export; deletable on its own.
+  The signal is **weak on its own** (95% of people land in the middle buckets) and is the most
+  sensitive data collected, so hiding it by default is an open owner decision; the
+  `Signals:ValuesEnabled` switch hides the questionnaire, the card line and the sort in one flip.
+- **Shown interests**: the opt-in list behind the shared-interest reveal (above).
+- All three: opt-in, skippable, independently removable, included in export, removed on account
+  deletion, and never a hard filter or a blended score.
+
 ### Privacy controls
 - **Discoverability toggle** — "Hide me from matches" keeps your fingerprint and your own
   match view, but removes you from everyone else's results. Defaults to discoverable. It is
@@ -141,6 +192,26 @@ and the two CSV uploads need no account credentials.
   (`/account/data.json`). Who hid *you* is deliberately not shown, to either party.
 - **Hide a specific person** — a "Hide" button on any match card removes that person from your
   matches, symmetrically (neither sees the other). Manage/undo at `/matches/hidden`.
+- **Report a person** — a "Report" action on any match card records a closed-set reason and hides
+  the reported person from you. One report per reporter per target (unique index), so a single
+  actor cannot inflate a count.
+
+### Trust, safety & operations (operator-token-gated)
+- Setting `Metrics:Token` enables three operator endpoints, all `404` until then:
+  `GET /metrics` (aggregate adoption counts — how many users set an intent, took the questionnaire,
+  etc.; breakdowns withheld below a 10-user cohort so nobody is identifiable),
+  `GET /metrics/reports` (reported users ranked by distinct reporters, with suspension status) and
+  `POST /metrics/suspend` (`{"username":"…","suspend":true|false}`).
+- **Suspension is a reversible flag** (`AppUser.SuspendedAt`): a suspended account is removed from
+  everyone's matches, its session dies on the next request and it cannot sign in; `false`
+  reinstates. Deliberately not a delete, so a leaked token cannot destroy accounts. The token check
+  runs before model binding and is constant-time.
+- **Anti-sybil registration guard, privacy-preserving** (no third-party CAPTCHA — a tracker would
+  contradict the product): an always-on honeypot field plus, when `AntiAbuse:GuardRegistration=true`,
+  a Data-Protection-signed, time-limited, single-use form ticket that also rejects submissions
+  faster than `AntiAbuse:MinFormSeconds`. Blocks blind, looped and replayed POSTs; the per-IP
+  register rate limit is the always-on volume cap. Single-use is tracked in-process.
+- `GET /health` — anonymous DB-reachability probe.
 
 ### Robustness & failure handling
 - Per-connector failures are surfaced to the user; a connector that returns no data is
@@ -209,11 +280,12 @@ to `MatchViewModel` (adding the matched user's bio/contact and shared source typ
 
 | Entity | Key fields | Notes |
 |--------|-----------|-------|
-| `AppUser` | Id, Username, NormalizedUsername, PasswordHash, CreatedAt, Bio?, Contact?, IsDiscoverable, RecoveryCodeHash?, SessionsValidFrom | `NormalizedUsername` is the compatibility-folded, lower-cased comparison form (non-unique index); display casing stays in `Username` | Username is case-insensitive unique (NOCASE); Bio/Contact are the opt-in public profile |
+| `AppUser` | Id, Username, NormalizedUsername, PasswordHash, CreatedAt, Bio?, Contact?, IsDiscoverable, RecoveryCodeHash?, SessionsValidFrom, LastMatchesViewedAt?, ConnectionIntent?, ValuesOpenness?, ValuesScheme?, ShowableInterestsJson?, SuspendedAt? | `NormalizedUsername` is the compatibility-folded, lower-cased comparison form (non-unique index); display casing stays in `Username`. Username is case-insensitive unique (NOCASE). Bio/Contact/ConnectionIntent/ShowableInterestsJson are the opt-in public profile; `ValuesOpenness` is the derived −2..+2 bucket (raw answers never stored) tagged with the `ValuesScheme` it was derived under; `SuspendedAt` is the reversible operator suspension |
 | `FingerprintRecord` | UserId (PK), FingerprintJson, SourcesJson, UpdatedAt | The **combined** (truncated) signature used for matching |
 | `SourceFingerprintRecord` | Id, UserId, Source, RawSignatureJson, FeatureCount, UpdatedAt | One per (user, source); **raw 64-bit** signature; unique index on (UserId, Source) |
 | `FingerprintScheme` | Id, Verifier, UpdatedAt | One row. Records which pepper the stored signatures were built under, so a rotation is noticed instead of silently breaking every comparison |
 | `UserBlock` | Id, BlockerId, BlockedId, CreatedAt | One person hiding another; unique on (Blocker, Blocked). Cascades from **both** ends, so a block cannot outlive either party's account deletion |
+| `UserReport` | Id, ReporterId, ReportedId, Reason, CreatedAt | One person reporting another with a closed-set reason; unique on (Reporter, Reported); cascades from both ends. Read only through the token-gated operator endpoint |
 
 Schema changes are made with EF migrations and applied on startup via
 `db.Database.Migrate()`.
@@ -252,6 +324,10 @@ All settings come from `appsettings.json` or environment variables.
 | `ForwardedHeaders:Enabled` | `false` | Believe `X-Forwarded-For`/`-Proto`. **Required behind a proxy**, or every visitor shares one rate-limit bucket |
 | `ForwardedHeaders:KnownProxies` | — | Proxy IPs to trust, comma-separated. Enabling without this (or KnownNetworks) is refused at startup |
 | `ForwardedHeaders:KnownNetworks` | — | Proxy networks to trust, CIDR form (`10.0.0.0/8`) |
+| `Metrics:Token` | — (off) | Operator bearer token. Enables `GET /metrics`, `GET /metrics/reports`, `POST /metrics/suspend`; all `404` until set |
+| `AntiAbuse:GuardRegistration` | `false` | Enforce the signed single-use registration form ticket. Turn on for a public launch |
+| `AntiAbuse:MinFormSeconds` | `3` | With the guard on, reject a registration submitted faster than this after the form loaded |
+| `Signals:ValuesEnabled` | `true` | Set `false` to hide the values questionnaire, the match-card alignment line and the "Similar outlook first" sort; stored buckets are kept for a clean re-enable |
 
 ---
 
@@ -259,28 +335,67 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 214 tests, fully offline
+dotnet test                           # 349 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
 - **Behind a proxy, set `ForwardedHeaders:Enabled` and name the trusted proxies** — otherwise
-  every visitor arrives as the proxy's IP and shares a single rate-limit bucket.
+  every visitor arrives as the proxy's IP and shares a single rate-limit bucket. Enabling it
+  without naming any is refused at startup, on purpose.
 - **Persist the key ring** (`DataProtection:KeyPath`) on a volume so cookies survive
   redeploys; point it at shared storage for multi-instance deployments.
+- **Set `Fingerprint:Pepper` once and keep it.** The app refuses to start without one outside
+  Development; changing it invalidates every stored signature (detected at startup; everyone must
+  reconnect).
 - **Schema changes** ship as EF migrations and apply automatically on startup.
 - Add a migration: `dotnet ef migrations add <Name> --project Profiler.Web`.
+
+### Container (any Docker host) — verified 2026-08-08
+`Dockerfile` (multi-stage, non-root, `/data` volume, pepper injected at runtime) and
+`docker-compose.yml`. Secrets live in a git-ignored `deploy/.env.production` copied from
+`deploy/.env.example`. After `docker compose up -d --build`, `deploy/smoke.sh` verifies a running
+deployment end to end (core journey, anti-abuse guards firing, raw interests absent from the wire,
+operator endpoints token-gated); it only creates throwaway accounts. Every push to `main` (or a
+`v*` tag) publishes the image to GHCR as `ghcr.io/kashiashvili/effective-octo-giggle` via
+`.github/workflows/deploy.yml` — the repo's Actions workflow permission must be "Read and write".
+
+### Azure App Service — path chosen 2026-09-12, not yet live
+One-time setup the owner runs under their own `az login`: `./deploy/azure-bootstrap.sh`. It creates
+the resource group, a Linux App Service plan (F1 free by default; `SKU=B1` for always-on, ~$13/mo)
+and a container web app, then sets every setting that is easy to get wrong: `WEBSITES_PORT=8080`;
+`WEBSITES_ENABLE_APP_SERVICE_STORAGE=true` with the SQLite database and the Data Protection key
+ring under `/home/data` (the only persistent path — otherwise every restart wipes accounts and logs
+everyone out); forwarded headers enabled *with* the platform's internal networks named; the
+registration guard on; a single worker (SQLite corrupts if App Service scales out). It generates
+and prints the permanent pepper, the operator token and the publish profile.
+
+Then in GitHub → Settings → Secrets and variables → Actions: variable `AZURE_WEBAPP_NAME`, secret
+`AZURE_WEBAPP_PUBLISH_PROFILE`; and make the GHCR package public so App Service can pull it (the
+image holds no secrets). From then on the `deploy-azure` job ships every push to `main` — the
+exact sha-pinned image, then polls the public URL until it answers 200, because a container that
+cannot boot otherwise "deploys" fine and serves 503. The job is skipped entirely until the variable
+exists, so the workflow stays green before Azure does. Upgrade the tier in place, no redeploy, no
+data loss: `az appservice plan update -g <rg> -n <plan> --sku B1`.
 
 ---
 
 ## 9. Testing
 
-116 xUnit tests, **fully offline and fast (~1–2s)**:
+349 xUnit tests, **fully offline** (~35s, dominated by the integration suite booting the app):
 - **Unit:** fingerprint math (incl. the union = element-wise-min property), matcher
   (ranking, threshold, empty exclusion), aggregator (failures), view-model tiers/validation,
-  connectors (CSV parsing + garbage handling + API-error handling via a stub HTTP handler).
-- **Integration** (`Integration/AuthFlowTests.cs`): boots the real app on an isolated temp
-  database and exercises auth redirects, register/auto-login, bad login, profile save,
-  change password (old fails / new works), account deletion, and ghost-cookie rejection.
+  connectors (CSV parsing + garbage handling + API-error handling via a stub HTTP handler),
+  interest catalog (allowlist, normalisation, bridge, weights), values derivation, registration
+  guard.
+- **Integration** (`Integration/`): boots the real app on an isolated temp database (so every
+  migration is proven on a fresh DB) and exercises auth, profile, signals, self-described
+  interests, matching, hide/report/suspend, export, deletion, operator endpoints — and asserts the
+  privacy promise directly against the database (raw interests, picks and questionnaire answers
+  are never stored).
+- **Synthetic assumption tests** (no real users): `InterestSignalResolutionTests`,
+  `ValuesSignalResolutionTests`, `ValuesSortImpactTests`, `InterestWeightingExperimentTests` build
+  synthetic populations, run them through the real pipeline and pin the calibrations the product
+  relies on. They fail if a threshold drifts.
 
 ---
 
@@ -291,17 +406,72 @@ dotnet test                           # 214 tests, fully offline
 - **No in-app messaging.** Matches connect via the contact line each person opts to share.
 - **No email address, therefore no reset link.** Recovery is a one-time code the user must keep;
   losing both the password and the code means the account is unreachable by anyone, including us.
-- Matching returns the top 20; there is no pagination or manual filtering yet.
+- Matching returns the top 20 (filterable by theme, sortable by signal); there is no pagination.
 - **Matching is O(all users) in memory.** Every `/matches` request loads and deserialises every
   user's fingerprint, then compares against all of them. Fine at current scale; past a few
   thousand users this needs LSH banding (bucket candidates by signature bands) so each request
   only compares against plausible neighbours.
+- **SQLite means one instance.** Run a single worker (the Azure bootstrap pins it); the
+  registration ticket's single-use cache is in-process too, so a multi-instance deployment would
+  need a shared cache and a different database.
+- **14 of 18 connectors need a self-minted OAuth token or API key.** Pasting tokens into a form
+  is a phishing-shaped habit and out of reach for the non-developer target user; the self-described
+  path exists so nobody needs them. Culling those connectors (or building real OAuth) is an open
+  owner decision.
+- **The values signal is weak on its own** (one averaged axis; most pairs land in the middle
+  tier) while being the most sensitive data collected. Hiding it by default is recommended and is
+  one config flip (`Signals:ValuesEnabled=false`) — an open owner decision. Strengthening it (a
+  second Schwartz axis) is gated on real adoption evidence.
+- **Cross-pool bridge covers programming languages only.** Self-described music/film picks and
+  connector genres still live in different vocabularies and cannot match each other.
+- **Connector-side rarity weighting is not applied.** It would change established connector
+  signatures and `SchemeVerifier` only detects pepper changes, so old and new signatures would
+  silently stop matching. Needs a weighting version folded into the scheme first.
+
+**Open product bets, all gated** (details and recommendations in `docs/OWNER_DECISIONS.md` and
+`PROJECT_STATE.md`): promote the vision to multi-signal compatibility (owner); hide the values
+signal (owner); go live to gather `/metrics` evidence (owner); connector-side weighting (design);
+community-scoped pools (needs a real partner); interest clusters and a return channel (need a
+pool); client-side fingerprinting (pepper-on-client problem).
 
 ---
 
 ## 11. Changelog (newest first)
 
 Each entry: what changed and why it mattered.
+
+### 2026-09-17
+- **Documentation consolidated so the loop and the owner read one truth each.** `CLAUDE.md`
+  (persistent rules) and `docs/PRODUCT_AGENT.md` (operating manual) had drifted into two copies
+  of the same rules with three different names for the loop; the manual now holds only the
+  *how* (roles, delegation with concrete agent/model tiers, state-file discipline, a gated-work
+  protocol, the discovery techniques that actually produced this product's decisions, the
+  validation ladder) and both are written tersely. `PROJECT_STATE.md` was cut from 762 lines of
+  history to a current-only snapshot (the history is here, in this changelog). This handbook's
+  sections 2–10 were brought up to date with everything shipped since July (signals, self-described
+  interests, safety loop, operations, deploy paths); the test count is reconciled everywhere to the
+  real figure (349).
+
+### 2026-09-12
+- **Azure App Service deploy path.** Owner chose App Service (Linux container) with publish-profile
+  auth and the GHCR image. `deploy/azure-bootstrap.sh` is the one-time setup run under the owner's
+  own `az login`: resource group, plan (F1 free by default), container web app, and every setting
+  that is easy to get wrong — port, persistent `/home` storage for the SQLite db and key ring
+  (otherwise every restart wipes accounts), forwarded headers with the platform's networks named,
+  the registration guard on, a single worker. It prints the permanent pepper, the operator token
+  and the publish profile. `deploy.yml` gained a `deploy-azure` job that ships the exact sha-pinned
+  image and polls the URL until it answers 200; skipped until the `AZURE_WEBAPP_NAME` variable
+  exists so the workflow stays green before Azure does.
+
+### 2026-08-08
+- **Go live, as far as this environment allows: compose stack, secret template, smoke test.**
+  Built and ran the production image with real production config (generated pepper and operator
+  token in a git-ignored `deploy/.env.production`, `Production` environment, registration guard on,
+  persistent volume). `deploy/smoke.sh` verifies a *running* deployment end to end — core journey,
+  anti-abuse guards actually firing, raw interests absent from the wire, operator endpoints
+  token-gated — using only throwaway accounts, and treats a 429 from the register limiter as the
+  guard working. Verified 16/16, migrations applied on boot, data and key ring survive a restart.
+  Public exposure still needs a host, TLS in front and the Actions write permission for GHCR.
 
 ### 2026-07-25
 - **Owner decision brief + a one-flip values-signal switch.** Consolidated the gated strategic decisions
@@ -313,6 +483,11 @@ Each entry: what changed and why it mattered.
   values signal" (the data-minimizing default) a single config flip rather than future code work. Values
   disabled → questionnaire not served/collected, no line/sort on matches (2 tests); default-on path
   unchanged (existing values tests pass).
+- **Accessibility pass — two heading-hierarchy defects fixed.** The core journey was already
+  strong (`lang`, skip-link, `<main>`, `role=status/alert` flashes, label associations,
+  `:focus-visible`, no bare `<img>`). Two real WCAG defects: the auth pages used `<h2>` as their
+  top heading with no `<h1>`, and the Matches/Hidden empty states jumped from `<h1>` to `<h4>`.
+  Both fixed semantically only — class-scoped CSS moved with the tags, rendering pixel-identical.
 - **Values sort: coherence fix + impact evidence.** Assumption-tested the values signal's main
   user-facing use (the "Similar outlook first" sort). Finding: with both sides set, it reorders heavily
   (top-1 changes ~66%, ~18/20 positions move) — inherent to an outlook-first sort since outlook and
@@ -333,6 +508,19 @@ Each entry: what changed and why it mattered.
   limit stays the always-on volume cap; single-use is per-instance (multi-instance strict single-use
   wants a shared cache — noted). No JS, no external service, no PII. 6 tests (honeypot always-on,
   guard-off passes, blind-POST rejected, normal flow, replay blocked, time-trap).
+- **Integrated user-flow review passed; card-density redesign closed as not warranted.** Walked
+  the cumulative product live with a fully-populated worst-case match card (Strong tier, mutual
+  intent, values alignment, shared-interest intersection, bio, contact, Hide + Report, all three
+  sorts, contact nudge). No regression or cross-feature bug. The card is tall but logically grouped
+  and readable, so the recorded redesign bet was closed on evidence rather than built. Seed data
+  removed afterwards.
+- **Containerised deploy pipeline; repository pushed.** `Dockerfile` (multi-stage, non-root,
+  `/data` volume, pepper at runtime), `.dockerignore`, and `.github/workflows/deploy.yml` (test →
+  build → push to GHCR with the built-in token on `main`/`v*`/manual). `main` fast-forwarded from
+  the working branch to the private GitHub repo. Deployment readiness verified separately: pepper
+  enforced outside Development (and the published dev value refused), 16 migrations proven on a
+  fresh DB, key ring persisted, `/health` present, HTTPS/HSTS/forwarded-headers documented — a
+  small private deployment to gather initial `/metrics` evidence was unblocked from this point.
 - **Operator suspend loop — act on reports (reversible).** Completes the safety loop: the operator could
   see reports but not act. `AppUser.SuspendedAt` (migration `AddUserSuspension`) is a **reversible**
   soft-suspend — deliberately not a token-gated hard-delete, which a leaked token could turn into mass
