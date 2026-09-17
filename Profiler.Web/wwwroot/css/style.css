@@ -1020,3 +1020,12 @@ footer {
 .data-table th, .data-table td { text-align: left; vertical-align: top; padding: .5rem .6rem; border-bottom: 1px solid var(--gray-200); }
 .data-table thead th { color: var(--gray-600); font-weight: 600; }
 .data-table tbody th { font-weight: 600; white-space: nowrap; }
+
+/* Folded source groups (token connectors) */
+.sources-more > summary { cursor: pointer; font-weight: 600; color: var(--gray-600); padding: .5rem 0; list-style: revert; }
+.sources-more > summary:hover { color: var(--primary-dark, #4f46e5); }
+.sources-more[open] > summary { margin-bottom: .5rem; }
+
+/* Build stamp in the footer: which commit is actually running. Deliberately quiet — it is metadata
+   for whoever is checking a deploy, not something a visitor needs to read. */
+.build-stamp { margin-top: .35rem; font-size: .72rem; opacity: .55; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }

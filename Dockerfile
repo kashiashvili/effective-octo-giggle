@@ -25,8 +25,14 @@ RUN mkdir -p /data && chown -R app:app /data
 VOLUME /data
 USER app
 
+# Which commit this image was built from, stamped in by CI (docker build --build-arg BUILD_SHA=...).
+# Defaults to "dev" for local builds; the footer only shows it when it is a real sha, so a local or
+# hand-built image simply shows nothing rather than a misleading label.
+ARG BUILD_SHA=dev
+
 ENV ASPNETCORE_ENVIRONMENT=Production \
     ASPNETCORE_URLS=http://+:8080 \
+    Build__Sha=$BUILD_SHA \
     ConnectionStrings__Default="Data Source=/data/profiler.db" \
     DataProtection__KeyPath=/data/keys \
     Backup__Directory=/data/backups

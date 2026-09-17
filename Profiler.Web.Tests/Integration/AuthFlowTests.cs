@@ -192,6 +192,21 @@ public class AuthFlowTests : IClassFixture<ProfilerWebFactory>
     }
 
     [Fact]
+    public async Task ConnectPage_FoldsTheTokenSources_AndKeepsThemReachable()
+    {
+        var client = NewClient();
+        await RegisterAsync(client, "fold_" + Guid.NewGuid().ToString("N")[..8]);
+        var html = await client.GetStringAsync("/sources/connect");
+
+        var fold = html.IndexOf("<details", StringComparison.Ordinal);
+        Assert.True(fold > 0, "the token group is folded");
+        Assert.True(html.IndexOf("name=\"GitHubUser\"", StringComparison.Ordinal) < fold, "no-token sources come first");
+        Assert.True(html.IndexOf("name=\"YouTubeSubscriptionsCsv\"", StringComparison.Ordinal) < fold, "the Takeout upload is a no-token source");
+        Assert.True(html.IndexOf("name=\"SpotifyToken\"", StringComparison.Ordinal) > fold, "token fields are inside the fold, still submitted by the same form");
+        Assert.True(html.IndexOf("</details>", StringComparison.Ordinal) < html.IndexOf("</form>", StringComparison.Ordinal), "the fold closes inside the form");
+    }
+
+    [Fact]
     public async Task Disconnect_RecombinesFingerprint_AndRemovesItWithTheLastSource()
     {
         var client = NewClient();

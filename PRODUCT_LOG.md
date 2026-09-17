@@ -392,7 +392,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 392 tests, fully offline
+dotnet test                           # 394 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -522,6 +522,13 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Token connectors folded, not removed.** Opportunity Critic #4: the 18-card source grid was still
+  ~60% of the landing page and the connect form led with 14 token cards, against the product's own
+  "you never need a token" line. The landing now shows the five no-token sources (GitHub, Goodreads,
+  Netflix, RSS, YouTube Takeout) and folds the thirteen token sources behind "13 more sources that
+  take an API token you create yourself"; the connect form folds its token group the same way,
+  inside the same form so nothing changes for anyone who has a token. Nothing is removed — culling
+  connectors stays the owner's call. Two tests (order and fold on both pages): 394.
 - **Circle page: the circle keeps its promise for mixed groups.** Opportunity Critic #4's structural
   finding: the chip and sort decorate the global list, which is cut at the 5% floor and the top 20,
   so a circle-mate below the floor or outside the top 20 was invisible — exactly the members a

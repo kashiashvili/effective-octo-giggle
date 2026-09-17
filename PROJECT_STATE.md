@@ -31,8 +31,8 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `227d268` privacy inventory (2026-09-17); circle page follows it.
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **392 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `394fbb5` circle page (2026-09-17); token fold follows it.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **394 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Circle page — built, tests green, committing (2026-09-17, Critic #4 bet 1).** `/circles/{id}` for members: every member whatever the overlap, honest labels below the floor, reciprocity, invite + leave; design revised. +1 test → 392.
+**Token fold — built, tests green, committing (2026-09-17, Critic #4 bet 5).** Five no-token sources up front; thirteen token sources folded on landing and connect. +2 tests → 394.
 
-**Next mandatory action:** QA walk of the circle page on `profiler-web-qa`, Release Auditor over `227d268..HEAD` (privacy inventory + circle page), then §7 item 5 (fold token connectors, S) and item 3 (organiser health card, S). Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Next mandatory action:** QA walk (circle page + folds) on `profiler-web-qa`; integrate the Release Auditor on `227d268..394fbb5` (running); then §7 item 3 (organiser circle-health card: members / with fingerprint / Good+ pairs inside, shown ≥5 members, counts only). Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -70,7 +70,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 2. **Vision revision: introductions inside groups/gatherings you already belong to** — Decision 5 (owner, copy). Increments 1, 3, 4 are ungated.
 3. **Organiser circle-health card** — members / with fingerprint / Good+ pairs inside (shown ≥5 members, counts only). Gate: none, after 1. S.
 4. **Try-before-register preview** — anonymous picker → lens + coarse band → register to see who. Gate: none, design for the oracle (band, pool ≥10, per-IP limit). M.
-5. **Fold token connectors** — landing: four no-token cards + one line; connect: token group collapsed. Nothing removed (cull stays owner). Gate: none. S.
+5. **Fold token connectors** — shipped (five no-token cards up front on the landing; token groups folded on both pages).
 6. Retire "Same circle first" sort once 1 lands (half-measure on the wrong primitive). Gate: none, after 1.
 7. Persist 9-theme lens counts ("your interest shape", circle themes ≥5) — new stored derived data → new-data checklist. Gate: design.
 8. Web Push return channel — gate: pool + owner (push relays vs "no trackers").

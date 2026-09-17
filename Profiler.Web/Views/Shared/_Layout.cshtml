@@ -61,6 +61,17 @@
     <footer>
         <div class="container">
             <p>🔐 Profiler — Privacy-preserving social matching. Your raw data is never stored. <a href="/home/privacy">How we protect your data</a></p>
+            @{
+                // Stamped into the image by CI. Shown so anyone can tell which commit is actually
+                // running without shell access — the quickest way to confirm a deploy landed. Hidden
+                // for local/hand-built images, which carry the "dev" placeholder.
+                var buildSha = Context.RequestServices
+                    .GetService<IConfiguration>()?["Build:Sha"];
+            }
+            @if (!string.IsNullOrWhiteSpace(buildSha) && buildSha != "dev")
+            {
+                <p class="build-stamp">build @(buildSha.Length > 7 ? buildSha[..7] : buildSha)</p>
+            }
         </div>
     </footer>
     <script src="~/js/site.js" defer></script>

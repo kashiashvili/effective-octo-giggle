@@ -32,6 +32,15 @@ public class LandingPageTests : IClassFixture<ProfilerWebFactory>
         Assert.Contains("No account or token needed", html);
         Assert.Contains("API token you create yourself", html);
         Assert.DoesNotContain("coming soon", html, StringComparison.OrdinalIgnoreCase);
+
+        // The five no-token sources come first; the thirteen token sources are folded, not removed.
+        var sources = html[html.IndexOf("Sources you", StringComparison.Ordinal)..];
+        var fold = sources.IndexOf("<details", StringComparison.Ordinal);
+        Assert.True(fold > 0);
+        foreach (var open in new[] { "GitHub", "Goodreads", "Netflix", "RSS / Blogs", "YouTube" })
+            Assert.True(sources.IndexOf($"<h3>{open}</h3>", StringComparison.Ordinal) < fold, $"{open} should be shown before the fold");
+        foreach (var folded in new[] { "Spotify", "Reddit", "Steam", "Twitch", "LinkedIn" })
+            Assert.True(sources.IndexOf($"<h3>{folded}</h3>", StringComparison.Ordinal) > fold, $"{folded} should be inside the fold");
     }
 
     [Fact]
