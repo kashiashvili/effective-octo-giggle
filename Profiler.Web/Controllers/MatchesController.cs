@@ -20,11 +20,13 @@ public class MatchesController : Controller
 
     private readonly AppDbContext _db;
     private readonly Security.FeatureFlags _flags;
+    private readonly Security.CircleInvites _invites;
 
-    public MatchesController(AppDbContext db, Security.FeatureFlags flags)
+    public MatchesController(AppDbContext db, Security.FeatureFlags flags, Security.CircleInvites invites)
     {
         _db = db;
         _flags = flags;
+        _invites = invites;
     }
 
     [HttpGet("")]
@@ -43,7 +45,22 @@ public class MatchesController : Controller
 
         // Where a friend would sign up. Built from the current request so it is correct behind a
         // proxy (forwarded headers, when configured, have already rewritten scheme/host by here).
+        // Someone in a circle shares that circle's link instead: the friend then lands in the circle
+        // and is marked on the match list, which is what an invite from a person means.
         ViewBag.InviteUrl = $"{Request.Scheme}://{Request.Host}/account/register";
+        if (_flags.CirclesEnabled)
+        {
+            var newest = await _db.CircleMemberships
+                .Where(m => m.UserId == userId)
+                .OrderByDescending(m => m.JoinedAt).ThenByDescending(m => m.Id)
+                .Join(_db.Circles, m => m.CircleId, c => c.Id, (m, c) => new { c.Id, c.Name })
+                .FirstOrDefaultAsync();
+            if (newest != null)
+            {
+                ViewBag.InviteUrl = $"{Request.Scheme}://{Request.Host}/circles/join/{_invites.Issue(newest.Id)}";
+                ViewBag.InviteCircleName = newest.Name;
+            }
+        }
 
         var myFp = await _db.Fingerprints.FirstOrDefaultAsync(f => f.UserId == userId);
         if (myFp == null)

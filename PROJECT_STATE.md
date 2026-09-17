@@ -31,8 +31,8 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `6dc5527` circles slice 2 (2026-09-17); circles audit fixes follow it.
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **385 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `d7002bc` circles audit fixes (2026-09-17); invite follow-through next.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **386 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Circles audit-fix unit — built, tests green, committing (2026-09-17).** Auditor verdict yes; P2 (unmetered/uncapped create+join) and all P3s closed; QA walk done. +2 tests → 385. Circles feature complete (both slices, audited, walked).
+**Circle invite follow-through — built, tests green, committing (2026-09-17).** Empty-state invite box shares the newest circle's link; no-fingerprint state leads with interests; landing step 3 mentions the mark. +1 test → 386.
 
-**Next mandatory action:** Product Owner review, then the smallest circle follow-through: the matches empty state's invite box offers the viewer's circle invite link (invitees land in the circle) instead of the bare register URL when they have one, and step 3 on the landing mentions the "Same circle" mark; then §7 item 4 (mutual-visibility badge). Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Next mandatory action:** Product Owner review; then §7 item 4 (mutual-visibility badge: "You're in their top matches too", request-time only, shown only when true, withheld while hidden) — check cost: for each of ≤20 matches compute their top-20 under their visibility rules against the in-memory matcher. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 

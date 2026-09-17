@@ -431,6 +431,31 @@ public class CirclesTests : IClassFixture<ProfilerWebFactory>
     }
 
     [Fact]
+    public async Task TheEmptyMatchList_OffersTheCircleInviteLink_OnceTheViewerHasACircle()
+    {
+        var tag = Guid.NewGuid().ToString("N")[..6];
+        var a = NewClient();
+        await RegisterAsync(a, "circ_inv_" + tag);
+
+        // No fingerprint yet: the no-accounts path leads.
+        var noFingerprint = await a.GetStringAsync("/matches");
+        Assert.Contains("/sources/interests", noFingerprint);
+
+        // A fingerprint nobody overlaps with: the empty state offers the plain register link.
+        await SeedFingerprintAsync("circ_inv_" + tag, $"{tag}:only-me-1", $"{tag}:only-me-2");
+        var plain = await a.GetStringAsync("/matches");
+        Assert.Contains("/account/register", plain);
+        Assert.DoesNotContain("/circles/join/", plain);
+
+        // With a circle, the same box shares the circle's link and says where it leads.
+        await StartCircleAsync(a, "Invite box " + tag);
+        var withCircle = await a.GetStringAsync("/matches");
+        Assert.Contains("/circles/join/", withCircle);
+        Assert.Contains("joins <strong>Invite box " + tag + "</strong>", withCircle);
+        Assert.DoesNotContain("/account/register\"", withCircle);
+    }
+
+    [Fact]
     public async Task ACircleName_IsValidated_AndRenderedAsPlainText()
     {
         var tag = Guid.NewGuid().ToString("N")[..6];

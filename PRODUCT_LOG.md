@@ -116,6 +116,9 @@ match on shared channels.
 - **Only membership is stored** (`CircleMembership`: circle, user, when); it cascades and is removed
   explicitly on account deletion; the export lists circle names; `Signals:CirclesEnabled=false`
   hides start/join/leave (404) and the dashboard card, keeping rows.
+- **Inviting**: once you are in a circle, the match list's empty-state invite box shares your newest
+  circle's link instead of the bare register link, and says so — a friend you invite lands in your
+  circle and is marked on your matches.
 - **On matches** (slice 2): people from a circle you share carry a "Same circle: <name>" chip, and
   "Same circle first" is offered as a sort whenever you are in a circle — chip + sort only, never a
   filter (outsiders still appear), never part of a score (interest order is kept within each group),
@@ -378,7 +381,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 385 tests, fully offline
+dotnet test                           # 386 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -508,6 +511,12 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Invites lead into your circle; the no-fingerprint state leads with interests.** The match list's
+  empty-state invite box now shares the viewer's newest circle link (with "joins <circle> and is
+  marked on your matches") instead of the bare register link once they are in a circle — an invite
+  from a person should land the friend next to that person. The "No fingerprint yet" state offered
+  only "Connect Sources"; it now leads with "Pick my interests" like the rest of onboarding. Landing
+  step 3 mentions the circle mark. One test: 386.
 - **Release Auditor on circles: verdict yes; one P2 and the P3s closed.** P2: starting or joining
   circles was unmetered and uncapped, so one account could grow the tables and the operator's
   counts without limit — now a per-IP limiter (`RateLimiting:CirclesPermitLimit`, 10/min, with its

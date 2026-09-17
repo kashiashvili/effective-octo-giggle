@@ -97,10 +97,13 @@
         @if (noFingerprint)
         {
             <div class="empty-state">
-                <div class="empty-icon">🔌</div>
+                <div class="empty-icon">✏️</div>
                 <h2>No fingerprint yet</h2>
-                <p>Connect your data sources to generate your fingerprint and find matches.</p>
-                <p class="mt-4"><a href="/sources/connect" class="btn btn-primary">Connect Sources</a></p>
+                <p>Pick your interests from a list — no accounts needed — or connect a source, and we build your fingerprint from that.</p>
+                <p class="mt-4">
+                    <a href="/sources/interests" class="btn btn-primary">Pick my interests</a>
+                    <a href="/sources/connect" class="btn btn-outline">Connect a source</a>
+                </p>
             </div>
         }
         else if (hasAnyMatch && !Model.Any())
@@ -129,13 +132,21 @@
                     <p>No one else has a fingerprint yet. Invite people who'd want to match with you — Profiler only works once your people are here too.</p>
                 }
 
+                @{ string? inviteCircle = ViewBag.InviteCircleName as string; }
                 <div class="invite-box">
-                    <label class="invite-label">Share this link</label>
+                    <label class="invite-label">@(inviteCircle == null ? "Share this link" : $"Share your circle's link")</label>
                     <div class="invite-row">
                         <input type="text" class="form-control invite-input" value="@ViewBag.InviteUrl" readonly aria-label="Invite link" />
-                        <button type="button" class="btn btn-primary" data-copy="@ViewBag.InviteUrl" data-no-busy>Copy link</button>
+                        <button type="button" class="btn btn-primary" data-copy="@ViewBag.InviteUrl" data-no-busy aria-live="polite">Copy link</button>
                     </div>
-                    <small class="text-muted">Anyone with the link can join. We never see who you invited.</small>
+                    @if (inviteCircle == null)
+                    {
+                        <small class="text-muted">Anyone with the link can join. We never see who you invited.</small>
+                    }
+                    else
+                    {
+                        <small class="text-muted">Anyone with the link joins <strong>@inviteCircle</strong> and is marked on your matches. We never see who you invited.</small>
+                    }
                 </div>
 
                 <p class="mt-4"><a href="/sources/connect" class="btn btn-outline">Add more sources</a></p>
