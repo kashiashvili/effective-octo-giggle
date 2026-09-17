@@ -15,6 +15,26 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 
+// Operational telemetry (requests, timings, unhandled exceptions) to the hosting provider's
+// monitoring service, so a failure in production can be diagnosed without shell access. Registered
+// ONLY when a connection string is configured, so development and the test suite send nothing.
+// Request URLs carry signed circle invites, which RedactSecretsInTelemetry strips before anything
+// leaves the process; request bodies (usernames, questionnaire answers) are not collected at all.
+// Adaptive sampling is off: this is a small deployment and a dropped exception is the one telemetry
+// item that must never be missing. Owner decision 6, 2026-09-17.
+var telemetryConnectionString = Profiler.Web.Security.TelemetryOptions.ConnectionString(builder.Configuration);
+builder.Services.AddSingleton(new Profiler.Web.Security.TelemetryOptions(telemetryConnectionString != null));
+if (telemetryConnectionString != null)
+{
+    builder.Services.AddApplicationInsightsTelemetry(options =>
+    {
+        options.ConnectionString = telemetryConnectionString;
+        options.EnableAdaptiveSampling = false;
+    });
+    builder.Services.AddSingleton<Microsoft.ApplicationInsights.Extensibility.ITelemetryInitializer,
+        Profiler.Web.Security.RedactSecretsInTelemetry>();
+}
+
 // TempData rides in a cookie, and one of the things it now carries is a freshly issued recovery
 // code on its way to the page that displays it. The payload is encrypted by Data Protection, but
 // the cookie itself defaults to being sent over plain HTTP too; match the auth cookie's policy so

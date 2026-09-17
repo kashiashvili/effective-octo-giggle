@@ -55,7 +55,7 @@ Startup, post-compaction, uncertainty: read `PROJECT_STATE.md` → `git status` 
 - User-authored text rendered plain, never as links.
 - Raw interests, picks, questionnaire answers, tokens never persisted. Every new stored field gets a DB-asserted privacy test.
 - `Fingerprint:Pepper` permanent; rotation wipes every signature.
-- No third-party CAPTCHA or trackers.
+- No third-party CAPTCHA, and no tracking script in the browser. **Server-side operational telemetry to the hosting provider is allowed** (owner, 2026-09-17): requests, timings, errors — never raw data, and invite tokens are redacted before send. Off unless `APPLICATIONINSIGHTS_CONNECTION_STRING` is set; the connection string is a secret and never enters the repo.
 - Values signal default on until Decision 2.
 
 ## 6. Delegation + Models

@@ -32,7 +32,7 @@
 ## 2. Baseline (2026-09-17)
 
 - Branch `rebuild/dotnet-profiler` (all work). **`origin/main` and `origin/rebuild/dotnet-profiler` are both at `e5efb6f`** (owner pushed on 2026-09-17; the loop never pushes — `CLAUDE.md` §4). Local `main` is stale and unused. Eight local commits are unpushed, all of `d48979e..c4236e9` — the organiser card, its audit fixes, and the whole values & worldview rebuild. Last product commit: values audit fixes (`b47d7e4`; `0fbc35c` the feature, `bde7957`+`9a8fd3b` accessibility).
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **400 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 18 migrations, auto-applied; integration suite boots on fresh DB.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **415 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 18 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `Build:Sha` (CI-stamped, footer), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
 
@@ -42,11 +42,11 @@
 
 ## 4. Active Task
 
-**None active — values & worldview v2 complete (2026-09-17).** Owner instruction met: researched (`docs/DESIGN_VALUES.md`), implemented (`0fbc35c`), accessibility fixed (`bde7957`, `9a8fd3b`), audited with seven P2s closed (`b47d7e4`), QA-walked twice. 400 tests, clean worktree.
+**Production sign-in is failing (reported 2026-09-17, live on the owner's App Service).** A correct password returns the themed error page; the login POST throws. Ruled out by local repro in production configuration: the login code is byte-identical to the last working commit (`Program.cs`, cookie setup and the login action untouched in that range), a fresh database signs in fine, a pre-values database migrated by `ValuesProfileV2` signs in fine and browses every signed-in page, and an unwritable Data Protection key ring is not the cause — that breaks the login *page*, which renders in production. Remaining candidates need the exception: a partially applied migration on the live database (that rebuild cannot run in a transaction and an F1 container can recycle mid-operation), or something in the live row that BCrypt or the model rejects.
 
-**Product Owner review of it:** the signal now earns its place — strangers read "similar priorities" 16.7% of the time against 69% for pairs who genuinely share them, and centring holds 76% of generous-vs-stingy pairs together — so the data-minimisation argument for hiding it no longer applies, and Decision 2 is closed as strengthened. More axes (the remaining Schwartz values, or the third primal belief) stay gated on real adoption evidence: adding sensitive items before anyone has answered the current fourteen would repeat the v1 mistake in the other direction. The card's reason line is the part to watch once there are users, since it is the only place one person's priority ordering becomes visible to another.
+**Shipped to unblock the diagnosis:** Application Insights, registered only when `APPLICATIONINSIGHTS_CONNECTION_STRING` is set, adaptive sampling off, invite tokens redacted from telemetry (Decision 6), pushed to `main` on the owner's instruction — which deploys.
 
-**Next action:** §7 item 4 — try-before-register preview. Needs a design note first (the match-count oracle: coarse band only, pool floor, per-IP limit, nothing stored, picks discarded in-request), then build. Owner replies to decisions 1, 3, 4, 5 pre-empt everything.
+**Next action:** once the deploy is live, reproduce the sign-in and read `exceptions | order by timestamp desc` in the Logs blade; fix from the stack trace. Do not roll the image back without restoring `profiler-premigrate-*.db` first — the previous code selects the `ValuesOpenness` column this release dropped.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 

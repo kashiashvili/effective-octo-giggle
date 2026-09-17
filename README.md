@@ -214,6 +214,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 | `AntiAbuse:GuardRegistration`    | `false`              | Enforce the signed single-use registration form ticket (blocks blind/replayed POSTs). Turn on for a public launch |
 | `AntiAbuse:MinFormSeconds`       | `3`                  | When the guard is on, reject a registration submitted faster than this after the form loaded |
 | `Signals:ValuesEnabled`          | `true`               | The optional values & worldview signal (questionnaire, match-card alignment line, "Similar outlook first" sort, and the nudges). Set `false` to hide all of it; stored profiles are kept for a clean re-enable |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | — (off)      | Sends operational telemetry (requests, timings, unhandled exceptions) to Azure Application Insights. Unset = nothing is sent and the SDK is not even registered, so development and tests stay silent. A secret: set it as an app setting, never in the repo. Invite tokens are stripped from URLs before send; request bodies are not collected |
 | `Signals:CirclesEnabled`         | `true`               | Circles (invite-scoped groups: start, join by link, leave; "Same circle" chip and sort on matches). Set `false` to hide all of it; memberships are kept |
 | `Backup:Directory`               | — (off)              | Folder for rolling SQLite snapshots (the container image sets `/data/backups`, the Azure bootstrap `/home/data/backups`). Unset = no snapshots |
 | `Backup:Keep`                    | `7`                  | Snapshots kept per kind (scheduled / pre-migration); older ones are deleted |
@@ -265,7 +266,14 @@ All settings can be supplied via `appsettings.json` or environment variables.
   (`dotnet ef migrations add <Name> --project Profiler.Web`), applied automatically
   on startup — no manual database steps.
 - **Health probe:** `GET /health` returns `200 {"status":"healthy"}` when the database
-  is reachable, `503` otherwise. Anonymous, and reports nothing beyond reachability. The compose
+  is reachable, `503` otherwise. Anonymous, and reports nothing beyond reachability.
+- **Diagnostics.** Unhandled exceptions always go to container stdout (App Service Log stream, or
+  `https://<app>.scm.azurewebsites.net/api/logs/docker`). Setting
+  `APPLICATIONINSIGHTS_CONNECTION_STRING` additionally sends requests, dependencies and exceptions to
+  Application Insights, where the failing request's stack trace is searchable by its Request ID:
+  `requests | where success == false` and `exceptions | order by timestamp desc` in the Logs blade.
+  Adaptive sampling is deliberately off, so no exception is dropped. The privacy page states that
+  telemetry is on whenever it is, and the invite-token redaction is asserted by tests. The compose
   healthcheck, the Azure health-check path and the deploy workflow's readiness poll all use it.
 - **Back up the database — see below.** Neither a bare Docker host nor App Service F1/B1 backs
   anything up for you, and the pepper makes lost signatures unrebuildable.
@@ -351,7 +359,7 @@ Then `GET /health` must answer 200 and `deploy/smoke.sh` should pass against the
 dotnet test
 ```
 
-The suite (400 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (415 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 

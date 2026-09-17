@@ -365,6 +365,11 @@ Schema changes are made with EF migrations and applied on startup via
    alignment line — never the numbers) and the interests you chose to show.** All of these are withheld while you are hidden.
 7. The in-product privacy page lists every table in plain words from `Data/DataInventory`, which
    a test holds to the EF model in both directions — an undescribed table fails the build.
+8. **Nothing about a person is sent to a third party.** The one exception, when the operator
+   configures it, is server-side operational telemetry — request path, timing, error detail — to the
+   hosting provider's monitoring service, with circle invite tokens stripped from URLs first and
+   request bodies never collected. The privacy page says so whenever it is on. There is still no
+   tracking script in the browser.
 8. Where the operator turns on database snapshots (`Backup:Directory`; the shipped container
    and Azure setups do), a deleted account survives in them for at most `Backup:Keep ×
    Backup:IntervalHours` (7 days by default). The snapshots are copies of the same signature-only
@@ -396,6 +401,7 @@ All settings come from `appsettings.json` or environment variables.
 | `AntiAbuse:MinFormSeconds` | `3` | With the guard on, reject a registration submitted faster than this after the form loaded |
 | `Signals:ValuesEnabled` | `true` | Set `false` to hide the values & worldview questionnaire, the match-card alignment line, the "Similar outlook first" sort and the nudges; stored profiles are kept for a clean re-enable |
 | `Signals:CirclesEnabled` | `true` | Set `false` to hide starting/joining circles, the "Same circle" chip and sort; memberships are kept |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | — (off) | Operational telemetry to Application Insights (requests, timings, unhandled exceptions). Unset = the SDK is not registered and nothing is sent. A secret: app setting only, never in the repo. Invite tokens are redacted before send; request bodies are never collected |
 | `Backup:Directory` | — (off) | Folder for rolling SQLite snapshots. Image sets `/data/backups`, Azure bootstrap `/home/data/backups`; unset in dev/tests |
 | `Backup:Keep` | `7` | Snapshots kept per kind (`scheduled`, `premigrate`) |
 | `Backup:IntervalHours` | `24` | Scheduled cadence, anchored to the newest snapshot on disk |
@@ -407,7 +413,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 400 tests, fully offline
+dotnet test                           # 415 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -544,6 +550,25 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Application Insights, wired narrowly and honestly (owner instruction).** Production sign-in began
+  failing after going live and the container's stdout was the only diagnostic, so the owner created an
+  Application Insights resource and asked for the code side. Added: the classic
+  `Microsoft.ApplicationInsights.AspNetCore` SDK (2.23.0), registered **only** when
+  `APPLICATIONINSIGHTS_CONNECTION_STRING` is present — development and the test suite therefore
+  register no SDK and send nothing — with adaptive sampling off, because on a deployment this small a
+  dropped exception is the one item that must never be missing. Two deliberate choices worth
+  recording. First, the package is pinned to the 2.x line: 3.x is an OpenTelemetry-based rewrite whose
+  extensibility model no longer has `ITelemetryInitializer`, and switching majors blind while
+  production is down is the wrong trade; revisiting it is a follow-up. Second, a telemetry initializer
+  strips **circle invite tokens** from request URLs, operation names and telemetry properties before
+  anything leaves the process — `/circles/join/<token>` and `?circle=<token>` are credentials, and
+  anyone holding one can join that circle. Request bodies, where usernames and questionnaire answers
+  travel, are not collected by the SDK at all. The privacy page now states that operational telemetry
+  is sent whenever it is configured, says what it contains and what it never contains, and says that
+  there is still no tracking script in the browser; `CLAUDE.md` §5's "no third-party trackers" line
+  records the owner's amendment. 15 tests (redaction of both URL shapes, case-insensitivity, ordinary
+  URLs untouched, exception properties, off-by-default, and the privacy page's claim appearing only
+  when telemetry is configured): 415.
 - **Release Auditor on the values rebuild: seven P2s and the P3s closed.** Worth recording what the
   audit caught, because most of it was the honest-claims kind: (1) the dashboard announced "X comes
   first for you" even for someone who rates everything evenly, picking a priority by enum order —

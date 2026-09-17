@@ -1,13 +1,13 @@
 # Owner Decision Brief
 
-_Prepared by the autonomous product loop, 2026-07-25. Updated 2026-09-17 (Azure path added 2026-09-12; Decision 5 added; **Decision 2 answered and implemented**; counts re-verified). Four decisions open: 1, 3, 4, 5._
+_Prepared by the autonomous product loop, 2026-07-25. Updated 2026-09-17 (Azure path added 2026-09-12; Decision 5 added; **Decision 2 answered and implemented**; counts re-verified). Four decisions open: 1, 3, 4, 5; Decision 6 answered and implemented._
 
 The build/validate/deploy work that can be justified **without owner strategy input or real usage
 data** is done: multi-source matching (interests + intent + values), self-described + free-text
 interests, cross-pool bridging, rarity weighting, evidence-recalibrated tiers, the shared-interest
 reveal, the full trust-&-safety loop (report → operator review → reversible suspend), privacy-preserving
 anti-sybil, token-gated measurement, and a containerized deploy pipeline on `main`. Three independent
-Release Audits and two Opportunity Critics; 400 tests, 0 warnings (re-verified 2026-09-17).
+Release Audits and two Opportunity Critics; 415 tests, 0 warnings (re-verified 2026-09-17).
 
 What remains needs **you**. Each decision below has the evidence, the options, a recommendation, and
 what it unblocks. None require reading code — the loop can execute whichever way you decide.
@@ -174,6 +174,28 @@ arrive (through someone), and it is copy, not code — reversible in an hour.
 
 **Unblocks.** Landing/positioning copy; whether to build circle-scoped extras (member list to members,
 "N in your circle" on the empty state, invite-only mode).
+
+---
+
+## Decision 6 — Operational telemetry to Application Insights — **ANSWERED 2026-09-17: yes, enabled**
+
+**Your call:** you created an Application Insights resource for the App Service and asked for the code
+changes, after production sign-in started failing with only container stdout to go on.
+
+**What it means.** The app now sends request paths, timings and unhandled exceptions to that resource
+whenever `APPLICATIONINSIGHTS_CONNECTION_STRING` is set as an app setting. This is the first time
+anything about a request leaves the server, so three limits are built in: circle invite tokens are
+stripped from URLs, operation names and properties before send (they are credentials); request bodies
+are never collected, so usernames and questionnaire answers do not travel; and there is no script in
+the browser, so visitors are not tracked. The privacy page states all of this whenever telemetry is on.
+`CLAUDE.md` §5 records the amendment to "no third-party trackers".
+
+**Cost.** Ingestion-billed, independent of the F1 plan, with a small monthly free allowance. Turning it
+off is removing one app setting — the SDK is then not even registered.
+
+**Still yours to weigh:** whether to keep it after the current fault is fixed, and whether to add the
+client-side snippet (recommend no: that would be a browser tracker and would contradict the product's
+promise).
 
 ---
 

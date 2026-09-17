@@ -58,4 +58,20 @@ public class LandingPageTests : IClassFixture<ProfilerWebFactory>
         Assert.DoesNotContain("any contact details", html);
         Assert.Contains("/account/data", html);
     }
+
+    [Fact]
+    public async Task PrivacyPage_MentionsTelemetry_OnlyWhenItIsConfigured()
+    {
+        var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        Assert.DoesNotContain("operational telemetry", await client.GetStringAsync("/home/privacy"));
+
+        using var withTelemetry = _factory.WithWebHostBuilder(b => b.UseSetting(
+            Profiler.Web.Security.TelemetryOptions.ConnectionStringKey,
+            "InstrumentationKey=00000000-0000-0000-0000-000000000000;IngestionEndpoint=https://example.invalid/"));
+        var html = await withTelemetry.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false })
+            .GetStringAsync("/home/privacy");
+        Assert.Contains("operational telemetry", html);
+        Assert.Contains("Invite links are stripped", html);
+        Assert.Contains("no tracking script", html);
+    }
 }

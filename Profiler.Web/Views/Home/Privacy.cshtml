@@ -1,4 +1,5 @@
 @inject Profiler.Web.Data.SnapshotOptions Snapshots
+@inject Profiler.Web.Security.TelemetryOptions Telemetry
 @{
     ViewBag.Title = "Privacy";
 }
@@ -52,6 +53,16 @@
                     <li>An email address or phone number — none is asked for. A contact line exists only if you type one, and only you decide what it says</li>
                     <li>Who invited whom to a circle, or the invite links you shared</li>
                 </ul>
+                @if (Telemetry.Enabled)
+                {
+                    <p class="text-muted mt-3 mb-0">
+                        One thing this server does send elsewhere: <strong>operational telemetry</strong> — which
+                        page was requested, how long it took, and the details of any error — to its hosting
+                        provider's monitoring service, so faults can be found and fixed. Invite links are stripped
+                        out before it is sent, and it never carries your interests, your questionnaire answers,
+                        your signature or your password. There is no tracking script in your browser.
+                    </p>
+                }
             </div>
         </div>
 
