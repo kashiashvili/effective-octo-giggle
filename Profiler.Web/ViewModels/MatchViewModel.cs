@@ -50,6 +50,13 @@ public class MatchViewModel
     /// </summary>
     public List<string> SharedCircles { get; set; } = new();
 
+    /// <summary>
+    /// True when the viewer is in this person's own top matches as well — reaching out would not be a
+    /// message to a stranger. Computed at request time from the same fingerprints; false while the
+    /// viewer is hidden (a hidden account is in nobody's list).
+    /// </summary>
+    public bool RanksYouToo { get; set; }
+
     /// <summary>Human label for the matched user's connection intent, or null if unspecified/hidden.</summary>
     public string? ConnectionIntentLabel { get; set; }
 

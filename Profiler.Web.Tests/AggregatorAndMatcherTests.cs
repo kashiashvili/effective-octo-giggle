@@ -90,6 +90,26 @@ public class AggregatorAndMatcherTests
     }
 
     [Fact]
+    public void FindMatches_AppliesTheCallersExclusions_PerQuery()
+    {
+        var gen = new FingerprintGenerator(128);
+        var matcher = new UserMatcher();
+        matcher.Add("1", gen.Generate(new[] { "a", "b", "c" }), "one");
+        matcher.Add("2", gen.Generate(new[] { "a", "b", "c" }), "two");
+        matcher.Add("3", gen.Generate(new[] { "a", "b", "d" }), "three");
+
+        // The same store answers two viewpoints: "1" hides "2"; "3" hides nobody.
+        var forOne = matcher.FindMatches("1", exclude: uid => uid == "2");
+        Assert.DoesNotContain(forOne, m => m.UserId == "2");
+        Assert.Contains(forOne, m => m.UserId == "3");
+        var forThree = matcher.FindMatches("3");
+        Assert.Equal(2, forThree.Count);
+
+        Assert.Equal(1, matcher.CandidateCount("1", uid => uid == "2"));
+        Assert.Equal(2, matcher.CandidateCount("1"));
+    }
+
+    [Fact]
     public void MergedBySource_UnionsFeaturesOfASourceThatArrivedTwice_AndLeavesOthersAlone()
     {
         // YouTube can arrive by token and by Takeout export in one submit; the per-source row is unique.

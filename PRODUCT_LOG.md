@@ -62,8 +62,9 @@ fingerprint; the underlying interests are discarded after the fingerprint is bui
 3. Profiler **fetches your interests, builds the fingerprint, and discards the raw data** (and
    the picks, and any tokens).
 4. **View your matches** — ranked by interest similarity, with a qualitative tier, the source
-   types you share, how fresh the other fingerprint is, a "Same circle" chip when you share a
-   circle, and — when both of you opted in — the interests you both chose to show. Filter by
+   types you share, how fresh the other fingerprint is, whether you are in *their* top matches
+   too, a "Same circle" chip when you share a circle, and — when both of you opted in — the
+   interests you both chose to show. Filter by
    shared interest theme; sort by best match, same circle first, same connection intent first, or
    similar outlook first. Nothing is blended into one score.
 5. **Optionally add compatibility signals** beyond interests: a connection intent (what kind of
@@ -176,6 +177,9 @@ match on shared channels.
   per-source signatures. A category, never an interest.
 - Each card also shows **how fresh the other person's fingerprint is**, coarsely, and flags anything
   past the same 90-day staleness threshold used for your own sources.
+- **"You're in their top matches too"** when the viewer is in that person's own top 20 (computed
+  from their viewpoint — their hides, not the viewer's — at request time; nothing stored; never
+  while the viewer is hidden). Shown only when true.
 - **The combined fingerprint is a union**, so a wide-ranging profile scores lower against everyone
   even where two people are identical on a source they share. The per-source line is what makes that
   legible; a test pins the effect.
@@ -381,7 +385,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 386 tests, fully offline
+dotnet test                           # 388 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -511,6 +515,17 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **"You're in their top matches too."** The list is cut at the top 20 in each direction, so a
+  strong match here could be a stranger to them and a message from the viewer a message from
+  nobody they recognise (Opportunity Critic #3, bet 4). For each of the viewer's matches, that
+  person's own top list is now computed at request time from the same in-memory store — with the
+  people hidden between *them* and others left out, not the viewer's hides — and the card carries
+  the badge only when the viewer is in it. Nothing stored; never shown while the viewer is hidden
+  (a hidden account is in nobody's list). The matcher gained a per-query exclusion so one store
+  serves every viewpoint; the viewer's own hides moved from store construction to that predicate
+  (same result for the viewer's list, verified by the existing hide/suspend tests). Cost: at most
+  twenty extra passes over the fingerprints per page. Tests: badge on the mutual match only, gone
+  when they hide the viewer, gone while the viewer is hidden; matcher exclusions per query: 388.
 - **Invites lead into your circle; the no-fingerprint state leads with interests.** The match list's
   empty-state invite box now shares the viewer's newest circle link (with "joins <circle> and is
   marked on your matches") instead of the bare register link once they are in a circle — an invite

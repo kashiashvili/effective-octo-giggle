@@ -209,6 +209,10 @@
                                 <span class="compat-pct @match.Tier">@match.TierLabel</span>
                                 <span class="text-muted">~@match.SimilarityPercent% shared</span>
                             </div>
+                            @if (match.RanksYouToo)
+                            {
+                                <p class="match-mutual" title="They would see you on their own match list too">🔁 You're in their top matches too</p>
+                            }
                             <div class="match-freshness text-muted">
                                 @if (match.IsStale)
                                 {

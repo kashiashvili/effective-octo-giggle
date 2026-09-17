@@ -80,15 +80,18 @@ public class MatchesController : Controller
             .ToListAsync();
         var hidden = hiddenUserIds.ToHashSet();
 
-        // Candidates are the current user plus every *discoverable*, not-hidden other user. A user
-        // who turned off discoverability keeps seeing their own matches but is excluded from others'.
+        // The store holds the current user plus every *discoverable*, not-suspended other user; who is
+        // hidden between two people is applied per query, so the same store can also answer "would
+        // they see me?" for each match below. A user who turned off discoverability keeps seeing their
+        // own matches but is excluded from others'.
         var matcher = new UserMatcher();
         foreach (var record in allFps)
         {
-            // A suspended account is excluded from everyone's matches, on top of the discoverable/hidden rules.
-            if (record.UserId != userId && (!record.User.IsDiscoverable || hidden.Contains(record.UserId) || record.User.SuspendedAt != null)) continue;
+            // A suspended account is excluded from everyone's matches, on top of the discoverable rule.
+            if (record.UserId != userId && (!record.User.IsDiscoverable || record.User.SuspendedAt != null)) continue;
             matcher.Add(record.UserId.ToString(), ProfileFingerprint.FromJson(record.FingerprintJson), record.User.Username);
         }
+        bool HiddenFromMe(string uid) => hidden.Contains(int.Parse(uid));
 
         ViewBag.IsDiscoverable = allFps.FirstOrDefault(f => f.UserId == userId)?.User.IsDiscoverable ?? true;
 
@@ -109,7 +112,7 @@ public class MatchesController : Controller
 
         var mySources = JsonSerializer.Deserialize<List<string>>(myFp.SourcesJson) ?? new();
 
-        var matches = matcher.FindMatches(userId.ToString(), minSimilarity: MinMatchSimilarity);
+        var matches = matcher.FindMatches(userId.ToString(), minSimilarity: MinMatchSimilarity, exclude: HiddenFromMe);
 
         // Per-source signatures are only needed for the handful of people who actually matched, so
         // they are loaded after ranking rather than for everyone with a fingerprint.
@@ -143,6 +146,31 @@ public class MatchesController : Controller
                 .ToDictionary(g => g.Key, g => g.Select(x => x.Name).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList())
             : new Dictionary<int, List<string>>();
         ViewBag.HasOwnCircles = myCircleIds.Count > 0 && viewerVisible;
+
+        // Would they see me? The list is cut at the top 20 in each direction, so a strong match here
+        // can be a stranger to them. For each match, their own top list is computed from the same
+        // store with the people hidden between *them* and others left out; the badge is shown only
+        // when the viewer is in it, and never while the viewer is hidden (a hidden account is in
+        // nobody's list). Request-time only, nothing stored.
+        var ranksMeToo = new HashSet<int>();
+        if (viewerVisible && matchedIds.Count > 0)
+        {
+            var theirBlocks = await _db.UserBlocks
+                .Where(b => matchedIds.Contains(b.BlockerId) || matchedIds.Contains(b.BlockedId))
+                .Select(b => new { b.BlockerId, b.BlockedId })
+                .ToListAsync();
+            var myKey = userId.ToString();
+            foreach (var matchedId in matchedIds)
+            {
+                var theirHidden = theirBlocks
+                    .Where(b => b.BlockerId == matchedId || b.BlockedId == matchedId)
+                    .Select(b => b.BlockerId == matchedId ? b.BlockedId : b.BlockerId)
+                    .ToHashSet();
+                var theirTop = matcher.FindMatches(matchedId.ToString(), minSimilarity: MinMatchSimilarity,
+                    exclude: uid => theirHidden.Contains(int.Parse(uid)));
+                if (theirTop.Any(t => t.UserId == myKey)) ranksMeToo.Add(matchedId);
+            }
+        }
 
         var viewModels = matches.Select(m =>
         {
@@ -192,6 +220,7 @@ public class MatchesController : Controller
                     ? Profiler.Web.Profile.ShowableInterests.Common(myShowable, showableForCard)
                     : new List<string>(),
                 SharedCircles = sharedCircles.TryGetValue(int.Parse(m.UserId), out var circles) ? circles : new List<string>(),
+                RanksYouToo = ranksMeToo.Contains(int.Parse(m.UserId)),
                 Bio = iAmVisible ? matchFp?.User.Bio : null,
                 Contact = iAmVisible ? matchFp?.User.Contact : null,
                 // A separate, explainable signal shown alongside interests — never blended into the
@@ -212,7 +241,7 @@ public class MatchesController : Controller
         }).ToList();
 
         // Lets the empty state distinguish "you are the only user" from "others exist, none close yet".
-        ViewBag.OthersExist = matcher.CandidateCount(userId.ToString()) > 0;
+        ViewBag.OthersExist = matcher.CandidateCount(userId.ToString(), HiddenFromMe) > 0;
 
         var me = allFps.FirstOrDefault(f => f.UserId == userId)?.User;
 

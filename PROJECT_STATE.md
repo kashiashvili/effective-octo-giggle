@@ -22,7 +22,7 @@
 1. Register (username + password, recovery code shown once) → auto sign-in.
 2. Pick/type interests at `/sources/interests` (zero accounts; recovery-code continue and landing lead here) **or** connect a source (GitHub username, Goodreads/Netflix/YouTube-Takeout export, RSS; the rest need self-made tokens).
 3. Fingerprint built; raw data + picks + tokens discarded (DB-asserted).
-4. Ranked matches: tier (Good ≥15%, Strong ≥35%), shared source types, closest source, freshness, "Same circle" chip, shared-interest reveal if opted in, intent line, outlook line. Filter by theme, sort Best / Same circle / Same intent / Similar outlook. Never a blended score.
+4. Ranked matches: tier (Good ≥15%, Strong ≥35%), shared source types, closest source, freshness, "in their top matches too" badge, "Same circle" chip, shared-interest reveal if opted in, intent line, outlook line. Filter by theme, sort Best / Same circle / Same intent / Similar outlook. Never a blended score.
 5. Optional: set intent, take values questionnaire (consent-gated, answers discarded), choose interests to show.
 6. Read bio/contact, reach out off-platform. Hide or report a match.
 7. Manage sources, profile, password, sessions, visibility, blocks, signals, circles (start/invite/leave), export, deletion.
@@ -31,8 +31,8 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `d7002bc` circles audit fixes (2026-09-17); invite follow-through next.
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **386 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `9231952` invite follow-through (2026-09-17); mutual badge follows it.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **388 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Circle invite follow-through — built, tests green, committing (2026-09-17).** Empty-state invite box shares the newest circle's link; no-fingerprint state leads with interests; landing step 3 mentions the mark. +1 test → 386.
+**Mutual-visibility badge — built, tests green, committing (2026-09-17, Critic #3 bet 4).** Per-query matcher exclusions; badge from each match's own viewpoint; withheld while hidden. +2 tests → 388.
 
-**Next mandatory action:** Product Owner review; then §7 item 4 (mutual-visibility badge: "You're in their top matches too", request-time only, shown only when true, withheld while hidden) — check cost: for each of ≤20 matches compute their top-20 under their visibility rules against the in-memory matcher. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Next mandatory action:** Product Owner review of the day (nine product units since the morning's stop-3 idle) → Release Auditor over `9231952..HEAD` (mutual badge + invite follow-through), then a fresh Opportunity Critic (#4) since the product changed materially (circles, exports, bridge, badge). Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -69,7 +69,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 1. **Landing + onboarding honesty** — hero/steps say "link GitHub/Goodreads/Netflix" and never mention `/sources/interests` (the real funnel); unbacked "coming soon" connector list; recovery-code continue → token grid instead of interests. Gate: none. S. **Active next.**
 2. **Bring-your-own-export connectors** — YouTube Takeout shipped (this unit). Further formats (Spotify privacy export, Steam? Letterboxd CSV) only if a matching token vocabulary or self-described theme exists to bridge to. Gate: none. S per format.
 3. **Circles (invite-scoped pools, additive)** — signed invite tags membership; "Same circle" chip + circle-first sort; registration stays open. Only lever on pool *formation*; Decision 4's "private cohort" has no mechanism today (bare invite URL, global pool). New stored social fact → design + new-data checklist + Auditor. Gate: design (build) / owner (vision promotion, Decision 5).
-4. **Mutual-visibility badge** — "you're in their top matches too", request-time only. Gate: none, after 1–3.
+4. **Mutual-visibility badge** — shipped (request-time, their viewpoint, withheld while hidden).
 5. **Genre bridge** — shipped (twelve common genres; weight-1 rule enforced by test). Remaining: Last.fm/SoundCloud vocabularies need connector-side emission = scheme versioning first.
 6. Real usage evidence via `/metrics` — gate: deployment (Decision 4). Funnel counters shipped `e6a0fcb`.
 7. Hide values signal by default — gate: owner (Decision 2); mechanism built.
