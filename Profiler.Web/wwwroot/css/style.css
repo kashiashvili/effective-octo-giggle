@@ -972,16 +972,6 @@ footer {
 .youtube-card   .source-form-header { background: linear-gradient(135deg, #ff0000, #cc0000); }
 
 /* Coming-soon section */
-.coming-soon-section {
-  background: var(--gray-50);
-  border: 1.5px dashed var(--gray-200);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-.coming-soon-section h3 { font-size: 1rem; font-weight: 700; margin-bottom: .75rem; color: var(--gray-600); }
-.coming-soon-list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; }
-.coming-soon-list li { font-size: .9rem; color: var(--gray-500); }
 
 /* Form submit area */
 .form-submit { padding-top: .5rem; }

@@ -33,7 +33,7 @@
                 <span>
                     <strong>New here?</strong> The quickest sources need no tokens — just enter a
                     <strong>GitHub username</strong>, paste some <strong>RSS feed URLs</strong>, or upload a
-                    <strong>Goodreads/Netflix CSV</strong> export. Connect one now; you can always add more later.
+                    <strong>Goodreads, Netflix or YouTube (Takeout) export</strong>. Connect one now; you can always add more later.
                     The remaining cards accept OAuth tokens if you already have them.
                 </span>
             </div>
@@ -92,6 +92,19 @@
                     <label>Viewing History CSV</label>
                     <input asp-for="NetflixCsv" type="file" class="form-control" accept=".csv" />
                     <small>From Netflix → Account → Viewing Activity → Download</small>
+                </div>
+            </div>
+
+            <!-- YouTube (Google Takeout export, no token) -->
+            <div class="source-form-card youtube-card">
+                <div class="source-form-header">
+                    <span class="source-icon">📺</span>
+                    <h3>YouTube</h3>
+                </div>
+                <div class="form-group">
+                    <label>Subscriptions CSV (Google Takeout)</label>
+                    <input asp-for="YouTubeSubscriptionsCsv" type="file" class="form-control" accept=".csv" />
+                    <small>takeout.google.com → deselect all → YouTube and YouTube Music → limit to <em>subscriptions</em> → export. The file is <code>subscriptions.csv</code>. No token needed; matches people who connected YouTube either way.</small>
                 </div>
             </div>
 
@@ -306,21 +319,9 @@
                 <div class="form-group">
                     <label>OAuth Access Token</label>
                     <input asp-for="YouTubeToken" class="form-control" placeholder="ya29..." type="password" />
-                    <small>Google OAuth — requires youtube.readonly scope</small>
+                    <small>Google OAuth — requires youtube.readonly scope. Or upload your Takeout subscriptions export in the "No account needed" section — no token required.</small>
                 </div>
             </div>
-        </div>
-
-        <div class="coming-soon-section">
-            <h3>💡 More sources to come</h3>
-            <ul class="coming-soon-list">
-                <li>🎯 <strong>BeReal</strong> — shared moments &amp; location interests</li>
-                <li>🎲 <strong>BoardGameGeek</strong> — owned &amp; rated board games</li>
-                <li>📱 <strong>Mastodon</strong> — followed accounts &amp; hashtags</li>
-                <li>🎬 <strong>Letterboxd</strong> — film ratings &amp; watchlists</li>
-                <li>🎵 <strong>Apple Music</strong> — top played songs &amp; artists</li>
-                <li>📖 <strong>Medium</strong> — clapped stories &amp; tags followed</li>
-            </ul>
         </div>
 
         <div class="form-submit">

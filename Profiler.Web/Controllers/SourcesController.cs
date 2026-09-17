@@ -75,7 +75,8 @@ public class SourcesController : Controller
 
     [HttpPost("connect")]
     [ValidateAntiForgeryToken]
-    // Two 10 MB CSVs plus form fields. Rejects oversized bodies at the pipeline level, before
+    // Three CSVs of up to 10 MB each (a Takeout subscriptions file is a few KB) plus form fields.
+    // Rejects oversized bodies at the pipeline level, before
     // ASP.NET buffers up to its 128 MB default and the per-file check below ever runs.
     [RequestSizeLimit(25 * 1024 * 1024)]
     // Every submit fans out to third-party APIs (and user-supplied RSS URLs), so this endpoint
@@ -85,7 +86,7 @@ public class SourcesController : Controller
     {
         var userId = CurrentUserId;
 
-        foreach (var (file, label) in new[] { (vm.GoodreadsCsv, "Goodreads"), (vm.NetflixCsv, "Netflix") })
+        foreach (var (file, label) in new[] { (vm.GoodreadsCsv, "Goodreads"), (vm.NetflixCsv, "Netflix"), (vm.YouTubeSubscriptionsCsv, "YouTube subscriptions") })
         {
             if (file is { } f && f.Length > MaxCsvUploadBytes)
             {
@@ -113,6 +114,13 @@ public class SourcesController : Controller
             using var sr = new StreamReader(vm.NetflixCsv.OpenReadStream());
             var csv = await sr.ReadToEndAsync();
             connectors.Add(new NetflixConnector(csv));
+        }
+
+        if (vm.YouTubeSubscriptionsCsv is { Length: > 0 })
+        {
+            using var sr = new StreamReader(vm.YouTubeSubscriptionsCsv.OpenReadStream());
+            var csv = await sr.ReadToEndAsync();
+            connectors.Add(new YouTubeSubscriptionsConnector(csv));
         }
 
         if (!string.IsNullOrWhiteSpace(vm.GoogleToken))

@@ -13,7 +13,8 @@ Built with ASP.NET Core MVC, Entity Framework Core, and SQLite.
 
 - **User accounts** – register and sign in securely (passwords hashed with BCrypt)
 - **Multi-source data collection** – 18 connectors: enter a GitHub username, upload
-  Goodreads/Netflix CSV exports, or paste OAuth tokens / API keys for the rest
+  Goodreads/Netflix/YouTube (Takeout) exports, paste RSS feed URLs, or paste OAuth tokens /
+  API keys for the rest
 - **Privacy-preserving fingerprinting** – a MinHash algorithm turns your interests
   into a comparable signature; raw feature data is never persisted
 - **Independent source management** – add, refresh, or disconnect sources one at a
@@ -40,7 +41,7 @@ Built with ASP.NET Core MVC, Entity Framework Core, and SQLite.
 | **Google**    | OAuth 2.0 access token (People API)                                       |
 | **Facebook**  | OAuth 2.0 access token (Graph API)                                        |
 | **Spotify**   | OAuth 2.0 access token                                                    |
-| **YouTube**   | OAuth 2.0 access token                                                    |
+| **YouTube**   | Google Takeout `subscriptions.csv` upload (no token) — or an OAuth 2.0 access token |
 | **Twitter/X** | OAuth 2.0 access token                                                    |
 | **LinkedIn**  | OAuth 2.0 access token                                                    |
 | **Reddit**    | OAuth 2.0 access token                                                    |
@@ -309,7 +310,7 @@ Then `GET /health` must answer 200 and `deploy/smoke.sh` should pass against the
 dotnet test
 ```
 
-The suite (362 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (367 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 

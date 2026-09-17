@@ -91,6 +91,59 @@ public class ConnectorTests
         }
     }
 
+    // ---- YouTube Takeout subscriptions CSV -------------------------------
+
+    [Fact]
+    public async Task YouTubeSubscriptionsConnector_EmitsTheTokenConnectorsChannelSlugs()
+    {
+        // As exported by Google Takeout, BOM included.
+        const string csv = "\uFEFFChannel Id,Channel Url,Channel Title\n" +
+                           "UCYO_jab_esuFRV4b17AJtAw,https://www.youtube.com/channel/UCYO_jab_esuFRV4b17AJtAw,3Blue1Brown\n" +
+                           "UCHnyfMqiRRG1u-2MsSQLbXA,https://www.youtube.com/channel/UCHnyfMqiRRG1u-2MsSQLbXA,Veritasium\n" +
+                           "UCsXVk37bltHxD1rDPwtNM8Q,https://www.youtube.com/channel/UCsXVk37bltHxD1rDPwtNM8Q,\"Kurzgesagt – In a Nutshell\"\n";
+
+        var data = await new YouTubeSubscriptionsConnector(csv).FetchAsync();
+
+        Assert.Equal("YouTube", data.Source);
+        Assert.Equal(new[]
+        {
+            "youtube-channel:3blue1brown",
+            "youtube-channel:veritasium",
+            "youtube-channel:kurzgesagt-in-a-nutshell",
+        }, data.Features);
+    }
+
+    [Fact]
+    public async Task YouTubeSubscriptionsConnector_LocalisedHeader_UsesTheThirdColumn()
+    {
+        const string csv = "Kanal-ID,Kanal-URL,Kanaltitel\nUC1,https://www.youtube.com/channel/UC1,Veritasium\n";
+        var data = await new YouTubeSubscriptionsConnector(csv).FetchAsync();
+        Assert.Equal(new[] { "youtube-channel:veritasium" }, data.Features);
+    }
+
+    [Fact]
+    public async Task YouTubeSubscriptionsConnector_CapsAndDedupes_AndSkipsUnsluggableTitles()
+    {
+        var rows = Enumerable.Range(0, 70).Select(i => $"UC{i},https://www.youtube.com/channel/UC{i},Channel {i % 60}");
+        var csv = "Channel Id,Channel Url,Channel Title\n" + string.Join("\n", rows) + "\nUCx,url,Всё о котах\n";
+
+        var data = await new YouTubeSubscriptionsConnector(csv).FetchAsync();
+
+        Assert.Equal(YouTubeSubscriptionsConnector.MaxChannels, data.Features.Count);
+        Assert.Equal(data.Features.Count, data.Features.Distinct().Count());
+        Assert.All(data.Features, f => Assert.StartsWith("youtube-channel:channel-", f));
+    }
+
+    [Fact]
+    public async Task YouTubeSubscriptionsConnector_GarbageOrEmpty_NeverThrowsRaw()
+    {
+        foreach (var content in new[] { "", "this is not a csv at all", "\n\n\n", "a,b\n1,2\n" })
+        {
+            var ex = await Record.ExceptionAsync(() => new YouTubeSubscriptionsConnector(content).FetchAsync());
+            Assert.True(ex == null || ex is ConnectorException, $"raw exception for {content.Length}-char input: {ex}");
+        }
+    }
+
     // ---- Netflix CSV ----------------------------------------------------
 
     [Fact]

@@ -57,7 +57,7 @@ fingerprint; the underlying interests are discarded after the fingerprint is bui
 2. **Describe your interests, or connect a source.** No account at all is needed: at
    `/sources/interests` you tick interests from a curated list (plus free text) and get the same
    fingerprint. Connectors that need no tokens: a GitHub username, RSS feed URLs, or a
-   Goodreads/Netflix CSV export. The rest accept OAuth tokens / API keys you create yourself —
+   Goodreads, Netflix or YouTube (Google Takeout) export. The rest accept OAuth tokens / API keys you create yourself —
    the landing page and the dashboard say so, and lead with the no-accounts path.
 3. Profiler **fetches your interests, builds the fingerprint, and discards the raw data** (and
    the picks, and any tokens).
@@ -95,11 +95,13 @@ fingerprint; the underlying interests are discarded after the fingerprint is bui
   signatures, and every block involving them, then signs out.
 
 ### Data sources (18 connectors)
-GitHub (username; optional token), Goodreads (CSV), Netflix (CSV), Google, Facebook,
-Pinterest, Spotify, Twitter/X, LinkedIn, Reddit, Last.fm (key + username), Steam (key +
-Steam ID), TikTok, Instagram, Twitch (token + client ID), RSS/Blogs (feed URLs),
-SoundCloud, YouTube. Most API connectors need an OAuth token or API key; GitHub, RSS,
-and the two CSV uploads need no account credentials.
+GitHub (username; optional token), Goodreads (CSV), Netflix (CSV), YouTube (Google Takeout
+`subscriptions.csv` — or a token), Google, Facebook, Pinterest, Spotify, Twitter/X, LinkedIn,
+Reddit, Last.fm (key + username), Steam (key + Steam ID), TikTok, Instagram, Twitch (token +
+client ID), RSS/Blogs (feed URLs), SoundCloud. Most API connectors need an OAuth token or API
+key; GitHub, RSS and the three exports need no account credentials. The YouTube export emits
+the same `youtube-channel:<slug>` features as the token path, so export users and token users
+match on shared channels.
 
 ### Self-described interests (no account needed)
 - **Curated picker** at `/sources/interests`: ~140 tags across 9 themes. Picks become features
@@ -348,7 +350,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 362 tests, fully offline
+dotnet test                           # 367 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -446,7 +448,7 @@ data loss: `az appservice plan update -g <rg> -n <plan> --sku B1`.
 - **SQLite means one instance.** Run a single worker (the Azure bootstrap pins it); the
   registration ticket's single-use cache is in-process too, so a multi-instance deployment would
   need a shared cache and a different database.
-- **14 of 18 connectors need a self-minted OAuth token or API key.** Pasting tokens into a form
+- **13 of 18 connectors need a self-minted OAuth token or API key.** Pasting tokens into a form
   is a phishing-shaped habit and out of reach for the non-developer target user; the self-described
   path exists so nobody needs them. Culling those connectors (or building real OAuth) is an open
   owner decision.
@@ -473,6 +475,20 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **YouTube without a token: Google Takeout `subscriptions.csv` upload.** Opportunity Critic #3's
+  "bring your own export" bet, smallest increment. The token YouTube connector emits
+  `youtube-channel:<slug of title>`; the new `YouTubeSubscriptionsConnector` parses the Takeout
+  file (header by name, third column as the localised-header fallback; BOM tolerated; first 50
+  distinct channels — Takeout lists everything while the token path sees 30, and wide sets dilute
+  Jaccard) into the same features, so someone who uploaded an export and someone who pasted a
+  token match on shared channels. Same source name "YouTube", so it refreshes the same per-source
+  signature. Parsed in memory, discarded like every CSV. Wired into the connect form's "No account
+  needed" group with the Takeout steps, the landing and connect pages' no-token lists, and a
+  pointer on the token card. The connect page's own "More sources to come" list (six unbuilt
+  sources) is gone for the same honesty reason as the landing's, with its dead CSS. 13 of 18
+  connectors now need a token. Tests: Takeout fixture with BOM → exact slugs; localised header;
+  cap + dedupe + non-Latin skip; garbage never throws raw; end to end two exports match on
+  "YouTube" with no raw title on any page: 367.
 - **Release Auditor on the day's units: two P1s fixed, retention promise made literally true.** An
   independent audit of `ab80929..e6a0fcb` found (1) the snapshot service read the backup folder
   outside its guard, so an unreadable `Backup:Directory` threw out of the hosted service and — with

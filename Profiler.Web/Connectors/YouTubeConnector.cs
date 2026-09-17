@@ -16,7 +16,7 @@ public class YouTubeConnector : IConnector
         _accessToken = accessToken;
     }
 
-    private static string Slugify(string input)
+    internal static string Slugify(string input)
     {
         var slug = input.ToLowerInvariant();
         slug = Regex.Replace(slug, @"[^a-z0-9\s-]", "");

@@ -20,7 +20,7 @@
 
 **Core journey:**
 1. Register (username + password, recovery code shown once) → auto sign-in.
-2. Pick/type interests at `/sources/interests` (zero accounts; recovery-code continue and landing lead here) **or** connect a source (GitHub username, CSV, RSS; the rest need self-made tokens).
+2. Pick/type interests at `/sources/interests` (zero accounts; recovery-code continue and landing lead here) **or** connect a source (GitHub username, Goodreads/Netflix/YouTube-Takeout export, RSS; the rest need self-made tokens).
 3. Fingerprint built; raw data + picks + tokens discarded (DB-asserted).
 4. Ranked matches: tier (Good ≥15%, Strong ≥35%), shared source types, closest source, freshness, shared-interest reveal if opted in, intent line, outlook line. Filter by theme, sort Best / Same intent / Similar outlook. Never a blended score.
 5. Optional: set intent, take values questionnaire (consent-gated, answers discarded), choose interests to show.
@@ -31,8 +31,8 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `9c9ff96` (2026-09-17, onboarding leads with the no-accounts path); audit fixes follow it.
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **362 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit: YouTube Takeout export connector (2026-09-17; hash in §10 next state commit).
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **367 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*`.
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Audit-fix unit — built, committing (2026-09-17).** Release Auditor on `ab80929..e6a0fcb`: P1 host-stop on unreadable backup dir, P1 retention promise false for pre-migration snapshots, P2 count-only retention on sleeping hosts, P2 busy loop on null snapshot, P3s (fail-closed undocumented, temp leak, return-metric semantics, source breakdown cohort rule, Azure restore untested, stale state hashes). All fixed or documented; +3 tests → 362.
+**YouTube Takeout export unit — built, tests green, committing (2026-09-17, Critic #3 opportunity 2).** `YouTubeSubscriptionsConnector` → same `youtube-channel:*` slugs as the token path; wired into connect form, landing, README; connect page's unbacked "More sources to come" removed. +5 tests → 367.
 
-**Next mandatory action:** Product Owner review, then Critic #3 opportunity 2 (YouTube Takeout `subscriptions.csv` → `youtube-channel:*`; check `YouTubeConnector` feature keys first) — small, ungated, extends the no-token funnel. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Next mandatory action:** Product Owner review; then §7 item 3 (circles) needs a design pass first — write the design (data shape, invite token via Data Protection, new-data checklist, migration) and an owner-brief entry for the vision side before any code; or item 5 (genre slug bridge, S) as the next small increment. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -53,7 +53,7 @@
 3. Enable `AntiAbuse:GuardRegistration=true` for public launch (recommend yes).
 4. Go live on Azure: owner runs `deploy/azure-bootstrap.sh` under own `az login`, sets repo variable `AZURE_WEBAPP_NAME` + secret `AZURE_WEBAPP_PUBLISH_PROFILE`, makes GHCR package public. Unblocks real `/metrics` evidence, which every further signal bet depends on.
 
-Also owner-only (standing): opt-in contact model stays final; culling paste-a-token connectors (14/18) — security + honesty win but removes advertised capability.
+Also owner-only (standing): opt-in contact model stays final; culling paste-a-token connectors (13/18) — security + honesty win but removes advertised capability.
 
 ## 6. Backlog
 
@@ -66,7 +66,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 ## 7. Opportunities Under Evaluation (ranked; Critic #3 2026-09-17 falsified "best buildable version")
 
 1. **Landing + onboarding honesty** — hero/steps say "link GitHub/Goodreads/Netflix" and never mention `/sources/interests` (the real funnel); unbacked "coming soon" connector list; recovery-code continue → token grid instead of interests. Gate: none. S. **Active next.**
-2. **Bring-your-own-export connectors** — YouTube Takeout `subscriptions.csv` → existing `youtube-channel:*` vocab so export users match token users; "we never ask for a token". Gate: none. S per format.
+2. **Bring-your-own-export connectors** — YouTube Takeout shipped (this unit). Further formats (Spotify privacy export, Steam? Letterboxd CSV) only if a matching token vocabulary or self-described theme exists to bridge to. Gate: none. S per format.
 3. **Circles (invite-scoped pools, additive)** — signed invite tags membership; "Same circle" chip + circle-first sort; registration stays open. Only lever on pool *formation*; Decision 4's "private cohort" has no mechanism today (bare invite URL, global pool). New stored social fact → design + new-data checklist + Auditor. Gate: design (build) / owner (vision promotion, Decision 5).
 4. **Mutual-visibility badge** — "you're in their top matches too", request-time only. Gate: none, after 1–3.
 5. **Genre bridge by slug coincidence** — `spotify-genre:indie-rock` vs self-described `indie-rock` already share slugs; bridge is exact-slug, not fuzzy (backlog P2 was over-estimated). Gate: none. S.
@@ -97,7 +97,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 - Registration ticket single-use cache is in-process (fine single-instance).
 - Values signal = most sensitive data, least validated signal; default still on pending Decision 2.
 - F1 tier sleeps + 60 CPU-min/day; `az appservice plan update ... --sku B1` upgrades in place.
-- 14/18 connectors require self-minted tokens (phishing-shaped UX); mitigated by self-described path.
+- 13/18 connectors require self-minted tokens (phishing-shaped UX); mitigated by self-described path + no-token exports (Goodreads, Netflix, YouTube Takeout).
 
 ## 10. Last Completed Iteration
 
