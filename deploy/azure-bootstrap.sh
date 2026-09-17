@@ -4,6 +4,10 @@
 # Linux container web app, and every app setting the app needs — then prints the publish profile to
 # paste into GitHub as the AZURE_WEBAPP_PUBLISH_PROFILE secret.
 #
+# Safe to re-run against an existing deployment: every create is idempotent, and an existing pepper
+# and operator token are reused rather than regenerated (rotating the pepper would invalidate every
+# stored fingerprint). Use it to repair configuration, not just for the first install.
+#
 # Run it yourself (it needs YOUR Azure login; the agent cannot log in as you):
 #
 #   az login
@@ -35,9 +39,25 @@ az webapp create -g "$RG" -p "$PLAN" -n "$APP_NAME" --container-image-name "$IMA
 
 # --- secrets -------------------------------------------------------------------------------------
 # The pepper is PERMANENT: changing it invalidates every stored fingerprint and forces every user to
-# reconnect. Generated once here; back up the values this script prints.
-PEPPER="${PEPPER:-$(openssl rand -base64 32)}"
-METRICS_TOKEN="${METRICS_TOKEN:-$(openssl rand -base64 24)}"
+# reconnect. So on a re-run against an app that already has one, REUSE it rather than minting a new
+# one — that is what makes this script safe to run again to repair configuration. (az group/plan/webapp
+# create are already idempotent.) Override deliberately with PEPPER=... if you really mean to rotate.
+EXISTING_PEPPER=$(az webapp config appsettings list -g "$RG" -n "$APP_NAME" \
+  --query "[?name=='Fingerprint__Pepper'].value | [0]" -o tsv 2>/dev/null || true)
+EXISTING_TOKEN=$(az webapp config appsettings list -g "$RG" -n "$APP_NAME" \
+  --query "[?name=='Metrics__Token'].value | [0]" -o tsv 2>/dev/null || true)
+
+if [ -n "${PEPPER:-}" ]; then
+  echo "==> Using the pepper supplied in the environment (rotating invalidates every fingerprint)"
+elif [ -n "$EXISTING_PEPPER" ]; then
+  PEPPER="$EXISTING_PEPPER"
+  echo "==> Reusing the existing pepper (not rotating - stored fingerprints stay valid)"
+else
+  PEPPER="$(openssl rand -base64 32)"
+  echo "==> Generated a new pepper (first run)"
+fi
+
+METRICS_TOKEN="${METRICS_TOKEN:-${EXISTING_TOKEN:-$(openssl rand -base64 24)}}"
 
 echo "==> App settings"
 az webapp config appsettings set -g "$RG" -n "$APP_NAME" -o none --settings \
