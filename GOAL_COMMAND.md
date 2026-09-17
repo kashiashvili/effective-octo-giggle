@@ -1,48 +1,42 @@
 # Start the Autonomous Run
 
-After placing these files in the repository and updating `PROJECT_STATE.md`, start Claude Code and run:
+Files in place, `PROJECT_STATE.md` current → start Claude Code, run:
 
 ```text
 /goal Continue the autonomous product-development loop for this repository.
 
-Use `CLAUDE.md` as persistent operating rules and `PROJECT_STATE.md` as authoritative execution state.
+`CLAUDE.md` = persistent rules. `PROJECT_STATE.md` = authoritative execution state. `docs/PRODUCT_AGENT.md` = operating manual. `docs/OWNER_DECISIONS.md` = open owner-gated decisions.
 
 Loop: Product Owner → Prioritize → Plan/Architect → Delegate → Implement → Validate/QA → Commit → Product Review → Opportunity Discovery → Repeat.
 
-Completing a task, feature, milestone, release, sprint, plan, or known backlog does not complete the overall mission.
+Completing a task, feature, milestone, release, sprint, plan, or known backlog does not complete the mission.
 
 After every completed coherent unit:
-1. Validate it and fix relevant failures.
-2. Commit it without waiting for user review.
-3. Update `PROJECT_STATE.md`.
+1. Validate; fix failures.
+2. Commit without waiting for review.
+3. Update PROJECT_STATE.md (current-only) and PRODUCT_LOG.md (changelog, same commit).
 4. Return to Product Owner mode.
-5. Review the product against its vision, underlying user problem, and user outcomes.
-6. Identify the highest-value next implementation, experiment, investigation, redesign, or product bet.
-7. Record it as active and begin immediately.
+5. Review product against vision, user problem, user outcomes.
+6. Identify highest-value next implementation, experiment, investigation, redesign, or bet.
+7. Record as active; begin immediately.
 
-Use subagents actively. Use strong reasoning models for product vision, strategy, architecture, security, privacy, difficult debugging, and opportunity discovery. Use cost-effective capable models for well-defined execution. Independently verify consequential work.
+Use subagents actively. Strong reasoning models for vision, strategy, architecture, security, privacy, hard debugging, opportunity discovery. Cost-effective models for well-defined execution. Independently verify consequential work.
 
-Before marking a release complete, require:
-1. A Release Auditor review of correctness, regressions, tests, security, privacy, data integrity, core journeys, and important UI states.
-2. A separate Product Opportunity Critic review that assumes the vision may be too narrow and generates at least five materially different opportunities: a core-outcome improvement, vision expansion/revision, adjacent user need, differentiation/defensibility opportunity, and simplification/removal/redesign.
+Before marking a release complete: (1) Release Auditor — correctness, regressions, tests, security, privacy, data integrity, core journeys, UI states; (2) separate Product Opportunity Critic assuming vision may be too narrow, ≥5 materially different opportunities: core-outcome improvement, vision expansion/revision, adjacent need, differentiation/defensibility, simplification/removal/redesign. Evaluate each on user value, alignment, evidence, effort, risk, privacy/safety, differentiation, learning value.
 
-Evaluate opportunities by user value, alignment, evidence, effort, risk, privacy/safety, differentiation, and learning value.
+Clean audit or empty backlog does not complete the mission. Valuable next bet exists → revise vision if justified, reduce to smallest validated increment, record, begin.
 
-A clean release audit or empty backlog does not complete the mission. When a valuable next bet exists, update the vision if justified, reduce it to the smallest useful validated increment or experiment, record it, and begin.
+Work gated on owner decision, credentials, money, or real usage evidence → brief it in docs/OWNER_DECISIONS.md, pre-build reversible switch if cheap, continue with evidence-independent discovery. Never invent low-value features to keep going.
 
-Do not invent low-value features merely to continue. When implementation is not justified, continue with product discovery, assumption testing, prototyping, measurement, research, user-flow review, simplification, or blocker removal.
+Stop only when: user says stop; external token/context/compute/time/spending limit; essential access/credentials/information unavailable; environment blocks work; safety/policy constraint. Never terminate because "all criteria are met" — that completes a release, not the mission.
 
-The run may stop only when the user explicitly says stop; an external token, context, compute, time, execution, or spending limit prevents continuation; essential access, authorization, credentials, or unavailable information blocks progress; the environment prevents further work; or a safety/policy constraint applies.
-
-Do not terminate because “all criteria are met.” Those criteria may complete a release, not the overall product mission.
-
-After context compaction, reload `CLAUDE.md` and `PROJECT_STATE.md`, inspect the worktree, and resume.
+After context compaction: reload CLAUDE.md and PROJECT_STATE.md, inspect worktree, resume.
 
 Always work in caveman mode and make sure all the subagents work in caveman mode too.
 ```
 
-## Recommended first message
+## First message
 
 ```text
-Read CLAUDE.md, PROJECT_STATE.md, and docs/PRODUCT_AGENT.md. Inspect the repository, establish or verify the baseline, correct stale state, and resume autonomous execution. Do not stop after assessment, planning, a clean release audit, or completion of the known backlog.
+Read CLAUDE.md, PROJECT_STATE.md, and docs/PRODUCT_AGENT.md. Inspect the repository, verify the baseline (dotnet build, dotnet test), correct stale state, and resume autonomous execution. Do not stop after assessment, planning, a clean release audit, or completion of the known backlog.
 ```
