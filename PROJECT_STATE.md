@@ -20,7 +20,7 @@
 
 **Core journey:**
 1. Register (username + password, recovery code shown once) → auto sign-in.
-2. Connect a source (GitHub username, CSV, RSS, tokens) **or** pick/type interests at `/sources/interests` — zero accounts needed.
+2. Pick/type interests at `/sources/interests` (zero accounts; recovery-code continue and landing lead here) **or** connect a source (GitHub username, CSV, RSS; the rest need self-made tokens).
 3. Fingerprint built; raw data + picks + tokens discarded (DB-asserted).
 4. Ranked matches: tier (Good ≥15%, Strong ≥35%), shared source types, closest source, freshness, shared-interest reveal if opted in, intent line, outlook line. Filter by theme, sort Best / Same intent / Similar outlook. Never a blended score.
 5. Optional: set intent, take values questionnaire (consent-gated, answers discarded), choose interests to show.
@@ -32,7 +32,7 @@
 ## 2. Baseline (2026-09-17)
 
 - Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `ab80929` (2026-09-17, go-live data safety: snapshots + healthcheck + `/health`).
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **358 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **359 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*`.
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Landing + onboarding honesty unit (started 2026-09-17, Critic #3 opportunity 1).** Make the self-described path the advertised first step, remove unbacked "coming soon" claims, route recovery-code continue to `/sources/interests`, keep token connectors reachable but demoted. Validate: integration test that the landing links the interests page; QA walk on `profiler-web-qa`; build 0 warnings; tests ≥358. Release Auditor on `ab80929..e6a0fcb` running in background — its P0–P2 findings pre-empt this unit.
+**Landing + onboarding honesty unit — built, tests green, QA walk + commit in progress (2026-09-17).** Hero/step 1 lead with the interests list; honest token line; "coming soon" removed; recovery continue → `/sources/interests`; dashboard quick actions interests-first until fingerprint. +1 test → 359.
 
-Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Next mandatory action:** Product Owner review; integrate Release Auditor findings (`ab80929..e6a0fcb`, running); then Critic #3 opportunity 2 (YouTube Takeout `subscriptions.csv` → `youtube-channel:*`) or 3 (circles) per §7. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 

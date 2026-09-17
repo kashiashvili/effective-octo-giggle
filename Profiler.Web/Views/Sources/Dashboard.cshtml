@@ -101,25 +101,36 @@
             <div class="card quick-actions">
                 <div class="card-header dark">Quick Actions</div>
                 <div class="card-body">
+                    @{
+                        // Until a fingerprint exists the no-accounts path leads; afterwards, refreshing
+                        // sources is the more common action.
+                        void InterestsAction()
+                        {
+                            <li>
+                                <a href="/sources/interests" class="action-item">
+                                    <span class="action-icon purple">✏️</span>
+                                    <span class="action-item-text">
+                                        <strong>@(hasFingerprint ? "Update your interests" : "Describe your interests")</strong>
+                                        <small>@(hasFingerprint ? "Pick what you're into — same fingerprint, nothing stored" : "Pick what you're into — no accounts needed, nothing stored")</small>
+                                    </span>
+                                </a>
+                            </li>
+                        }
+                        void ConnectAction()
+                        {
+                            <li>
+                                <a href="/sources/connect" class="action-item">
+                                    <span class="action-icon purple">🔌</span>
+                                    <span class="action-item-text">
+                                        <strong>@(hasFingerprint ? "Add or update sources" : "Connect a source")</strong>
+                                        <small>@(hasFingerprint ? "Each source is refreshed independently" : "A GitHub username, a Goodreads/Netflix export or an RSS feed sharpens it")</small>
+                                    </span>
+                                </a>
+                            </li>
+                        }
+                    }
                     <ul class="action-list">
-                        <li>
-                            <a href="/sources/connect" class="action-item">
-                                <span class="action-icon purple">🔌</span>
-                                <span class="action-item-text">
-                                    <strong>@(hasFingerprint ? "Add or update sources" : "Connect your sources")</strong>
-                                    <small>@(hasFingerprint ? "Each source is refreshed independently" : "Link accounts to build your fingerprint")</small>
-                                </span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="/sources/interests" class="action-item">
-                                <span class="action-icon purple">✏️</span>
-                                <span class="action-item-text">
-                                    <strong>Describe your interests</strong>
-                                    <small>No account to connect? Pick what you're into — same fingerprint, nothing stored</small>
-                                </span>
-                            </a>
-                        </li>
+                        @if (hasFingerprint) { ConnectAction(); InterestsAction(); } else { InterestsAction(); ConnectAction(); }
                         <li>
                             <a href="/matches" class="action-item @(hasFingerprint ? "" : "disabled")">
                                 <span class="action-icon red">🤝</span>

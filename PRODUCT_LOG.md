@@ -52,11 +52,13 @@ fingerprint; the underlying interests are discarded after the fingerprint is bui
 
 1. **Register** → account is created, you are **signed in automatically**, and you are shown
    your **recovery code once** (there is no email address on file, so this is the only way
-   back in) before landing on the Connect page.
-2. **Connect at least one source, or describe your interests.** No account at all is needed:
-   at `/sources/interests` you can tick interests from a curated list and get the same
+   back in). Its continue button leads to the interests list; connecting a source is the
+   alternative link.
+2. **Describe your interests, or connect a source.** No account at all is needed: at
+   `/sources/interests` you tick interests from a curated list (plus free text) and get the same
    fingerprint. Connectors that need no tokens: a GitHub username, RSS feed URLs, or a
-   Goodreads/Netflix CSV export. The rest accept OAuth tokens / API keys.
+   Goodreads/Netflix CSV export. The rest accept OAuth tokens / API keys you create yourself —
+   the landing page and the dashboard say so, and lead with the no-accounts path.
 3. Profiler **fetches your interests, builds the fingerprint, and discards the raw data** (and
    the picks, and any tokens).
 4. **View your matches** — ranked by interest similarity, with a qualitative tier, the source
@@ -345,7 +347,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 358 tests, fully offline
+dotnet test                           # 359 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -468,6 +470,19 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Landing and onboarding now lead with the path that actually converts.** Opportunity Critic #3
+  (evidence in `PROJECT_STATE.md` §7): the hero and "How it works" said "link your GitHub,
+  Goodreads, Netflix", never mentioned the self-described interests list — the funnel the product
+  was rebuilt around — advertised six "coming soon" sources with no code or backlog behind them,
+  and the recovery-code page's only continue button dropped new users onto the 18-card token
+  grid. Now: hero and step 1 lead with "pick your interests from a list", the sources section says
+  honestly which four need no account or token and that the rest take a self-made API token, the
+  unbacked "coming soon" line is gone (nothing shipped was removed — culling connectors stays an
+  owner call, the grid remains), the recovery-code continue goes to `/sources/interests` with
+  "connect a source instead" as the secondary link, and the dashboard's quick actions put
+  "Describe your interests" first until a fingerprint exists. Tests: landing orders the interests
+  path before any platform, names the token honesty line, contains no "coming soon"; recovery page
+  links both paths: 359.
 - **`/metrics` now answers the questions the first cohort exists to answer.** The state file's untested
   assumptions — do privacy-conscious people fingerprint at all, self-described or via a connector;
   does interest similarity bring anyone back — were "needs live users", but the live endpoint only
