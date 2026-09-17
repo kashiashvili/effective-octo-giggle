@@ -100,6 +100,9 @@ public class MetricsController : ControllerBase
             WithContact = await users.CountAsync(u => u.Contact != null),
             WithConnectionIntent = await users.CountAsync(u => u.ConnectionIntent != null),
             WithValuesProfile = await users.CountAsync(u => u.ValuesOpenness != null),
+            // Whether pools form through circles at all: plain totals, nothing per circle.
+            Circles = await _db.Circles.CountAsync(),
+            UsersInCircles = await _db.CircleMemberships.Select(m => m.UserId).Distinct().CountAsync(),
             // Withheld (null) below the small-cohort threshold to prevent re-identification.
             BreakdownsWithheldBelowCohort = breakdownsShown ? (int?)null : MinCohortForBreakdown,
             ConnectionIntentBreakdown = intentBreakdown,

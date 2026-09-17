@@ -110,6 +110,23 @@ public class MatchesController : Controller
 
         perSource.TryGetValue(userId, out var mySignatures);
 
+        // Circles both sides are in: one query over the viewer's memberships joined against the people
+        // who matched. Withheld while the viewer is hidden, like every other reciprocal field, and
+        // absent entirely when circles are disabled at the deployment level.
+        var viewerVisible = (bool)(ViewBag.IsDiscoverable ?? true);
+        var myCircleIds = _flags.CirclesEnabled
+            ? await _db.CircleMemberships.Where(m => m.UserId == userId).Select(m => m.CircleId).ToListAsync()
+            : new List<int>();
+        var sharedCircles = myCircleIds.Count > 0 && viewerVisible
+            ? (await _db.CircleMemberships
+                    .Where(m => myCircleIds.Contains(m.CircleId) && matchedIds.Contains(m.UserId))
+                    .Join(_db.Circles, m => m.CircleId, c => c.Id, (m, c) => new { m.UserId, c.Name })
+                    .ToListAsync())
+                .GroupBy(x => x.UserId)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.Name).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList())
+            : new Dictionary<int, List<string>>();
+        ViewBag.HasOwnCircles = myCircleIds.Count > 0;
+
         var viewModels = matches.Select(m =>
         {
             var matchFp = allFps.FirstOrDefault(f => f.UserId.ToString() == m.UserId);
@@ -157,6 +174,7 @@ public class MatchesController : Controller
                 SharedShowableInterests = iAmVisible
                     ? Profiler.Web.Profile.ShowableInterests.Common(myShowable, showableForCard)
                     : new List<string>(),
+                SharedCircles = sharedCircles.TryGetValue(int.Parse(m.UserId), out var circles) ? circles : new List<string>(),
                 Bio = iAmVisible ? matchFp?.User.Bio : null,
                 Contact = iAmVisible ? matchFp?.User.Contact : null,
                 // A separate, explainable signal shown alongside interests — never blended into the
@@ -236,12 +254,14 @@ public class MatchesController : Controller
         // the viewer has the matching signal set, so the sort always means something.
         var viewerHasIntent = !string.IsNullOrEmpty(myIntent);
         var viewerHasValues = myValues.HasValue;
+        var viewerHasCircles = myCircleIds.Count > 0;
         ViewBag.HasOwnValues = viewerHasValues;
 
         var sortMode = sort switch
         {
             "intent" when viewerHasIntent => "intent",
             "values" when viewerHasValues => "values",
+            "circle" when viewerHasCircles => "circle",
             _ => null,
         };
         ViewBag.SortMode = sortMode;
@@ -249,6 +269,8 @@ public class MatchesController : Controller
         {
             "intent" => shown.OrderByDescending(m => m.SharesViewerIntent).ToList(),
             "values" => shown.OrderBy(m => m.ValuesAlignmentRank).ToList(),
+            // People from a circle you share first; interest order preserved within each group.
+            "circle" => shown.OrderByDescending(m => m.SharedCircles.Count > 0).ToList(),
             _ => shown,
         };
 

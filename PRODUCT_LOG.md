@@ -62,9 +62,10 @@ fingerprint; the underlying interests are discarded after the fingerprint is bui
 3. Profiler **fetches your interests, builds the fingerprint, and discards the raw data** (and
    the picks, and any tokens).
 4. **View your matches** — ranked by interest similarity, with a qualitative tier, the source
-   types you share, how fresh the other fingerprint is, and — when both of you opted in — the
-   interests you both chose to show. Filter by shared interest theme; sort by best match, same
-   connection intent first, or similar outlook first. Nothing is blended into one score.
+   types you share, how fresh the other fingerprint is, a "Same circle" chip when you share a
+   circle, and — when both of you opted in — the interests you both chose to show. Filter by
+   shared interest theme; sort by best match, same circle first, same connection intent first, or
+   similar outlook first. Nothing is blended into one score.
 5. **Optionally add compatibility signals** beyond interests: a connection intent (what kind of
    connection you want), a short values/outlook questionnaire (consent-gated; answers discarded
    after deriving a coarse bucket), and a list of interests you are happy to show on your card.
@@ -115,8 +116,10 @@ match on shared channels.
 - **Only membership is stored** (`CircleMembership`: circle, user, when); it cascades and is removed
   explicitly on account deletion; the export lists circle names; `Signals:CirclesEnabled=false`
   hides start/join/leave (404) and the dashboard card, keeping rows.
-- Slice 2 (next): the "Same circle" chip and "Same circle first" sort on matches — chip + sort only,
-  never a filter, never part of a score, withheld while the viewer is hidden.
+- **On matches** (slice 2): people from a circle you share carry a "Same circle: <name>" chip, and
+  "Same circle first" is offered as a sort whenever you are in a circle — chip + sort only, never a
+  filter (outsiders still appear), never part of a score (interest order is kept within each group),
+  withheld while you are hidden. `/metrics` reports `circles` and `usersInCircles` as plain totals.
 
 ### Self-described interests (no account needed)
 - **Curated picker** at `/sources/interests`: ~140 tags across 9 themes. Picks become features
@@ -372,7 +375,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 380 tests, fully offline
+dotnet test                           # 383 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -499,6 +502,15 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Circles, slice 2: the chip and the sort.** People from a circle the viewer shares carry a
+  "Same circle: <name>" chip (first among the card's signals — the most concrete reason two people
+  are on the same list) and "Same circle first" joins the sort options whenever the viewer is in a
+  circle. One query per match list (viewer's memberships joined against the matched people); chip +
+  sort only — outsiders still appear, interest order is preserved within each group, nothing enters
+  the similarity — and withheld while the viewer is hidden, like bio and contact. `/metrics` gains
+  `circles` and `usersInCircles`. Tests: chip only on the circle-mate's card, sort lifts the mate
+  without dropping the outsider, outsider sees nothing, hidden viewer sees nothing, leaving removes
+  the chip, flag off removes chip and sort while keeping rows, metrics deltas: 383.
 - **Release Auditor on the onboarding / YouTube / genre-bridge units: one P2 fixed, six P3s closed.**
   P2: YouTube by token and by Takeout export in the same submit produced two "YouTube" results and
   the per-source row is unique, so the save threw — the very path the export unit promised

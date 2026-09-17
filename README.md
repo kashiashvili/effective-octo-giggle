@@ -26,7 +26,8 @@ Built with ASP.NET Core MVC, Entity Framework Core, and SQLite.
 - **Optional public profile** – add a short bio and a way to be reached, shown only
   to people you match with; rendered as plain text (never a live link)
 - **Circles** – start a named group and share its invite link (signed, 30 days, never stored); people from
-  the same circle are marked on each other's matches. Never a filter, never part of a score
+  the same circle carry a "Same circle" chip on each other's matches and can be sorted first. Never a
+  filter, never part of a score
 - **Account controls** – persistent cookie sign-in, a one-time recovery code (no email
   address is collected, so there is no reset link), per-source disconnect, and
   password-confirmed account deletion that removes all of your data
@@ -327,7 +328,7 @@ Then `GET /health` must answer 200 and `deploy/smoke.sh` should pass against the
 dotnet test
 ```
 
-The suite (380 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (383 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 

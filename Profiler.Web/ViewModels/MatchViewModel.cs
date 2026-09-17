@@ -45,6 +45,12 @@ public class MatchViewModel
     public string? Contact { get; set; }
 
     /// <summary>Human label for the matched user's connection intent, or null if unspecified/hidden.</summary>
+    /// <summary>
+    /// Circles both of you are in, by name. A concrete social fact shown as a chip and usable as a
+    /// sort — never a filter, never part of the similarity. Empty while the viewer is hidden.
+    /// </summary>
+    public List<string> SharedCircles { get; set; } = new();
+
     public string? ConnectionIntentLabel { get; set; }
 
     /// <summary>True when the match is here for the same thing as the viewer — a mutual signal, not just a display.</summary>

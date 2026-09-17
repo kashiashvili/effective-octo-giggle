@@ -22,7 +22,7 @@
 1. Register (username + password, recovery code shown once) → auto sign-in.
 2. Pick/type interests at `/sources/interests` (zero accounts; recovery-code continue and landing lead here) **or** connect a source (GitHub username, Goodreads/Netflix/YouTube-Takeout export, RSS; the rest need self-made tokens).
 3. Fingerprint built; raw data + picks + tokens discarded (DB-asserted).
-4. Ranked matches: tier (Good ≥15%, Strong ≥35%), shared source types, closest source, freshness, shared-interest reveal if opted in, intent line, outlook line. Filter by theme, sort Best / Same intent / Similar outlook. Never a blended score.
+4. Ranked matches: tier (Good ≥15%, Strong ≥35%), shared source types, closest source, freshness, "Same circle" chip, shared-interest reveal if opted in, intent line, outlook line. Filter by theme, sort Best / Same circle / Same intent / Similar outlook. Never a blended score.
 5. Optional: set intent, take values questionnaire (consent-gated, answers discarded), choose interests to show.
 6. Read bio/contact, reach out off-platform. Hide or report a match.
 7. Manage sources, profile, password, sessions, visibility, blocks, signals, circles (start/invite/leave), export, deletion.
@@ -31,8 +31,8 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `ff03acc` circles slice 1 (2026-09-17); audit fixes follow it.
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **380 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `13b6acd` audit fixes (2026-09-17); circles slice 2 follows it.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **383 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*`.
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Audit-fix unit (Auditor on `9c9ff96..d1bbe1c`) — built, tests green, committing (2026-09-17).** P2 same-source merge; P3s closed. +2 tests → 380.
+**Circles slice 2 — built, tests green, committing (2026-09-17).** Chip + "Same circle first" sort + `/metrics` totals; 3 tests → 383.
 
-**Next mandatory action:** circles slice 2 — `MatchViewModel.SharedCircles`, one membership join per match list, "Same circle: <name>" chip, "Same circle first" sort offered only when the viewer has a circle, withheld while hidden, `/metrics` `circles` + `usersInCircles`, docs (§2/§3, README), tests (two invitees see the chip, outsider none, hidden viewer none, leave removes it, sort lifts circle-mates, flag off hides chip+sort). Then QA walk + Release Auditor over `ff03acc..HEAD`. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Next mandatory action:** QA walk of circles on `profiler-web-qa` (dashboard card, invite page anonymous + signed in, chip and sort on matches), then Release Auditor over `ff03acc..HEAD` (circles slices 1+2 + audit fixes). Then Product Owner review + next bet from §7 (mutual-visibility badge, or circle extras only if the Auditor is clean). Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Profiler.Web.Data;
 using Profiler.Web.Data.Models;
+using Profiler.Web.Profile;
 using Xunit;
 
 namespace Profiler.Web.Tests.Integration;
@@ -237,6 +238,133 @@ public class CirclesTests : IClassFixture<ProfilerWebFactory>
         Assert.DoesNotContain("Your circles", await a.GetStringAsync("/sources/dashboard"));
         Assert.Equal(HttpStatusCode.NotFound, (await a.GetAsync("/circles/join/anything")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await PostAsync(a, "/circles/create", new() { ["name"] = "x" })).StatusCode);
+    }
+
+    /// <summary>Gives a registered user a fingerprint so they take part in matching.</summary>
+    private async Task SeedFingerprintAsync(string username, params string[] features)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var gen = scope.ServiceProvider.GetRequiredService<FingerprintGenerator>();
+        var me = await db.Users.SingleAsync(u => u.Username == username);
+        db.Fingerprints.Add(new FingerprintRecord { UserId = me.Id, FingerprintJson = gen.Generate(features).ToJson(), SourcesJson = "[\"GitHub\"]" });
+        await db.SaveChangesAsync();
+    }
+
+    private static string CardOf(string matchesHtml, string username)
+    {
+        var start = matchesHtml.IndexOf(username, StringComparison.Ordinal);
+        Assert.True(start >= 0, $"{username} should be on the match list");
+        var end = matchesHtml.IndexOf("class=\"match-card\"", start, StringComparison.Ordinal);
+        return end < 0 ? matchesHtml[start..] : matchesHtml[start..end];
+    }
+
+    [Fact]
+    public async Task SameCircle_IsAChipAndASort_OnlyBetweenMembers_OnlyWhileVisible_NeverAFilter()
+    {
+        var tag = Guid.NewGuid().ToString("N")[..6];
+        var (aName, bName, cName) = ("circ_ma_" + tag, "circ_mb_" + tag, "circ_mc_" + tag);
+        var a = NewClient(); await RegisterAsync(a, aName);
+        var b = NewClient(); await RegisterAsync(b, bName);
+        var c = NewClient(); await RegisterAsync(c, cName);
+        // C is the stronger interest match for A; B (the circle-mate) is weaker but above the floor.
+        var mine = Enumerable.Range(1, 10).Select(i => $"{tag}:{i}").ToArray();
+        await SeedFingerprintAsync(aName, mine);
+        await SeedFingerprintAsync(cName, mine);
+        await SeedFingerprintAsync(bName, mine.Take(5).Concat(new[] { $"{tag}:b1", $"{tag}:b2" }).ToArray());
+
+        var token = await StartCircleAsync(a, "Run club " + tag);
+        await PostAsync(b, "/circles/join", new() { ["token"] = token }, tokenPage: $"/circles/join/{token}");
+
+        // Chip on the circle-mate's card only; the outsider still appears (never a filter).
+        var matches = await a.GetStringAsync("/matches");
+        Assert.Contains("Same circle: Run club " + tag, CardOf(matches, bName));
+        Assert.DoesNotContain("Same circle", CardOf(matches, cName));
+        Assert.Contains("Same circle first", matches);
+        // Default order is interest order: the stronger match first.
+        Assert.True(matches.IndexOf(cName, StringComparison.Ordinal) < matches.IndexOf(bName, StringComparison.Ordinal), "default order is by interest");
+        // The sort lifts the circle-mate without dropping anyone.
+        var sorted = await a.GetStringAsync("/matches?sort=circle");
+        Assert.True(sorted.IndexOf(bName, StringComparison.Ordinal) < sorted.IndexOf(cName, StringComparison.Ordinal), "sort=circle lifts the circle-mate");
+        Assert.Contains(cName, sorted);
+
+        // The outsider has no circle: no chip, no sort offered, and B's card carries nothing.
+        var outsider = await c.GetStringAsync("/matches");
+        Assert.DoesNotContain("Same circle", outsider);
+
+        // Hidden viewer: the chip and the sort are withheld, like bio and contact.
+        Assert.Equal(HttpStatusCode.Redirect, (await PostAsync(a, "/account/visibility", new() { ["discoverable"] = "false" })).StatusCode);
+        var hidden = await a.GetStringAsync("/matches");
+        Assert.DoesNotContain("Same circle:", hidden);
+        await PostAsync(a, "/account/visibility", new() { ["discoverable"] = "true" });
+
+        // Leaving removes the chip.
+        int circleId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            circleId = (await db.Circles.SingleAsync(x => x.Name == "Run club " + tag)).Id;
+        }
+        await PostAsync(b, "/circles/leave", new() { ["circleId"] = circleId.ToString() });
+        Assert.DoesNotContain("Same circle:", await a.GetStringAsync("/matches"));
+    }
+
+    [Fact]
+    public async Task WithCirclesOff_TheChipAndSortDisappear_ButRowsStay()
+    {
+        var tag = Guid.NewGuid().ToString("N")[..6];
+        var (aName, bName) = ("circ_fa_" + tag, "circ_fb_" + tag);
+        var a = NewClient(); await RegisterAsync(a, aName);
+        var b = NewClient(); await RegisterAsync(b, bName);
+        var features = new[] { $"{tag}:1", $"{tag}:2", $"{tag}:3" };
+        await SeedFingerprintAsync(aName, features);
+        await SeedFingerprintAsync(bName, features);
+        var token = await StartCircleAsync(a, "Choir " + tag);
+        await PostAsync(b, "/circles/join", new() { ["token"] = token }, tokenPage: $"/circles/join/{token}");
+        Assert.Contains("Same circle: Choir " + tag, await a.GetStringAsync("/matches"));
+
+        using var off = _factory.WithWebHostBuilder(h => h.UseSetting("Signals:CirclesEnabled", "false"));
+        var aOff = NewClient(off);
+        var loginPage = await aOff.GetStringAsync("/account/login");
+        var login = await aOff.PostAsync("/account/login", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["Username"] = aName, ["Password"] = "Tr0ubad0ur-x9", ["__RequestVerificationToken"] = AntiforgeryIn(loginPage)
+        }));
+        Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+        var matches = await aOff.GetStringAsync("/matches");
+        Assert.Contains(bName, matches);
+        Assert.DoesNotContain("Same circle", matches);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(2, await db.CircleMemberships.CountAsync(m => db.Circles.Any(x => x.Id == m.CircleId && x.Name == "Choir " + tag)));
+    }
+
+    [Fact]
+    public async Task Metrics_CountCirclesAndMembers_AsPlainTotals()
+    {
+        var tag = Guid.NewGuid().ToString("N")[..6];
+        const string metricsToken = "circles-metrics-zzqx";
+        var op = _factory.WithWebHostBuilder(h => h.UseSetting(Profiler.Web.Controllers.MetricsController.TokenKey, metricsToken))
+            .CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        async Task<(int Circles, int Users)> ReadAsync()
+        {
+            var req = new HttpRequestMessage(HttpMethod.Get, "/metrics");
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", metricsToken);
+            var body = await (await op.SendAsync(req)).Content.ReadAsStringAsync();
+            using var doc = System.Text.Json.JsonDocument.Parse(body);
+            return (doc.RootElement.GetProperty("circles").GetInt32(), doc.RootElement.GetProperty("usersInCircles").GetInt32());
+        }
+
+        var before = await ReadAsync();
+        var a = NewClient(); await RegisterAsync(a, "circ_me_" + tag);
+        var b = NewClient(); await RegisterAsync(b, "circ_mf_" + tag);
+        var token = await StartCircleAsync(a, "Metrics " + tag);
+        await PostAsync(b, "/circles/join", new() { ["token"] = token }, tokenPage: $"/circles/join/{token}");
+        var after = await ReadAsync();
+
+        Assert.Equal(1, after.Circles - before.Circles);
+        Assert.Equal(2, after.Users - before.Users);
     }
 
     [Fact]

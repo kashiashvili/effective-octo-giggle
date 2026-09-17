@@ -705,6 +705,12 @@ footer {
   font-weight: 600;
   color: var(--primary, #6366f1);
 }
+.match-circle {
+  margin-top: .5rem;
+  font-size: .85rem;
+  font-weight: 600;
+  color: #0f766e;
+}
 .match-values {
   margin-top: .5rem;
   font-size: .85rem;

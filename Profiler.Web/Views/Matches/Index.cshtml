@@ -7,6 +7,7 @@
     bool hasOwnContact = ViewBag.HasOwnContact ?? true;
     bool hasOwnIntent = ViewBag.HasOwnIntent ?? true;
     bool hasOwnValues = ViewBag.HasOwnValues ?? false;
+    bool hasOwnCircles = ViewBag.HasOwnCircles ?? false;
     string? sortMode = ViewBag.SortMode as string;
     var lens = ViewBag.InterestLens as List<Profiler.Web.Profile.InterestTheme>;
     int lensTotal = ViewBag.InterestLensTotal ?? 0;
@@ -143,11 +144,15 @@
         else
         {
             @await Html.PartialAsync("_SourceFilterChips", (availableSources, sourceFilter))
-            @if (hasOwnIntent || hasOwnValues)
+            @if (hasOwnIntent || hasOwnValues || hasOwnCircles)
             {
                 <div class="source-filter" role="group" aria-label="Sort matches">
                     <span class="sort-label">Prioritise:</span>
                     <a class="filter-chip @(sortMode == null ? "active" : "")" href="@sortBase">Best match</a>
+                    @if (hasOwnCircles)
+                    {
+                        <a class="filter-chip @(sortMode == "circle" ? "active" : "")" href="@(sortBase + sortSep + "sort=circle")">Same circle first</a>
+                    }
                     @if (hasOwnIntent)
                     {
                         <a class="filter-chip @(sortMode == "intent" ? "active" : "")" href="@(sortBase + sortSep + "sort=intent")">Same intent first</a>
@@ -208,7 +213,12 @@
                                    the honest estimate is the "~X% shared" text above, not the bar. *@
                                 <div class="progress-bar @match.Tier" style="width: @match.BarPercent%"></div>
                             </div>
-                            @* Compatibility signals grouped together, right after the match strength. *@
+                            @* Compatibility signals grouped together, right after the match strength. The
+                               circle comes first: the most concrete reason two people are on the same list. *@
+                            @if (match.SharedCircles.Any())
+                            {
+                                <p class="match-circle">👥 Same circle: @string.Join(" · ", match.SharedCircles)</p>
+                            }
                             @if (!string.IsNullOrWhiteSpace(match.ConnectionIntentLabel))
                             {
                                 @if (match.SharesViewerIntent)
