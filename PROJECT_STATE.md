@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Evidence-capture unit — built, validated, committing (2026-09-17).** First-cohort inspection closed: matches list shows anyone ≥0.05 estimated Jaccard labelled "Some overlap", empty state covers the rest — no fallback needed. `/metrics` gained the funnel + return counters the assumptions table needs (`fingerprintsBySource`, `viewedMatches`, `returnedAfterFirstDay`, `activeLast7Days`, `registeredLast7Days`), aggregate only, no new tracking; boot-time EF warning 10103 silenced. 1 test → 358.
+**Landing + onboarding honesty unit (started 2026-09-17, Critic #3 opportunity 1).** Make the self-described path the advertised first step, remove unbacked "coming soon" claims, route recovery-code continue to `/sources/interests`, keep token connectors reachable but demoted. Validate: integration test that the landing links the interests page; QA walk on `profiler-web-qa`; build 0 warnings; tests ≥358. Release Auditor on `ab80929..e6a0fcb` running in background — its P0–P2 findings pre-empt this unit.
 
-**Next mandatory action:** Product Owner review, then continue discovery on the go-live path (remaining veins: Data Protection keys unencrypted at rest on the volume — document or brief; Azure Files + SQLite cannot be tested here; operator runbook for reading `/metrics` over time). Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -63,13 +63,16 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 - **P3** — interest clusters / community formation (density-gated); opt-in Web Push return channel (needs pool); privacy-respecting CAPTCHA option (provider); client-side fingerprinting for self-describe path (pepper-on-client problem, premature).
 - **P4** — LSH banding past few thousand users; pagination; match-card redesign closed as not warranted after worst-case walk.
 
-## 7. Opportunities Under Evaluation (ranked)
+## 7. Opportunities Under Evaluation (ranked; Critic #3 2026-09-17 falsified "best buildable version")
 
-1. Real usage evidence via `/metrics` — gate: deployment (Decision 4).
-2. Hide values signal by default — gate: owner (Decision 2); mechanism built.
-3. Connector-side weighting — gate: scheme-versioning design; consequential migration.
-4. Interest clusters — gate: pool density.
-5. Provable "raw discarded" (re-derive-your-own-fingerprint tool; long-term client-side compute) — right moat, premature before pool exists.
+1. **Landing + onboarding honesty** — hero/steps say "link GitHub/Goodreads/Netflix" and never mention `/sources/interests` (the real funnel); unbacked "coming soon" connector list; recovery-code continue → token grid instead of interests. Gate: none. S. **Active next.**
+2. **Bring-your-own-export connectors** — YouTube Takeout `subscriptions.csv` → existing `youtube-channel:*` vocab so export users match token users; "we never ask for a token". Gate: none. S per format.
+3. **Circles (invite-scoped pools, additive)** — signed invite tags membership; "Same circle" chip + circle-first sort; registration stays open. Only lever on pool *formation*; Decision 4's "private cohort" has no mechanism today (bare invite URL, global pool). New stored social fact → design + new-data checklist + Auditor. Gate: design (build) / owner (vision promotion, Decision 5).
+4. **Mutual-visibility badge** — "you're in their top matches too", request-time only. Gate: none, after 1–3.
+5. **Genre bridge by slug coincidence** — `spotify-genre:indie-rock` vs self-described `indie-rock` already share slugs; bridge is exact-slug, not fuzzy (backlog P2 was over-estimated). Gate: none. S.
+6. Real usage evidence via `/metrics` — gate: deployment (Decision 4). Funnel counters shipped `e6a0fcb`.
+7. Hide values signal by default — gate: owner (Decision 2); mechanism built.
+8. Connector-side weighting — gate: scheme-versioning design; consequential migration.
 
 ## 8. Assumptions
 
