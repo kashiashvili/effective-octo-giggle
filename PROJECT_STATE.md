@@ -31,8 +31,8 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `96429b7` mutual badge (2026-09-17); its audit fixes follow it.
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **389 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `8dd315c` badge audit fixes (2026-09-17); privacy inventory follows it.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **391 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Mutual-visibility badge — built, tests green, committing (2026-09-17, Critic #3 bet 4).** Per-query matcher exclusions; badge from each match's own viewpoint; withheld while hidden. +2 tests → 388.
+**Privacy inventory — built, tests green, committing (2026-09-17).** Critic #4's honesty defect: privacy page claimed "that's the whole database". Now a schema-backed table (`Data/DataInventory`, held to the EF model by a test). +2 tests → 391.
 
-**Next mandatory action:** Product Owner review of the day (nine product units since the morning's stop-3 idle) → Release Auditor over `9231952..HEAD` (mutual badge + invite follow-through), then a fresh Opportunity Critic (#4) since the product changed materially (circles, exports, bridge, badge). Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Next mandatory action:** circle view (§7 item 1): revise `docs/DESIGN_CIRCLES.md` (members see members; separate view, not a filter of the global list; withhold hidden/suspended; honor blocks both ways; bio/contact by reciprocity), then build `GET /circles/{id}`, link from dashboard + chip, tests (mate below floor appears in the circle view but not the main list; outsider 404; hidden withheld; block honoured; flag off 404), QA walk, Release Auditor. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -64,16 +64,17 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 - **P3** — interest clusters / community formation (density-gated); opt-in Web Push return channel (needs pool); privacy-respecting CAPTCHA option (provider); client-side fingerprinting for self-describe path (pepper-on-client problem, premature).
 - **P4** — LSH banding past few thousand users (a page now makes ≤21 passes: the list plus one counting pass per match); pagination; match-card redesign closed as not warranted after worst-case walk.
 
-## 7. Opportunities Under Evaluation (ranked; Critic #3 2026-09-17 falsified "best buildable version")
+## 7. Opportunities Under Evaluation (ranked; Critic #4 2026-09-17 evening — "day coherent, nothing to revert")
 
-1. **Landing + onboarding honesty** — hero/steps say "link GitHub/Goodreads/Netflix" and never mention `/sources/interests` (the real funnel); unbacked "coming soon" connector list; recovery-code continue → token grid instead of interests. Gate: none. S. **Active next.**
-2. **Bring-your-own-export connectors** — YouTube Takeout shipped (this unit). Further formats (Spotify privacy export, Steam? Letterboxd CSV) only if a matching token vocabulary or self-described theme exists to bridge to. Gate: none. S per format.
-3. **Circles (invite-scoped pools, additive)** — signed invite tags membership; "Same circle" chip + circle-first sort; registration stays open. Only lever on pool *formation*; Decision 4's "private cohort" has no mechanism today (bare invite URL, global pool). New stored social fact → design + new-data checklist + Auditor. Gate: design (build) / owner (vision promotion, Decision 5).
-4. **Mutual-visibility badge** — shipped (request-time, their viewpoint, withheld while hidden).
-5. **Genre bridge** — shipped (twelve common genres; weight-1 rule enforced by test). Remaining: Last.fm/SoundCloud vocabularies need connector-side emission = scheme versioning first.
-6. Real usage evidence via `/metrics` — gate: deployment (Decision 4). Funnel counters shipped `e6a0fcb`.
-7. Hide values signal by default — gate: owner (Decision 2); mechanism built.
-8. Connector-side weighting — gate: scheme-versioning design; consequential migration.
+1. **Circle view** — `/circles/{id}` for members: every discoverable member, tier or "no overlap yet" below the floor, no top-20 cut; the global list untouched. Fixes the one promise circles make and cannot keep (mates below 0.05 or outside top 20 are invisible today). Gate: design revision (`docs/DESIGN_CIRCLES.md`). M. **Active next.**
+2. **Vision revision: introductions inside groups/gatherings you already belong to** — Decision 5 (owner, copy). Increments 1, 3, 4 are ungated.
+3. **Organiser circle-health card** — members / with fingerprint / Good+ pairs inside (shown ≥5 members, counts only). Gate: none, after 1. S.
+4. **Try-before-register preview** — anonymous picker → lens + coarse band → register to see who. Gate: none, design for the oracle (band, pool ≥10, per-IP limit). M.
+5. **Fold token connectors** — landing: four no-token cards + one line; connect: token group collapsed. Nothing removed (cull stays owner). Gate: none. S.
+6. Retire "Same circle first" sort once 1 lands (half-measure on the wrong primitive). Gate: none, after 1.
+7. Persist 9-theme lens counts ("your interest shape", circle themes ≥5) — new stored derived data → new-data checklist. Gate: design.
+8. Web Push return channel — gate: pool + owner (push relays vs "no trackers").
+9. Real usage evidence via `/metrics` — gate: deployment (Decision 4). Hide values signal — owner (Decision 2). Connector-side weighting — scheme versioning.
 
 ## 8. Assumptions
 

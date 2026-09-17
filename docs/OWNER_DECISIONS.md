@@ -7,7 +7,7 @@ data** is done: multi-source matching (interests + intent + values), self-descri
 interests, cross-pool bridging, rarity weighting, evidence-recalibrated tiers, the shared-interest
 reveal, the full trust-&-safety loop (report → operator review → reversible suspend), privacy-preserving
 anti-sybil, token-gated measurement, and a containerized deploy pipeline on `main`. Three independent
-Release Audits and two Opportunity Critics; 389 tests, 0 warnings (re-verified 2026-09-17).
+Release Audits and two Opportunity Critics; 391 tests, 0 warnings (re-verified 2026-09-17).
 
 What remains needs **you**. Each decision below has the evidence, the options, a recommendation, and
 what it unblocks. None require reading code — the loop can execute whichever way you decide.
@@ -146,9 +146,11 @@ rather than "join and get matched".
 **Evidence.** No real users. Structural: the self-described picker became the real funnel; the
 invite link is the only growth lever; all density-gated bets are unchanged for a year of building.
 
-**Options.** (a) Groups-first positioning: landing leads with "start a circle", go-live plan = one
-organiser per cohort. (b) Keep individual positioning; circles stay a feature. (c) Wait for the first
-cohort's `/metrics` to show whether circles are used.
+**Options.** (a) Groups-first positioning — "privacy-preserving introductions inside groups you already
+belong to": landing leads with "start a circle", go-live plan = one organiser per cohort (a meetup, a
+course, a team), the loop keeps building circle-scoped increments (member view, organiser health card,
+QR/short join link, a 60-second phone picker). (b) Keep individual positioning; circles stay a feature.
+(c) Wait for the first cohort's `/metrics` to show whether circles are used.
 
 **Recommendation: (a), after the increment ships.** It matches how the first cohort will actually
 arrive (through someone), and it is copy, not code — reversible in an hour.

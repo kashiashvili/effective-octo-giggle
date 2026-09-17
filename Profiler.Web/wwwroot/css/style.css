@@ -1014,3 +1014,9 @@ footer {
   .visibility-row { flex-wrap: wrap; }
   .visibility-row form { margin-left: 0; }
 }
+
+/* Plain data table (privacy inventory) */
+.data-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.data-table th, .data-table td { text-align: left; vertical-align: top; padding: .5rem .6rem; border-bottom: 1px solid var(--gray-200); }
+.data-table thead th { color: var(--gray-600); font-weight: 600; }
+.data-table tbody th { font-weight: 600; white-space: nowrap; }

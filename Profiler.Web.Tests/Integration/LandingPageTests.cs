@@ -33,4 +33,17 @@ public class LandingPageTests : IClassFixture<ProfilerWebFactory>
         Assert.Contains("API token you create yourself", html);
         Assert.DoesNotContain("coming soon", html, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task PrivacyPage_ListsEveryKindOfStoredData_AndMakesNoStaleClaims()
+    {
+        var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var html = await client.GetStringAsync("/home/privacy");
+
+        foreach (var kind in Profiler.Web.Data.DataInventory.Kinds)
+            Assert.Contains(kind.Name, html);
+        Assert.DoesNotContain("whole database", html);
+        Assert.DoesNotContain("any contact details", html);
+        Assert.Contains("/account/data", html);
+    }
 }

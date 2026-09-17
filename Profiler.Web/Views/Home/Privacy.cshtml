@@ -14,12 +14,30 @@
             <div class="card-body">
                 <h3 class="mb-2">What we store</h3>
                 <p>
-                    When you connect a source, we extract short interest labels (like
-                    <code>language:python</code> or <code>genre:sci-fi</code>) and immediately
-                    run them through a <strong>MinHash</strong> algorithm. Only the resulting
-                    numeric signature is saved, together with the list of source names you
-                    connected and your username and password hash (BCrypt). That's the whole database.
+                    When you connect a source or pick interests, we extract short interest labels (like
+                    <code>language:python</code> or <code>genre:sci-fi</code>) and immediately run them
+                    through a <strong>MinHash</strong> algorithm. Only the resulting numeric signature is
+                    kept. Everything else the database holds is listed below — the list is generated from
+                    the database schema itself, so it cannot fall behind the product. Your own copy of all
+                    of it is on your <a href="/account/data">data page</a>.
                 </p>
+                <div style="overflow-x:auto">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>What</th><th>Exactly what is kept</th><th>Your control</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var kind in Profiler.Web.Data.DataInventory.Kinds)
+                            {
+                                <tr>
+                                    <th scope="row">@kind.Name</th>
+                                    <td>@kind.What</td>
+                                    <td>@kind.Control</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -27,10 +45,12 @@
             <div class="card-body">
                 <h3 class="mb-2">What we never store</h3>
                 <ul style="padding-left:1.25rem">
-                    <li>Raw interest data — book titles, watch history, starred repos, playlists</li>
-                    <li>Access tokens and API keys — they are used once to fetch your data and discarded</li>
+                    <li>Raw interest data — book titles, watch history, starred repos, playlists, channel names, or the interests you ticked or typed</li>
+                    <li>Access tokens and API keys — used once to fetch your data and discarded</li>
                     <li>Uploaded CSV files — parsed in memory, never written to disk</li>
-                    <li>Email addresses or any contact details — an account is just a username</li>
+                    <li>Your answers to the values questionnaire — only the derived bucket is kept</li>
+                    <li>An email address or phone number — none is asked for. A contact line exists only if you type one, and only you decide what it says</li>
+                    <li>Who invited whom to a circle, or the invite links you shared</li>
                 </ul>
             </div>
         </div>
@@ -41,8 +61,10 @@
                 <p>
                     Two MinHash signatures can be compared to estimate how similar the underlying
                     interest sets are (Jaccard similarity) without either side revealing what those
-                    interests are. Other users only ever see your username, a similarity percentage,
-                    and which source types you have in common.
+                    interests are. Other people only ever see your username, a match tier and an
+                    approximate percentage, which source types you have in common, the circles you both
+                    are in, and whatever you chose to make public — and all of that only while you are
+                    discoverable.
                 </p>
                 <p class="text-muted mb-0">
                     A signature is not reversible on its own, and it is additionally hashed with a

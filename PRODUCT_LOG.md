@@ -344,7 +344,9 @@ Schema changes are made with EF migrations and applied on startup via
    types you share, the circles you both are in, and whatever you chose to make public:
    bio, contact, connection intent, values bucket (as a coarse alignment label) and the
    interests you chose to show.** All of these are withheld while you are hidden.
-7. Where the operator turns on database snapshots (`Backup:Directory`; the shipped container
+7. The in-product privacy page lists every table in plain words from `Data/DataInventory`, which
+   a test holds to the EF model in both directions — an undescribed table fails the build.
+8. Where the operator turns on database snapshots (`Backup:Directory`; the shipped container
    and Azure setups do), a deleted account survives in them for at most `Backup:Keep ×
    Backup:IntervalHours` (7 days by default). The snapshots are copies of the same signature-only
    database on the same volume; the privacy page and the delete-account panel state the number.
@@ -385,7 +387,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 389 tests, fully offline
+dotnet test                           # 391 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -515,6 +517,14 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Privacy page made literally true, and kept true by a test.** Opportunity Critic #4 found the
+  page still said "username and password hash… that's the whole database" and "we never store
+  any contact details" — false since bios, contact lines, intent, values buckets, shown interests,
+  hides, reports and now circles exist. The "what we store" section is now a table generated from
+  `Data/DataInventory` (one plain-words entry per entity: what is kept, your control), a test
+  holds that list to the EF model in both directions, the "never store" list names the actual
+  never-stored things (raw interests and picks, tokens, CSVs, questionnaire answers, email/phone,
+  who invited whom), and "what others see" lists every reciprocal field. 391.
 - **Release Auditor on the badge and the invite follow-through: verdict yes; P3s closed.** The badge
   is now a count ("fewer than 20 people rank strictly closer to them", early exit, no list built,
   ties in the viewer's favour) instead of rebuilding each match's list; the list sort breaks ties
