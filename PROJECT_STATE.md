@@ -31,8 +31,8 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `8a1ab42` token fold (2026-09-17); audit fixes follow it.
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **393 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `e5efb6f` audit fixes (2026-09-17); organiser card follows it.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **394 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Audit-fix unit (privacy inventory + circle page) — built, tests green, committing (2026-09-17).** P1 join-page copy, P2 column-level inventory + test, P2 one member-count definition, P3s, plus the red fold assertion. 393.
+**None active. Stopped under `CLAUDE.md` §10 condition 1 — owner said "commit current progress and finish" (2026-09-17 evening).** Last unit (organiser health card) committed with tests green (394) and a clean worktree.
 
-**Next mandatory action:** Product Owner review, then §7 item 3 (organiser circle-health card: members / with fingerprint / Good+ pairs inside, shown ≥5 members, counts only, request-time) or item 4 (try-before-register preview, design first). Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Exact resume action:** (1) Release Auditor over `8a1ab42..HEAD` (token fold, audit fixes, organiser card) — not yet run; fix findings. (2) Product Owner review of the day, then §7 item 4 (try-before-register preview): write the design note first (coarse band, pool ≥10 fingerprints, per-IP limit, nothing stored, picks discarded in-request), then build. (3) Restart `profiler-web-qa` before any QA walk — the running instance predates the token fold. Owner replies to `docs/OWNER_DECISIONS.md` (five open decisions) pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -68,7 +68,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 
 1. **Circle view** — shipped `394fbb5` (members see every discoverable member, honest labels below the floor, no top-20 cut; global list untouched).
 2. **Vision revision: introductions inside groups/gatherings you already belong to** — Decision 5 (owner, copy). Increments 1, 3, 4 are ungated.
-3. **Organiser circle-health card** — members / with fingerprint / Good+ pairs inside (shown ≥5 members, counts only). Gate: none, after 1. S.
+3. **Organiser circle-health card** — shipped (members · with fingerprint · good-match pairs from five members, counts only).
 4. **Try-before-register preview** — anonymous picker → lens + coarse band → register to see who. Gate: none, design for the oracle (band, pool ≥10, per-IP limit). M.
 5. **Fold token connectors** — shipped (five no-token cards up front on the landing; token groups folded on both pages).
 6. Retire "Same circle first" sort — deferred: harmless, cheap, and removing shipped UI without usage evidence buys nothing; revisit with `/metrics`.
@@ -103,7 +103,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 
 ## 10. Last Completed Iteration
 
-`6dc5527` 2026-09-17 — circles slice 2 (chip + "Same circle first" sort + metrics totals); `ff03acc` slice 1 (start / signed invite / join / leave / export / delete / flag / migration). Earlier today: `13b6acd` audit fixes; `d1bbe1c` genre bridge; `58baf17` YouTube Takeout export; `9e0f578`; `9c9ff96`; `e6a0fcb`; `ab80929`.
+Organiser health card (this commit), 2026-09-17. Same day, newest first: `e5efb6f` audit fixes (join copy, column-level inventory, one member count, red fold assertion); `8a1ab42` token fold; `394fbb5` circle page; `227d268` privacy inventory; `8dd315c`+`96429b7` mutual badge; `9231952` circle invite follow-through; `d7002bc`+`6dc5527`+`ff03acc` circles; `d1bbe1c` genre bridge; `58baf17` YouTube Takeout; `9e0f578`+`9c9ff96`+`e6a0fcb`+`ab80929` go-live safety, metrics, onboarding.
 
 ## 11. Deploy Status
 

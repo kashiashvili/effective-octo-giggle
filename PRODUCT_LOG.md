@@ -117,6 +117,9 @@ match on shared channels.
 - **Only membership is stored** (`CircleMembership`: circle, user, when); it cascades and is removed
   explicitly on account deletion; the export lists circle names; `Signals:CirclesEnabled=false`
   hides start/join/leave (404) and the dashboard card, keeping rows.
+- **Organiser's read** on the dashboard card: members · with a fingerprint · good-match pairs inside
+  (pairs counted only from five members, so the number never says who overlaps with whom, and only
+  among discoverable members; skipped above sixty). Counts only, computed per request, discarded.
 - **Inviting**: once you are in a circle, the match list's empty-state invite box shares your newest
   circle's link instead of the bare register link, and says so — a friend you invite lands in your
   circle and is marked on your matches.
@@ -392,7 +395,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 393 tests, fully offline
+dotnet test                           # 394 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -522,6 +525,12 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **The organiser can tell whether the circle is working.** Opportunity Critic #4, bet 3: the
+  dashboard card showed a name, a count, a link and Leave — nothing an organiser could act on. Each
+  circle row now reads "N members · M with a fingerprint · P good-match pairs inside", pairs counted
+  only from five members (below that the number would say who overlaps with whom) and only among
+  discoverable members, skipped above sixty; counts only, computed per request and discarded.
+  Test: four members → pair count withheld, five → three pairs, nobody named. 394.
 - **Release Auditor on the privacy inventory and the circle page: P1 and two P2s fixed.** P1: the
   join page still said the chip and sort were "all a circle does", false since the circle page shows
   members to members — the join page and the join confirmation now say exactly what members see.

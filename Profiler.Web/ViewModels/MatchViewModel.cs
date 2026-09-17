@@ -101,8 +101,8 @@ public class MatchViewModel
     // "Strong match" unreachable (0% even for same-niche pairs) and labelled genuine matches "Some
     // overlap". These thresholds place "Strong" around the top decile of same-niche overlap and
     // "Good" clearly above stranger noise, so each tier carries information.
-    private const int GoodMatchPercent = 15;
-    private const int StrongMatchPercent = 35;
+    public const int GoodMatchPercent = 15;
+    public const int StrongMatchPercent = 35;
 
     /// <summary>CSS/severity bucket used for colour cues.</summary>
     public string Tier => SimilarityPercent >= StrongMatchPercent ? "high"

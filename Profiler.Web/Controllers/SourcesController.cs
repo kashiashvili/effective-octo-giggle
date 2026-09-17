@@ -78,11 +78,38 @@ public class SourcesController : Controller
                 .Select(c => new { c.Id, c.Name, MemberCount = _db.CircleMemberships.Where(m => m.CircleId == c.Id).Join(_db.Users, m => m.UserId, u => u.Id, (m, u) => u).Count(u => u.SuspendedAt == null) })
                 .ToListAsync()
             : new();
-        ViewBag.Circles = circleRows.Select(c => new CircleSummaryViewModel
+        var circles = new List<CircleSummaryViewModel>();
+        foreach (var c in circleRows)
         {
-            Id = c.Id, Name = c.Name, MemberCount = c.MemberCount,
-            InviteUrl = $"{Request.Scheme}://{Request.Host}/circles/join/{_invites.Issue(c.Id)}"
-        }).ToList();
+            // Organiser's read on whether the circle is working: how many built a fingerprint, and how
+            // many discoverable pairs already overlap at the Good tier. Counts only, computed here and
+            // discarded; the pair count is withheld for small circles, where it would say who overlaps
+            // with whom, and skipped for very large ones.
+            var fingerprints = await _db.CircleMemberships
+                .Where(m => m.CircleId == c.Id)
+                .Join(_db.Users.Where(u => u.SuspendedAt == null), m => m.UserId, u => u.Id, (m, u) => u)
+                .Where(u => u.Fingerprint != null)
+                .Select(u => new { u.IsDiscoverable, u.Fingerprint!.FingerprintJson })
+                .ToListAsync();
+            int? goodPairs = null;
+            if (c.MemberCount >= CircleSummaryViewModel.PairStatsMinMembers && c.MemberCount <= CircleSummaryViewModel.PairStatsMaxMembers)
+            {
+                var visible = fingerprints.Where(f => f.IsDiscoverable).Select(f => ProfileFingerprint.FromJson(f.FingerprintJson)).Where(f => !f.IsEmpty).ToList();
+                var good = 0;
+                for (var i = 0; i < visible.Count; i++)
+                    for (var j = i + 1; j < visible.Count; j++)
+                        if (visible[i].Similarity(visible[j]) * 100 >= MatchViewModel.GoodMatchPercent) good++;
+                goodPairs = good;
+            }
+            circles.Add(new CircleSummaryViewModel
+            {
+                Id = c.Id, Name = c.Name, MemberCount = c.MemberCount,
+                InviteUrl = $"{Request.Scheme}://{Request.Host}/circles/join/{_invites.Issue(c.Id)}",
+                WithFingerprint = fingerprints.Count,
+                GoodPairs = goodPairs,
+            });
+        }
+        ViewBag.Circles = circles;
         return View();
     }
 

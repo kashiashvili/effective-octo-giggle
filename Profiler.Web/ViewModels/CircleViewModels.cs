@@ -50,4 +50,18 @@ public class CircleSummaryViewModel
     public string Name { get; set; } = "";
     public int MemberCount { get; set; }
     public string InviteUrl { get; set; } = "";
+
+    /// <summary>Members who have built a fingerprint (a count, whoever they are).</summary>
+    public int WithFingerprint { get; set; }
+
+    /// <summary>
+    /// Pairs of discoverable members whose overlap reaches the "Good match" tier — the organiser's
+    /// "did it work?" number. Null while the circle is smaller than <see cref="PairStatsMinMembers"/>
+    /// (a pair count over a handful of people says who overlaps with whom) or larger than
+    /// <see cref="PairStatsMaxMembers"/>.
+    /// </summary>
+    public int? GoodPairs { get; set; }
+
+    public const int PairStatsMinMembers = 5;
+    public const int PairStatsMaxMembers = 60;
 }

@@ -268,7 +268,19 @@
                                 <li class="source-row" style="display:block">
                                     <div class="flex items-center gap-3">
                                         <a href="/circles/@circle.Id" class="source-badge">@circle.Name</a>
-                                        <small class="text-muted">@circle.MemberCount member@(circle.MemberCount == 1 ? "" : "s") · <a href="/circles/@circle.Id">see who's here</a></small>
+                                        <small class="text-muted">
+                                            @circle.MemberCount member@(circle.MemberCount == 1 ? "" : "s") ·
+                                            @circle.WithFingerprint with a fingerprint ·
+                                            @if (circle.GoodPairs is { } pairs)
+                                            {
+                                                <text>@pairs good-match pair@(pairs == 1 ? "" : "s") inside ·</text>
+                                            }
+                                            else if (circle.MemberCount < Profiler.Web.ViewModels.CircleSummaryViewModel.PairStatsMinMembers)
+                                            {
+                                                <text>pair counts appear at @Profiler.Web.ViewModels.CircleSummaryViewModel.PairStatsMinMembers members ·</text>
+                                            }
+                                            <a href="/circles/@circle.Id">see who's here</a>
+                                        </small>
                                         <form asp-action="Leave" asp-controller="Circles" method="post" class="ms-auto">
                                             <input type="hidden" name="circleId" value="@circle.Id" />
                                             <button type="submit" class="btn btn-outline btn-sm" aria-label="Leave @circle.Name">Leave</button>

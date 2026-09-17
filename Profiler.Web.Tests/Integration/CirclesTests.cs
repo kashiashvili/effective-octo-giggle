@@ -539,6 +539,40 @@ public class CirclesTests : IClassFixture<ProfilerWebFactory>
     }
 
     [Fact]
+    public async Task TheDashboard_TellsAnOrganiserWhetherTheCircleWorks_InCountsOnly_FromFiveMembers()
+    {
+        var tag = Guid.NewGuid().ToString("N")[..6];
+        var names = new[] { "a", "b", "c", "d", "e" }.Select(n => $"circ_org_{n}_{tag}").ToArray();
+        var clients = new List<HttpClient>();
+        foreach (var n in names) { var cl = NewClient(); await RegisterAsync(cl, n); clients.Add(cl); }
+        var shared = new[] { $"{tag}:s1", $"{tag}:s2", $"{tag}:s3", $"{tag}:s4" };
+        await SeedFingerprintAsync(names[0], shared);
+        await SeedFingerprintAsync(names[1], shared);
+        await SeedFingerprintAsync(names[2], shared);                       // a, b, c: three Good pairs
+        await SeedFingerprintAsync(names[3], $"{tag}:d1", $"{tag}:d2");    // d: overlaps nobody
+        // e: no fingerprint
+
+        var token = await StartCircleAsync(clients[0], "Org " + tag);
+        for (var i = 1; i < 4; i++)
+            await PostAsync(clients[i], "/circles/join", new() { ["token"] = token }, tokenPage: $"/circles/join/{token}");
+
+        var four = await clients[0].GetStringAsync("/sources/dashboard");
+        Assert.Contains("4 members", four);
+        Assert.Contains("4 with a fingerprint", four);
+        Assert.Contains("pair counts appear at 5 members", four);
+        Assert.DoesNotContain("good-match pair", four);
+
+        await PostAsync(clients[4], "/circles/join", new() { ["token"] = token }, tokenPage: $"/circles/join/{token}");
+        var five = await clients[0].GetStringAsync("/sources/dashboard");
+        Assert.Contains("5 members", five);
+        Assert.Contains("4 with a fingerprint", five);
+        Assert.Contains("3 good-match pairs inside", five);
+        // Counts only: no member is named on the organiser's card.
+        var card = five[five.IndexOf("Org " + tag, StringComparison.Ordinal)..];
+        foreach (var other in names.Skip(1)) Assert.DoesNotContain(other, card);
+    }
+
+    [Fact]
     public async Task ACircleName_IsValidated_AndRenderedAsPlainText()
     {
         var tag = Guid.NewGuid().ToString("N")[..6];
