@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
@@ -25,7 +26,7 @@ public class DatabaseSnapshotHostTests : IClassFixture<ProfilerWebFactory>
 
             var privacy = await client.GetStringAsync("/home/privacy");
             Assert.Contains("rolling snapshots", privacy);
-            Assert.Contains("<strong>7 days</strong>", privacy);
+            Assert.Contains("older than <strong>7 days</strong> is deleted", privacy);
 
             // The service yields at start-up; give it a moment.
             string[] files = [];
@@ -39,6 +40,33 @@ public class DatabaseSnapshotHostTests : IClassFixture<ProfilerWebFactory>
         }
         finally
         {
+            try { Directory.Delete(dir, recursive: true); } catch { /* best effort */ }
+        }
+    }
+
+    [Fact]
+    public async Task AnUnreadableDirectory_IsLoggedAndRetried_AndNeverStopsTheHost()
+    {
+        if (OperatingSystem.IsWindows()) return; // permission model differs; the guarded loop is the same code
+
+        var dir = Path.Combine(Path.GetTempPath(), $"profiler-snap-locked-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        File.SetUnixFileMode(dir, UnixFileMode.None);
+        try
+        {
+            using var host = _factory.WithWebHostBuilder(b => b.UseSetting("Backup:Directory", dir));
+            var client = host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+            // The service hits the unreadable directory right after start-up. A stopped host would
+            // fail these requests; the guarded loop logs and waits instead.
+            Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health")).StatusCode);
+            await Task.Delay(500);
+            Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health")).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/home/privacy")).StatusCode);
+        }
+        finally
+        {
+            try { File.SetUnixFileMode(dir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute); } catch { /* best effort */ }
             try { Directory.Delete(dir, recursive: true); } catch { /* best effort */ }
         }
     }

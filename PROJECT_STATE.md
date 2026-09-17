@@ -31,8 +31,8 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `ab80929` (2026-09-17, go-live data safety: snapshots + healthcheck + `/health`).
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **359 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `9c9ff96` (2026-09-17, onboarding leads with the no-accounts path); audit fixes follow it.
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **362 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 16 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `ForwardedHeaders:*`, `RateLimiting:*`.
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Landing + onboarding honesty unit — built, tests green, QA walk + commit in progress (2026-09-17).** Hero/step 1 lead with the interests list; honest token line; "coming soon" removed; recovery continue → `/sources/interests`; dashboard quick actions interests-first until fingerprint. +1 test → 359.
+**Audit-fix unit — built, committing (2026-09-17).** Release Auditor on `ab80929..e6a0fcb`: P1 host-stop on unreadable backup dir, P1 retention promise false for pre-migration snapshots, P2 count-only retention on sleeping hosts, P2 busy loop on null snapshot, P3s (fail-closed undocumented, temp leak, return-metric semantics, source breakdown cohort rule, Azure restore untested, stale state hashes). All fixed or documented; +3 tests → 362.
 
-**Next mandatory action:** Product Owner review; integrate Release Auditor findings (`ab80929..e6a0fcb`, running); then Critic #3 opportunity 2 (YouTube Takeout `subscriptions.csv` → `youtube-channel:*`) or 3 (circles) per §7. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
+**Next mandatory action:** Product Owner review, then Critic #3 opportunity 2 (YouTube Takeout `subscriptions.csv` → `youtube-channel:*`; check `YouTubeConnector` feature keys first) — small, ungated, extends the no-token funnel. Owner replies to `docs/OWNER_DECISIONS.md` pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
@@ -91,7 +91,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 ## 9. Known Risks
 
 - `Fingerprint:Pepper` rotation wipes every signature (detected at startup, users must reconnect). Back it up.
-- Database snapshots live on the same volume as the database: they cover bad migration/release/data damage, not loss of the volume. Off-host copy is a manual owner step (README "Back up and restore"). Deleted rows survive in snapshots ≤7 days (disclosed in-product).
+- Database snapshots live on the same volume as the database: they cover bad migration/release/data damage, not loss of the volume. Off-host copy is a manual owner step (README "Back up and restore"). Any snapshot older than Keep×Interval (7) days is deleted on every service pass (disclosed in-product); pre-migration copy fails closed.
 - SQLite on App Service `/home` is an SMB share: keep the default rollback journal (never WAL — needs shared memory, breaks on network filesystems); single worker already pinned.
 - SQLite: App Service must stay at one worker; bootstrap pins it. Scaling out corrupts.
 - Registration ticket single-use cache is in-process (fine single-instance).
@@ -101,7 +101,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 
 ## 10. Last Completed Iteration
 
-`ab80929` 2026-09-17 — go-live data safety: `Backup:*` rolling SQLite snapshots (online-backup API, disk-anchored cadence, pre-migration snapshot, per-kind retention, in-product retention disclosure), compose healthcheck that can pass (bash `/dev/tcp`), `/health` for Azure health path + deploy poll, README backup/restore runbook; 8 tests → 357; live compose verification incl. restore drill.
+`9c9ff96` 2026-09-17 — onboarding leads with the no-accounts path (hero/step 1, honest token line, "coming soon" removed, recovery continue → interests, dashboard interests-first). Earlier today: `e6a0fcb` `/metrics` funnel + return counters; `ab80929` go-live data safety (snapshots, healthcheck, `/health`, restore runbook).
 
 ## 11. Deploy Status
 

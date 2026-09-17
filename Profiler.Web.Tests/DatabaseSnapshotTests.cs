@@ -139,6 +139,43 @@ public class DatabaseSnapshotTests : IDisposable
     }
 
     [Fact]
+    public void PruneExpired_RemovesEveryKindPastRetention_AndStaleTempFiles_OnlyKeepingRecentOnes()
+    {
+        var dir = _options.Directory!;
+        Directory.CreateDirectory(dir);
+        var now = new DateTime(2026, 9, 17, 12, 0, 0, DateTimeKind.Utc);
+        // Keep = 2, IntervalHours = 24 → retention 2 days. Files from 10 days ago of both kinds must go;
+        // yesterday's and today's stay, whatever their count.
+        foreach (var name in new[]
+        {
+            "profiler-scheduled-20260907-120000.db", "profiler-premigrate-20260901-120000.db",
+            "profiler-scheduled-20260916-120000.db", "profiler-scheduled-20260917-090000.db",
+            "profiler-premigrate-20260917-100000.db",
+        })
+            File.WriteAllText(Path.Combine(dir, name), "");
+        var staleTemp = Path.Combine(dir, "profiler-scheduled-20260910-120000.db.tmp");
+        File.WriteAllText(staleTemp, "");
+        File.SetLastWriteTimeUtc(staleTemp, now.AddHours(-3));
+        var liveTemp = Path.Combine(dir, "profiler-scheduled-20260917-115900.db.tmp");
+        File.WriteAllText(liveTemp, "");
+        File.SetLastWriteTimeUtc(liveTemp, now.AddMinutes(-1));
+
+        var removed = DatabaseSnapshots.PruneExpired(dir, _options, now);
+
+        Assert.Equal(3, removed);
+        var left = Directory.GetFiles(dir).Select(Path.GetFileName).OrderBy(n => n, StringComparer.Ordinal).ToArray();
+        Assert.Equal(new[]
+        {
+            "profiler-premigrate-20260917-100000.db",
+            "profiler-scheduled-20260916-120000.db",
+            "profiler-scheduled-20260917-090000.db",
+            "profiler-scheduled-20260917-115900.db.tmp",
+        }, left);
+
+        Assert.Equal(0, DatabaseSnapshots.PruneExpired(Path.Combine(_root, "missing"), _options, now));
+    }
+
+    [Fact]
     public void RetentionDays_IsTheLongestADeletedRowCanSurvive()
     {
         Assert.Equal(7, new SnapshotOptions { Directory = "x" }.RetentionDays);

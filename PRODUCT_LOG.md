@@ -204,7 +204,8 @@ and the two CSV uploads need no account credentials.
   fingerprint, fingerprints by source (self-described vs each connector), ever viewed matches,
   returned to the match list ≥1 day after registering, active last 7 days — plus bio/contact/intent/
   values adoption; intent and values breakdowns withheld below a 10-user cohort so nobody is
-  identifiable; all computed from columns already stored, no new tracking),
+  identifiable — the source breakdown follows the same rule; all computed from columns already
+  stored, no new tracking),
   `GET /metrics/reports` (reported users ranked by distinct reporters, with suspension status) and
   `POST /metrics/suspend` (`{"username":"…","suspend":true|false}`).
 - **Suspension is a reversible flag** (`AppUser.SuspendedAt`): a suspended account is removed from
@@ -347,7 +348,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 359 tests, fully offline
+dotnet test                           # 362 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -365,8 +366,10 @@ dotnet test                           # 359 tests, fully offline
   SQLite's online-backup API whenever `Backup:Directory` is set: a scheduled one every
   `Backup:IntervalHours` (cadence anchored to the newest file, so a host that recycles the process
   — App Service F1 sleeps — neither piles up copies nor skips a day) and one right before a
-  migration touches an established database; `Backup:Keep` newest per kind. Failures log and retry,
-  never crash the app. Copy them off-host (`docker cp profiler:/data/backups .`; Kudu
+  migration touches an established database; `Backup:Keep` newest per kind, and anything of either
+  kind older than `Keep × Interval` days deleted on every pass (that is the promise users read).
+  The scheduled service logs and retries every failure and never stops the host; the pre-migration
+  copy fails closed — an app that cannot write its safety copy refuses to migrate and says why. Copy them off-host (`docker cp profiler:/data/backups .`; Kudu
   `/api/zip/data/backups/` on Azure) and restore by stop → replace file → start — exact commands in
   `README.md` "Back up and restore". `/health` (DB reachability) is what the compose healthcheck
   (bash `/dev/tcp`, since the runtime image has no `wget`/`curl`), the Azure health-check path and
@@ -470,6 +473,21 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Release Auditor on the day's units: two P1s fixed, retention promise made literally true.** An
+  independent audit of `ab80929..e6a0fcb` found (1) the snapshot service read the backup folder
+  outside its guard, so an unreadable `Backup:Directory` threw out of the hosted service and — with
+  .NET's default — stopped the whole host (reproduced by the auditor); (2) pre-migration snapshots
+  were pruned only by count when the *next* migration shipped, so a deleted account could outlive
+  the "≤7 days" the privacy page promised. Fixed: the entire loop body is guarded (log, wait, retry),
+  an in-memory database exits cleanly, a missing database file backs off instead of spinning, and an
+  age-based prune deletes any snapshot of either kind older than `Keep × Interval` days on every
+  pass plus temp files left by an interrupted copy; the privacy copy now says exactly that. The
+  pre-migration copy fails closed by design and now logs a critical line saying so. The
+  `fingerprintsBySource` breakdown is withheld below the 10-account cohort like the other
+  breakdowns (a hidden account's sources are not the operator's to read either), and the return
+  metric's proxy nature (only the last visit is stored) is stated. Tests: age prune across kinds
+  and stale temp files, unreadable directory keeps the host serving, source breakdown withheld
+  below / present above the cohort: 362.
 - **Landing and onboarding now lead with the path that actually converts.** Opportunity Critic #3
   (evidence in `PROJECT_STATE.md` §7): the hero and "How it works" said "link your GitHub,
   Goodreads, Netflix", never mentioned the self-described interests list — the funnel the product

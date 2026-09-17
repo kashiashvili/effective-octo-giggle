@@ -113,15 +113,45 @@ public class MetricsTests : IClassFixture<ProfilerWebFactory>
         Assert.Equal(2, after.ViewedMatches - before.ViewedMatches);
         Assert.Equal(1, after.ReturnedAfterFirstDay - before.ReturnedAfterFirstDay);
         Assert.Equal(2, after.ActiveLast7Days - before.ActiveLast7Days);
-        var selfBefore = before.FingerprintsBySource.GetValueOrDefault(SourcesController.SelfDescribedSource);
-        Assert.Equal(1, after.FingerprintsBySource[SourcesController.SelfDescribedSource] - selfBefore);
         // Aggregates only: no account is named anywhere in the payload.
         Assert.DoesNotContain(tag, body);
     }
 
+    [Fact]
+    public async Task FingerprintsBySource_IsWithheldBelowTheCohort_AndCountsAccountsPerSourceAbove()
+    {
+        // Own factory: the shared one must stay a tiny cohort for the withholding tests above.
+        using var own = new ProfilerWebFactory();
+        var client = own.WithWebHostBuilder(b => b.UseSetting(MetricsController.TokenKey, Token))
+            .CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        using (var scope = own.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var first = new AppUser { Username = "src_0", PasswordHash = "x" };
+            db.Users.Add(first);
+            db.SourceFingerprints.Add(new SourceFingerprintRecord { User = first, Source = SourcesController.SelfDescribedSource, FeatureCount = 5 });
+            await db.SaveChangesAsync();
+        }
+        var (small, _) = await ReadWithBodyAsync(client);
+        Assert.Null(small.FingerprintsBySource);
+
+        using (var scope = own.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            for (var i = 1; i < 10; i++)
+                db.Users.Add(new AppUser { Username = $"src_{i}", PasswordHash = "x" });
+            await db.SaveChangesAsync();
+        }
+        var (large, _) = await ReadWithBodyAsync(client);
+        Assert.Equal(10, large.TotalUsers);
+        Assert.NotNull(large.FingerprintsBySource);
+        Assert.Equal(1, large.FingerprintsBySource![SourcesController.SelfDescribedSource]);
+    }
+
     private sealed record Snapshot(
         int TotalUsers, int RegisteredLast7Days, int ViewedMatches, int ReturnedAfterFirstDay, int ActiveLast7Days,
-        Dictionary<string, int> FingerprintsBySource);
+        Dictionary<string, int>? FingerprintsBySource);
 
     private async Task<Snapshot> ReadAsync(HttpClient client) => (await ReadWithBodyAsync(client)).Snapshot;
 

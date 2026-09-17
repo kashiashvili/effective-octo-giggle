@@ -213,8 +213,10 @@ All settings can be supplied via `appsettings.json` or environment variables.
   cloud key store and is a deliberate non-goal for a single-instance deployment.
 - **Reading `/metrics` as a funnel.** `totalUsers` → `withFingerprint` (did people get past
   "connect or self-describe"; `fingerprintsBySource` says which path) → `viewedMatches` →
-  `returnedAfterFirstDay` (came back to the match list a day or more later — the "did they
-  find a reason to return" number) → `withContact` / `withBio` (willing to be reached).
+  `returnedAfterFirstDay` (latest match-list visit a day or more after registering — the "did they
+  find a reason to come back" number; only the last visit is stored, so it cannot tell a second visit
+  from a late first one) → `withContact` / `withBio` (willing to be reached). `fingerprintsBySource`,
+  like the intent and values breakdowns, is withheld below a 10-account cohort.
   `registeredLast7Days` and `activeLast7Days` show the trend. All are counts over columns
   the app already stores; nothing per-user is reported.
 - **Schema changes** go through EF Core migrations
@@ -248,10 +250,12 @@ With `Backup:Directory` set (the image and the Azure bootstrap both set it) the 
 **consistent snapshot** of its SQLite database through SQLite's online-backup API — a plain copy of a
 database that is being written can be torn — every `Backup:IntervalHours` (24) and keeps the newest
 `Backup:Keep` (7), as `profiler-scheduled-<UTC stamp>.db`. It also snapshots an **established database
-right before applying a migration** (`profiler-premigrate-…`, same retention), the one moment a bad
-release could lose data with nothing to fall back on. Snapshots hold exactly what the live database
-holds — signatures, never raw data — and a deleted account leaves them within `Keep × Interval` days;
-the privacy page and the delete-account panel state that number when snapshots are on.
+right before applying a migration** (`profiler-premigrate-…`), the one moment a bad release could lose
+data with nothing to fall back on; if that safety copy cannot be written the app refuses to migrate
+and logs why (fix the folder, or unset `Backup:Directory` to migrate without one). Any snapshot of
+either kind **older than `Keep × Interval` days is deleted** whenever the app runs, so a deleted
+account is gone from them by then — the privacy page and the delete-account panel state that number
+when snapshots are on. Snapshots hold exactly what the live database holds: signatures, never raw data.
 
 Snapshots live on the same volume as the database, so **copy them off the host** now and then:
 
@@ -283,7 +287,9 @@ docker compose start profiler
 from `/restore/<file>.db`.)
 
 Azure App Service, from a file on your machine. Both Kudu APIs are rooted at `/home`, so
-`/api/vfs/data/profiler.db` is the persistent `/home/data/profiler.db` the bootstrap configured:
+`/api/vfs/data/profiler.db` is the persistent `/home/data/profiler.db` the bootstrap configured.
+(The compose sequence above was executed verbatim; this Azure sequence is untested until the first live
+drill — run it once on a throwaway snapshot right after going live.)
 
 ```bash
 az webapp stop -g profiler-rg -n <app-name>
@@ -303,7 +309,7 @@ Then `GET /health` must answer 200 and `deploy/smoke.sh` should pass against the
 dotnet test
 ```
 
-The suite (359 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (362 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 

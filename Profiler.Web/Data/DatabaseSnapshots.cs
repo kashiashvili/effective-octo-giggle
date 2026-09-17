@@ -97,6 +97,34 @@ public static class DatabaseSnapshots
         return names.Count == 0 ? null : StampOf(names[0]);
     }
 
+    /// <summary>
+    /// Enforces the promise users read on the privacy page: no snapshot of any kind outlives
+    /// <see cref="SnapshotOptions.RetentionDays"/>. Count-based pruning alone cannot keep it — a
+    /// pre-migration snapshot is only re-pruned when the next migration ships, and a host that sleeps
+    /// (App Service F1) takes fewer snapshots than days pass. Also removes temp files left by a backup
+    /// interrupted mid-write (older than an hour, so a copy in progress is never touched). Returns how
+    /// many files were removed.
+    /// </summary>
+    public static int PruneExpired(string directory, SnapshotOptions options, DateTime nowUtc)
+    {
+        if (!System.IO.Directory.Exists(directory)) return 0;
+        var cutoff = nowUtc - TimeSpan.FromDays(options.RetentionDays);
+        var removed = 0;
+        foreach (var path in System.IO.Directory.EnumerateFiles(directory, "profiler-*.db").ToList())
+        {
+            if (StampOf(path) >= cutoff) continue;
+            File.Delete(path);
+            removed++;
+        }
+        foreach (var temp in System.IO.Directory.EnumerateFiles(directory, "profiler-*.db.tmp").ToList())
+        {
+            if (File.GetLastWriteTimeUtc(temp) >= nowUtc - TimeSpan.FromHours(1)) continue;
+            File.Delete(temp);
+            removed++;
+        }
+        return removed;
+    }
+
     /// <summary>Deletes all but the newest <paramref name="keep"/> snapshots of a kind. Returns how many were removed.</summary>
     public static int Prune(string directory, string prefix, int keep)
     {

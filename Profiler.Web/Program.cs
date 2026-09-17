@@ -242,8 +242,20 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     // A migration that goes wrong is the one moment data can be lost with nothing to fall back on, so an
-    // established database is snapshotted first (no-op for a fresh or already-current database).
-    DatabaseSnapshots.BeforeMigrate(db, snapshotOptions, app.Logger);
+    // established database is snapshotted first (no-op for a fresh or already-current database). This
+    // fails closed on purpose: a deploy that cannot make its safety copy does not get to migrate.
+    try
+    {
+        DatabaseSnapshots.BeforeMigrate(db, snapshotOptions, app.Logger);
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogCritical(ex,
+            "Refusing to migrate: the pre-migration database snapshot into {Directory} failed. " +
+            "Fix Backup:Directory (permissions, free space) or unset it to migrate without a safety copy.",
+            snapshotOptions.Directory);
+        throw;
+    }
     db.Database.Migrate();
 
     // Backfill the normalized username for rows that predate the column. The migration can only

@@ -62,8 +62,11 @@ public class MetricsController : ControllerBase
         // further signal investment: did people get as far as a fingerprint, did they ever open the
         // match list, and did they come back to it after the first day? Computed from the two
         // timestamps already stored per account (registration, last plain match-list visit), so this
-        // adds no tracking. The return check runs in memory over just the two dates of users who
-        // viewed matches, rather than trusting date arithmetic translation to SQLite.
+        // adds no tracking. Only the *last* visit is stored, so "returned" means the latest plain
+        // match-list visit was at least a day after registering — a late first visit counts as a
+        // return to the product, a second visit within the first day does not. The check runs in
+        // memory over just the two dates of users who viewed matches, rather than trusting date
+        // arithmetic translation to SQLite.
         var now = DateTime.UtcNow;
         var weekAgo = now.AddDays(-7);
         var viewers = await users.Where(u => u.LastMatchesViewedAt != null)
@@ -72,12 +75,15 @@ public class MetricsController : ControllerBase
         var returnedAfterFirstDay = viewers.Count(v => v.LastViewed - v.CreatedAt >= TimeSpan.FromDays(1));
 
         // How people fingerprint: self-described vs each connector, as a count of accounts per source.
-        // Source types are already shown to every match ("shared source types"), so unlike intent and
-        // values this is not sensitive and is not withheld below the cohort.
-        var fingerprintsBySource = await _db.SourceFingerprints
-            .GroupBy(s => s.Source)
-            .Select(g => new { Source = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.Source, x => x.Count);
+        // A categorical breakdown like intent and values, so it follows the same cohort rule: with one
+        // or two accounts it reads as one person's source list, and a hidden account's sources are
+        // withheld from everyone else, operator included.
+        var fingerprintsBySource = breakdownsShown
+            ? await _db.SourceFingerprints
+                .GroupBy(s => s.Source)
+                .Select(g => new { Source = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Source, x => x.Count)
+            : null;
 
         return Ok(new
         {

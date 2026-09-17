@@ -65,10 +65,10 @@
                 @if (Snapshots.Enabled)
                 {
                     <p class="text-muted mb-0">
-                        For disaster recovery this server keeps rolling snapshots of its database for up to
-                        <strong>@Snapshots.RetentionDays days</strong>. They hold the same signatures as the live
-                        database — never raw data — stay on the same server, and anything you delete leaves
-                        them on that schedule.
+                        For disaster recovery this server keeps rolling snapshots of its database; any snapshot
+                        older than <strong>@Snapshots.RetentionDays days</strong> is deleted. They hold the same
+                        signatures as the live database — never raw data — stay on the same server, and anything
+                        you delete is gone from them by then.
                     </p>
                 }
             </div>
