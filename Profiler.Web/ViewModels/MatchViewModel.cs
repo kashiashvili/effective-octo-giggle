@@ -66,6 +66,12 @@ public class MatchViewModel
     /// <summary>Coarse values alignment with the viewer ("Similar outlook"), or null if either side has none/hidden.</summary>
     public string? ValuesAlignmentLabel { get; set; }
 
+    /// <summary>Why the label says what it says: the priority both put first, or the one they differ on most.</summary>
+    public string? ValuesAlignmentReason { get; set; }
+
+    /// <summary>"similar view of the world" etc., when both answered the worldview part.</summary>
+    public string? WorldAlignmentLabel { get; set; }
+
     /// <summary>Numeric closeness for the "similar outlook first" sort — smaller is closer; large when absent.</summary>
     public int ValuesAlignmentRank { get; set; } = int.MaxValue;
 

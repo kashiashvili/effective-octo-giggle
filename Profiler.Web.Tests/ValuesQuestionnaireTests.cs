@@ -1,126 +1,187 @@
 using Profiler.Web.Profile;
 using Xunit;
+using static Profiler.Web.Profile.ValuesQuestionnaire;
 
 namespace Profiler.Web.Tests;
 
 /// <summary>
-/// The values derivation is the privacy-sensitive core of the second signal: raw answers in, one
-/// coarse bucket out, nothing else kept. These pin the scoring (including reverse items), the
-/// rejection of incomplete or out-of-range input, and the coarse alignment wording.
+/// The v2 derivation (docs/DESIGN_VALUES.md): ratings are read relative to the person's own mean,
+/// the ten values fold into four priorities with hedonism split, world beliefs reverse-score, and the
+/// comparison and explanation helpers say only what the card shows.
 /// </summary>
 public class ValuesQuestionnaireTests
 {
-    private static Dictionary<string, int> Answers(int novelty, int routine, int ideas, int tradition) => new()
+    /// <summary>All value items at <paramref name="baseline"/>, then overrides; world items at 4 unless given.</summary>
+    private static Dictionary<string, int> Answers(int baseline = 4, int world = 4, params (string Key, int Value)[] overrides)
     {
-        ["novelty"] = novelty,
-        ["routine"] = routine,
-        ["ideas"] = ideas,
-        ["tradition"] = tradition,
-    };
-
-    [Fact]
-    public void FullyOpenResponse_MapsToTheOpennessExtreme()
-    {
-        // Agree with openness items (5), disagree with conservation items (1).
-        Assert.Equal(2, ValuesQuestionnaire.DeriveBucket(Answers(novelty: 5, routine: 1, ideas: 5, tradition: 1)));
+        var a = new Dictionary<string, int>();
+        foreach (var item in ValueItems) a[item.Key] = baseline;
+        foreach (var item in WorldItems) a[item.Key] = world;
+        foreach (var (k, v) in overrides) a[k] = v;
+        return a;
     }
 
     [Fact]
-    public void FullyTraditionalResponse_MapsToTheConservationExtreme()
+    public void FlatRatings_GiveAFlatProfile_WhateverTheLevel()
     {
-        Assert.Equal(-2, ValuesQuestionnaire.DeriveBucket(Answers(novelty: 1, routine: 5, ideas: 1, tradition: 5)));
+        // Rating everything 7 and rating everything 2 are the same priorities: nothing ahead of anything.
+        var high = Derive(Answers(baseline: 7))!;
+        var low = Derive(Answers(baseline: 2))!;
+        Assert.Equal(new ValuesProfile(0, 0, 0, 0, 0, 0), high);
+        Assert.Equal(high, low);
     }
 
     [Fact]
-    public void AllNeutral_MapsToTheCentre()
+    public void PuttingIndependenceAndExcitementFirst_ReadsAsOpenness_AndAgainstConservation()
     {
-        Assert.Equal(0, ValuesQuestionnaire.DeriveBucket(Answers(3, 3, 3, 3)));
+        var p = Derive(Answers(baseline: 4, overrides: new[] { ("independence", 7), ("excitement", 7), ("security", 2), ("tradition", 2), ("fitting-in", 2) }))!;
+        Assert.True(p.Openness >= 1, $"openness {p.Openness}");
+        Assert.True(p.Conservation <= -1, $"conservation {p.Conservation}");
+        Assert.Equal(Dimension.Openness, (Dimension)Array.IndexOf(p.Priorities, p.Priorities.Max()));
     }
 
     [Fact]
-    public void ReverseItemsCountAgainstOpenness()
+    public void Enjoyment_CountsHalfToOpenness_AndHalfToSelfEnhancement()
     {
-        // Agreeing with every statement, including the conservation ones, must not read as fully open.
-        var bucket = ValuesQuestionnaire.DeriveBucket(Answers(5, 5, 5, 5));
-        Assert.Equal(0, bucket);
+        var only = Derive(Answers(baseline: 4, overrides: new[] { ("enjoyment", 7) }))!;
+        Assert.True(only.Openness >= 0 && only.Enhancement >= 0);
+        Assert.Equal(only.Openness, only.Enhancement);
+        Assert.True(only.Conservation <= 0 && only.Transcendence <= 0);
     }
 
     [Fact]
-    public void IncompleteAnswers_ReturnNull()
+    public void WorldBeliefs_ReverseScore_AndCentreOnTheMidpoint()
     {
-        var partial = new Dictionary<string, int> { ["novelty"] = 5, ["ideas"] = 5 };
-        Assert.Null(ValuesQuestionnaire.DeriveBucket(partial));
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(6)]
-    [InlineData(-1)]
-    public void OutOfRangeAnswers_ReturnNull(int bad)
-    {
-        Assert.Null(ValuesQuestionnaire.DeriveBucket(Answers(bad, 3, 3, 3)));
+        var safe = Derive(Answers(overrides: new[] { ("safe-place", 7), ("trust", 1) }))!;      // agrees it's safe, disagrees people can't be trusted
+        var risky = Derive(Answers(overrides: new[] { ("safe-place", 1), ("trust", 7) }))!;
+        var neutral = Derive(Answers())!;
+        Assert.Equal(2, safe.Safe);
+        Assert.Equal(-2, risky.Safe);
+        Assert.Equal(0, neutral.Safe);
+        var enticing = Derive(Answers(overrides: new[] { ("interesting", 7), ("dull", 1) }))!;
+        Assert.Equal(2, enticing.Enticing);
     }
 
     [Fact]
-    public void DerivedBucket_StaysWithinRange_ForEveryPossibleResponse()
+    public void MissingOrOutOfRangeAnswers_YieldNothing()
     {
-        for (var n = 1; n <= 5; n++)
-        for (var r = 1; r <= 5; r++)
-        for (var i = 1; i <= 5; i++)
-        for (var t = 1; t <= 5; t++)
+        var partial = Answers();
+        partial.Remove("loyalty");
+        Assert.Null(Derive(partial));
+        Assert.Null(Derive(Answers(overrides: new[] { ("fairness", 0) })));
+        Assert.Null(Derive(Answers(overrides: new[] { ("dull", 8) })));
+        Assert.Null(Derive(null));
+    }
+
+    [Fact]
+    public void EveryDimension_StaysWithinTheStoredRange()
+    {
+        var rng = new Random(7);
+        for (var i = 0; i < 2000; i++)
         {
-            var bucket = ValuesQuestionnaire.DeriveBucket(Answers(n, r, i, t));
-            Assert.NotNull(bucket);
-            Assert.InRange(bucket!.Value, ValuesQuestionnaire.MinBucket, ValuesQuestionnaire.MaxBucket);
+            var a = new Dictionary<string, int>();
+            foreach (var k in AllKeys) a[k] = rng.Next(MinAnswer, MaxAnswer + 1);
+            var p = Derive(a)!;
+            Assert.All(p.Priorities.Concat(p.World), v => Assert.InRange(v, MinLevel, MaxLevel));
         }
     }
 
-    [Theory]
-    [InlineData(2, 2, "Similar outlook")]              // exact match only
-    [InlineData(2, 1, "Some overlap in outlook")]      // one step apart is no longer "similar"
-    [InlineData(2, 0, "Some overlap in outlook")]
-    [InlineData(2, -1, "Different outlook")]
-    [InlineData(-2, 2, "Different outlook")]
-    public void AlignmentLabel_IsCoarse_AndByDistance(int a, int b, string expected)
-    {
-        Assert.Equal(expected, ValuesQuestionnaire.AlignmentLabel(a, b));
-    }
-
     [Fact]
-    public void AlignmentLabel_IsNull_WhenEitherSideHasNoSignal()
+    public void Json_RoundTrips_AndRejectsGarbage()
     {
-        Assert.Null(ValuesQuestionnaire.AlignmentLabel(null, 1));
-        Assert.Null(ValuesQuestionnaire.AlignmentLabel(1, null));
-        Assert.Null(ValuesQuestionnaire.AlignmentLabel(null, null));
+        var p = new ValuesProfile(2, -1, 1, 0, -2, 1);
+        Assert.Equal(p, ValuesProfile.FromJson(p.ToJson()));
+        Assert.Null(ValuesProfile.FromJson(null));
+        Assert.Null(ValuesProfile.FromJson(""));
+        Assert.Null(ValuesProfile.FromJson("not json"));
+        Assert.Null(ValuesProfile.FromJson("{\"o\":9,\"c\":0,\"t\":0,\"e\":0,\"s\":0,\"n\":0}")); // out of range
     }
 
     [Theory]
-    // Keyed to the three shown label tiers, not the raw distance: exact match = 0 (Similar),
-    // one–two steps = 1 (Some overlap), further = 2 (Different). Smaller is closer.
-    [InlineData(2, 2, 0)]    // Similar
-    [InlineData(1, 2, 1)]    // one step  -> Some overlap
-    [InlineData(-1, 1, 1)]   // two steps -> Some overlap (same tier, not a finer rank)
-    [InlineData(2, -2, 2)]   // four steps -> Different
-    public void AlignmentRank_KeysToTheShownTiers_SmallerIsCloser(int a, int b, int expected)
+    [InlineData(0, 0, 0, 0, "Similar priorities")]
+    [InlineData(1, 0, 0, 1, "Similar priorities")]        // mean gap 0.5
+    [InlineData(1, 1, 1, 1, "Some overlap in priorities")] // mean gap 1
+    [InlineData(2, 2, 1, 0, "Some overlap in priorities")] // 1.25
+    [InlineData(2, 2, 2, 0, "Different priorities")]       // 1.5
+    public void AlignmentLabel_KeysToMeanPriorityGap(int dO, int dC, int dT, int dE, string expected)
     {
-        Assert.Equal(expected, ValuesQuestionnaire.AlignmentRank(a, b));
+        var a = new ValuesProfile(0, 0, 0, 0, 0, 0);
+        var b = new ValuesProfile(dO, dC, dT, dE, 0, 0);
+        Assert.Equal(expected, AlignmentLabel(a, b));
+        Assert.Equal(expected, AlignmentLabel(b, a));
     }
 
     [Fact]
-    public void AlignmentRank_DoesNotDistinguishWithinAShownTier()
+    public void Labels_AreNull_WhenEitherSideHasNoProfile()
     {
-        // A user sees the same "Some overlap in outlook" label for a 1-step and a 2-step gap, so the sort
-        // must not silently order them differently on a distinction the UI never shows (and the signal
-        // cannot reliably support). Both map to the same rank; interest order breaks the tie.
-        Assert.Equal(ValuesQuestionnaire.AlignmentRank(0, 1), ValuesQuestionnaire.AlignmentRank(0, 2));
+        var p = new ValuesProfile(1, 0, 0, 0, 0, 0);
+        Assert.Null(AlignmentLabel(null, p));
+        Assert.Null(AlignmentReason(p, null));
+        Assert.Null(WorldLabel(null, null));
+        Assert.Equal(int.MaxValue, AlignmentRank(p, null));
     }
 
     [Fact]
-    public void AlignmentRank_SortsAbsentSignalsLast()
+    public void AlignmentRank_OrdersByShownTiers_PrioritiesFirst_ThenWorld()
     {
-        // The sort keys off this, not the display label, so a missing signal must rank worst.
-        Assert.Equal(int.MaxValue, ValuesQuestionnaire.AlignmentRank(null, 2));
-        Assert.Equal(int.MaxValue, ValuesQuestionnaire.AlignmentRank(2, null));
-        Assert.True(ValuesQuestionnaire.AlignmentRank(2, -2) < ValuesQuestionnaire.AlignmentRank(2, null));
+        var me = new ValuesProfile(2, -2, 1, -1, 2, 2);
+        var twin = me;
+        var sameValuesDifferentWorld = new ValuesProfile(2, -2, 1, -1, -2, -2);
+        var differentValuesSameWorld = new ValuesProfile(-2, 2, -1, 1, 2, 2);
+        Assert.True(AlignmentRank(me, twin) < AlignmentRank(me, sameValuesDifferentWorld));
+        Assert.True(AlignmentRank(me, sameValuesDifferentWorld) < AlignmentRank(me, differentValuesSameWorld));
+        // Within a shown tier nothing is distinguished: both of these are "Similar priorities".
+        Assert.Equal(AlignmentRank(me, twin), AlignmentRank(me, new ValuesProfile(2, -2, 1, -1, 2, 2) with { Enhancement = 0 }) - 0);
+    }
+
+    [Fact]
+    public void AlignmentReason_NamesTheSharedTopPriority_OrTheWidestGap()
+    {
+        var caring = new ValuesProfile(0, -1, 2, -1, 0, 0);
+        var caringToo = new ValuesProfile(1, -2, 2, 0, 0, 0);
+        Assert.Equal("you both put caring for people and the planet first", AlignmentReason(caring, caringToo));
+
+        var ambitious = new ValuesProfile(0, -1, -2, 2, 0, 0);
+        Assert.Equal("you differ most on caring for people and the planet", AlignmentReason(caring, ambitious));
+
+        Assert.Equal("your priorities line up across the board", AlignmentReason(new ValuesProfile(0, 0, 0, 0, 0, 0), new ValuesProfile(0, 0, 0, 0, 2, 2)));
+    }
+
+    [Theory]
+    [InlineData(2, 2, "similar view of the world")]
+    [InlineData(1, 1, "a partly similar view of the world")]
+    [InlineData(2, -2, "a different view of the world")]
+    public void WorldLabel_KeysToMeanWorldGap(int safeB, int enticingB, string expected)
+    {
+        var a = new ValuesProfile(0, 0, 0, 0, 2, 2);
+        var b = new ValuesProfile(0, 0, 0, 0, safeB, enticingB);
+        Assert.Equal(expected, WorldLabel(a, b));
+    }
+
+    [Fact]
+    public void Describe_SaysEachDimensionInWords_RelativeToTheOwnAverage()
+    {
+        var rows = Describe(new ValuesProfile(2, -2, 0, 1, -1, 2)).ToList();
+        Assert.Equal(6, rows.Count);
+        Assert.Contains(rows, r => r.Name == "new experiences and independence" && r.Reading == "far above your average" && r.Science == "Openness to change");
+        Assert.Contains(rows, r => r.Name == "stability, tradition and fitting in" && r.Reading == "far below your average");
+        Assert.Contains(rows, r => r.Science.StartsWith("Safe world") && r.Reading == "you see the world as a risky place");
+        Assert.Contains(rows, r => r.Science.StartsWith("Enticing world") && r.Reading == "you find the world full of interest");
+    }
+
+    [Fact]
+    public void Items_AreOriginalWording_AndCoverTheTenValuesOnce()
+    {
+        Assert.Equal(10, ValueItems.Count);
+        Assert.Equal(4, WorldItems.Count);
+        Assert.Equal(AllKeys.Count(), AllKeys.Distinct().Count());
+        // Each priority is fed by at least two items; the weights per item sum to one.
+        Assert.All(ValueItems, i => Assert.Equal(1.0, i.Openness + i.Conservation + i.Transcendence + i.Enhancement, 6));
+        Assert.True(ValueItems.Sum(i => i.Openness) >= 2 && ValueItems.Sum(i => i.Conservation) >= 2
+                 && ValueItems.Sum(i => i.Transcendence) >= 2 && ValueItems.Sum(i => i.Enhancement) >= 2);
+        // Nothing political, moral, clinical or religious in the wording (standing decision).
+        var banned = new[] { "god", "religio", "vote", "party", "government", "immigra", "abortion", "gun", "sin", "moral", "disorder", "anxiety", "depress" };
+        var text = string.Join(" ", ValueItems.Select(i => i.Name + " " + i.Description).Concat(WorldItems.Select(i => i.Statement))).ToLowerInvariant();
+        Assert.All(banned, word => Assert.False(System.Text.RegularExpressions.Regex.IsMatch(text, $@"\b{word}"), $"item wording contains '{word}'"));
     }
 }

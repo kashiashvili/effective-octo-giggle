@@ -389,7 +389,9 @@ public class AccountController : Controller
         if (!_flags.ValuesSignalEnabled) return RedirectToAction("Dashboard", "Sources");
         var user = await FindCurrentUserAsync();
         if (user == null) return await SignOutToHomeAsync();
-        ViewBag.HasValues = user.ValuesOpenness.HasValue;
+        var profile = Profiler.Web.Profile.ValuesProfile.FromJson(user.ValuesProfileJson);
+        ViewBag.HasValues = profile != null;
+        ViewBag.Summary = profile == null ? null : Profiler.Web.Profile.ValuesQuestionnaire.Describe(profile).ToList();
         return View(new ValuesViewModel());
     }
 
@@ -409,22 +411,24 @@ public class AccountController : Controller
         if (!vm.Consent)
             ModelState.AddModelError(nameof(vm.Consent), "Please confirm you understand before saving.");
 
-        var bucket = Profiler.Web.Profile.ValuesQuestionnaire.DeriveBucket(vm.Answers);
-        if (bucket is null)
+        var profile = Profiler.Web.Profile.ValuesQuestionnaire.Derive(vm.Answers);
+        if (profile is null)
             ModelState.AddModelError("", "Please answer every question to save your values profile.");
 
         if (!ModelState.IsValid)
         {
-            ViewBag.HasValues = user.ValuesOpenness.HasValue;
+            var existing = Profiler.Web.Profile.ValuesProfile.FromJson(user.ValuesProfileJson);
+            ViewBag.HasValues = existing != null;
+            ViewBag.Summary = existing == null ? null : Profiler.Web.Profile.ValuesQuestionnaire.Describe(existing).ToList();
             return View(vm);
         }
 
-        user.ValuesOpenness = bucket;
+        user.ValuesProfileJson = profile!.ToJson();
         user.ValuesScheme = Profiler.Web.Profile.ValuesQuestionnaire.Version;
         await _db.SaveChangesAsync();
 
-        TempData["Success"] = "Your values profile has been saved. Your answers were used to work it out and then discarded.";
-        return RedirectToAction("Dashboard", "Sources");
+        TempData["Success"] = "Your values profile is saved — your answers were used to work it out and then discarded. Here is what it says.";
+        return RedirectToAction(nameof(Values));
     }
 
     [HttpPost("values/delete")]
@@ -434,7 +438,7 @@ public class AccountController : Controller
         var user = await FindCurrentUserAsync();
         if (user == null) return await SignOutToHomeAsync();
 
-        user.ValuesOpenness = null;
+        user.ValuesProfileJson = null;
         user.ValuesScheme = null;
         await _db.SaveChangesAsync();
 
@@ -498,7 +502,14 @@ public class AccountController : Controller
             Bio = user.Bio,
             Contact = user.Contact,
             ConnectionIntent = user.ConnectionIntent,
-            ValuesOpenness = user.ValuesOpenness,
+            ValuesProfile = Profiler.Web.Profile.ValuesProfile.FromJson(user.ValuesProfileJson) is { } vp
+                ? new Dictionary<string, int>
+                {
+                    ["opennessToChange"] = vp.Openness, ["conservation"] = vp.Conservation,
+                    ["selfTranscendence"] = vp.Transcendence, ["selfEnhancement"] = vp.Enhancement,
+                    ["worldSafe"] = vp.Safe, ["worldEnticing"] = vp.Enticing,
+                }
+                : null,
             ValuesScheme = user.ValuesScheme,
             ShowableInterests = Profiler.Web.Profile.ShowableInterests.Deserialize(user.ShowableInterestsJson),
             LastMatchesViewedAt = user.LastMatchesViewedAt,

@@ -26,6 +26,11 @@ Built with ASP.NET Core MVC, Entity Framework Core, and SQLite.
   badge so you know when you're on their list as well
 - **Optional public profile** – add a short bio and a way to be reached, shown only
   to people you match with; rendered as plain text (never a live link)
+- **Values & worldview (optional)** – ten importance items over Schwartz's ten basic values plus two
+  primal world beliefs, scored relative to your own average; you see your profile in words, matches see
+  only a coarse explained line ("Similar priorities — you both put caring for people and the planet
+  first"). Answers are discarded; six small numbers are kept. Not a personality test, no political or
+  moral items, original wording over published constructs (`docs/DESIGN_VALUES.md`)
 - **Circles** – start a named group and share its invite link (signed, 30 days, never stored); the circle
   page shows every member whatever the overlap, and people from the same circle carry a "Same circle"
   chip on each other's matches and can be sorted first. Never a filter of the match list, never part of
@@ -208,7 +213,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 | `Metrics:Token`                  | — (off)              | Operator bearer token. Gates `GET /metrics` (aggregate funnel + adoption counts: registered, with fingerprint, fingerprints by source, viewed matches, returned after the first day, active last 7 days, bio/contact/intent/values), `GET /metrics/reports` (moderation review), and `POST /metrics/suspend` (suspend/reinstate). All 404 unless set |
 | `AntiAbuse:GuardRegistration`    | `false`              | Enforce the signed single-use registration form ticket (blocks blind/replayed POSTs). Turn on for a public launch |
 | `AntiAbuse:MinFormSeconds`       | `3`                  | When the guard is on, reject a registration submitted faster than this after the form loaded |
-| `Signals:ValuesEnabled`          | `true`               | The optional values/outlook signal (questionnaire, match-card alignment line, "Similar outlook first" sort). Set `false` to hide all three — the data-minimizing default until the signal is strengthened; stored buckets are kept for a clean re-enable |
+| `Signals:ValuesEnabled`          | `true`               | The optional values & worldview signal (questionnaire, match-card alignment line, "Similar outlook first" sort, and the nudges). Set `false` to hide all of it; stored profiles are kept for a clean re-enable |
 | `Signals:CirclesEnabled`         | `true`               | Circles (invite-scoped groups: start, join by link, leave; "Same circle" chip and sort on matches). Set `false` to hide all of it; memberships are kept |
 | `Backup:Directory`               | — (off)              | Folder for rolling SQLite snapshots (the container image sets `/data/backups`, the Azure bootstrap `/home/data/backups`). Unset = no snapshots |
 | `Backup:Keep`                    | `7`                  | Snapshots kept per kind (scheduled / pre-migration); older ones are deleted |
@@ -346,7 +351,7 @@ Then `GET /health` must answer 200 and `deploy/smoke.sh` should pass against the
 dotnet test
 ```
 
-The suite (394 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (396 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 

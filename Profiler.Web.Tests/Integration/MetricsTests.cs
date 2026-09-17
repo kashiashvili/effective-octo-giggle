@@ -60,7 +60,7 @@ public class MetricsTests : IClassFixture<ProfilerWebFactory>
             db.Users.Add(new AppUser
             {
                 Username = username, PasswordHash = "x",
-                ConnectionIntent = "collaborators", ValuesOpenness = 2, ValuesScheme = "openness-v1"
+                ConnectionIntent = "collaborators", ValuesProfileJson = new Profiler.Web.Profile.ValuesProfile(2, -1, 1, 0, 1, 1).ToJson(), ValuesScheme = "schwartz-v2"
             });
             await db.SaveChangesAsync();
         }

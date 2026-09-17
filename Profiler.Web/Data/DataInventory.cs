@@ -20,12 +20,13 @@ public static class DataInventory
             "BCrypt hash of your password, a hash of your recovery code, when you registered, when you last " +
             "opened your matches, whether you are discoverable, the moment after which your sign-ins count " +
             "(moved when you change your password or sign out everywhere), and — only if you chose to add " +
-            "them — a bio, a contact line, a connection intent, a values bucket (−2..+2, tagged with the " +
-            "questionnaire version; the answers are discarded) and the interests you chose to show. If an " +
-            "operator suspended the account, when.",
+            "them — a bio, a contact line, a connection intent, a values and worldview profile (six small " +
+            "numbers: four value priorities and two world beliefs, each −2..+2, tagged with the questionnaire " +
+            "version; the answers are discarded) and the interests you chose to show. If an operator " +
+            "suspended the account, when.",
             "Edit or clear each optional field on your dashboard and profile; delete the account to remove everything.",
             new[] { "Id", "Username", "NormalizedUsername", "PasswordHash", "RecoveryCodeHash", "CreatedAt", "LastMatchesViewedAt",
-                    "IsDiscoverable", "SessionsValidFrom", "Bio", "Contact", "ConnectionIntent", "ValuesOpenness", "ValuesScheme",
+                    "IsDiscoverable", "SessionsValidFrom", "Bio", "Contact", "ConnectionIntent", "ValuesProfileJson", "ValuesScheme",
                     "ShowableInterestsJson", "SuspendedAt" }),
         new(typeof(FingerprintRecord), "Your fingerprint",
             "The combined MinHash signature used for matching, the names of the sources it came from, and " +

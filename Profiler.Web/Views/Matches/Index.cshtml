@@ -7,6 +7,7 @@
     bool hasOwnContact = ViewBag.HasOwnContact ?? true;
     bool hasOwnIntent = ViewBag.HasOwnIntent ?? true;
     bool hasOwnValues = ViewBag.HasOwnValues ?? false;
+    bool valuesEnabled = ViewBag.ValuesEnabled ?? false;
     bool hasOwnCircles = ViewBag.HasOwnCircles ?? false;
     string? sortMode = ViewBag.SortMode as string;
     var lens = ViewBag.InterestLens as List<Profiler.Web.Profile.InterestTheme>;
@@ -79,6 +80,17 @@
                 <span>
                     You haven't shared a way to be reached, so nobody here can answer you.
                     <a href="/account/profile">Add a contact line</a> — it's shown only to people you match with.
+                </span>
+            </div>
+        }
+
+        @if (valuesEnabled && !noFingerprint && !hasOwnValues && Model.Any())
+        {
+            <div class="alert alert-info">
+                <span class="alert-icon">🧭</span>
+                <span>
+                    Shared interests say what you like; shared priorities say what you're like.
+                    <a href="/account/values">Two minutes on what matters to you</a> and matches show who shares your priorities and how they see the world — answers discarded, only a coarse profile kept.
                 </span>
             </div>
         }
@@ -247,7 +259,11 @@
                             }
                             @if (!string.IsNullOrWhiteSpace(match.ValuesAlignmentLabel))
                             {
-                                <p class="match-values"><span aria-hidden="true">🧭</span> @match.ValuesAlignmentLabel</p>
+                                <p class="match-values">
+                                    <span aria-hidden="true">🧭</span> @match.ValuesAlignmentLabel@if (match.ValuesAlignmentReason != null)
+                                    {<text> — @match.ValuesAlignmentReason</text>}@if (match.WorldAlignmentLabel != null)
+                                    {<text> · @match.WorldAlignmentLabel</text>}
+                                </p>
                             }
                             @* A concrete reason to reach out: interests they chose to show. Shared ones
                                (both of you show them) lead; otherwise their own list is the icebreaker. *@

@@ -23,7 +23,7 @@
 2. Pick/type interests at `/sources/interests` (zero accounts; recovery-code continue and landing lead here) **or** connect a source (GitHub username, Goodreads/Netflix/YouTube-Takeout export, RSS; the rest need self-made tokens).
 3. Fingerprint built; raw data + picks + tokens discarded (DB-asserted).
 4. Ranked matches: tier (Good ≥15%, Strong ≥35%), shared source types, closest source, freshness, "in their top matches too" badge, "Same circle" chip, shared-interest reveal if opted in, intent line, outlook line. Filter by theme, sort Best / Same circle / Same intent / Similar outlook. Never a blended score.
-5. Optional: set intent, take values questionnaire (consent-gated, answers discarded), choose interests to show.
+5. Optional: set intent, take the values & worldview questionnaire (ten values + two world beliefs, consent-gated, answers discarded, own profile shown back in words), choose interests to show.
 6. Read bio/contact, reach out off-platform. Hide or report a match.
 7. Manage sources, profile, password, sessions, visibility, blocks, signals, circles (start/invite/leave; circle page shows every member), export, deletion.
 
@@ -31,8 +31,8 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `4533dfa` (2026-09-17, organiser-card audit fixes).
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **394 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 17 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit: values & worldview v2 (2026-09-17; hash recorded in the next state commit).
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **396 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 18 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `Build:Sha` (CI-stamped, footer), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
 
@@ -42,14 +42,14 @@
 
 ## 4. Active Task
 
-**None active. Stopped under `CLAUDE.md` §10 condition 1 — owner said "commit current progress and finish" (2026-09-17 evening).** Every unit shipped today has had its Release Auditor pass; the last one (`8a1ab42..d48979e`) closed in `4533dfa`. Worktree clean, 394 tests green.
+**Values & worldview v2 — built, tests green (396), committing (2026-09-17).** Owner instruction: make the values profile accessible and science-based. Research notes and citations in `docs/DESIGN_VALUES.md`; Schwartz ten values → four centred priorities + two primal world beliefs (Safe, Enticing), own wording, answers discarded, six integers stored, own profile shown back in words, explained card line, five entry points. Migration `ValuesProfileV2`. Decision 2 closed as "strengthen".
 
-**Exact resume action:** Product Owner review of the day, then §7 item 4 (try-before-register preview): write the design note first (coarse band, pool ≥10 fingerprints, per-IP limit, nothing stored, picks discarded in-request), then build. Restart `profiler-web-qa` before any QA walk. Owner replies to `docs/OWNER_DECISIONS.md` (five open decisions) pre-empt everything. Note for the owner: a `Build:Sha` stamp (Dockerfile, `deploy.yml`, footer, CSS) was found in the working tree and committed with `8a1ab42`; it was not authored by the loop — see `PRODUCT_LOG.md` §11.
+**Next mandatory action:** QA walk of the new questionnaire and card line on `profiler-web-qa`, then an independent Release Auditor over this unit (sensitive-data path, migration, new surfaces). Then Product Owner review. Owner replies to the remaining decisions (1, 3, 4, 5) pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 
 1. Promote vision to "privacy-preserving compatibility matching" (recommend yes).
-2. Values signal: keep / **hide by default** (recommended; one flip `Signals:ValuesEnabled=false`) / strengthen with 2nd Schwartz axis (only with real adoption evidence).
+2. ~~Values signal~~ **answered 2026-09-17 by the owner: strengthen.** Shipped as `schwartz-v2` (four centred priorities + two world beliefs, accessible surfaces).
 3. Enable `AntiAbuse:GuardRegistration=true` for public launch (recommend yes).
 4. ~~Go live on Azure~~ **DONE 2026-09-17** — live on B1 (owner approved the upgrade after F1 hit its daily CPU quota). `/metrics` now has a real deployment behind it; adoption evidence starts accruing, which unblocks the gated signal bets.
 5. Groups-first positioning once circles ship (copy only; recommend yes). Design: `docs/DESIGN_CIRCLES.md`.
@@ -74,7 +74,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 6. Retire "Same circle first" sort — deferred: harmless, cheap, and removing shipped UI without usage evidence buys nothing; revisit with `/metrics`.
 7. Persist 9-theme lens counts ("your interest shape", circle themes ≥5) — new stored derived data → new-data checklist. Gate: design.
 8. Web Push return channel — gate: pool + owner (push relays vs "no trackers").
-9. Real usage evidence via `/metrics` — gate: deployment (Decision 4). Hide values signal — owner (Decision 2). Connector-side weighting — scheme versioning.
+9. Real usage evidence via `/metrics` — gate: deployment (Decision 4). Further values axes — gate: real adoption evidence (Decision 2 closed: strengthened). Connector-side weighting — scheme versioning.
 
 ## 8. Assumptions
 
@@ -82,8 +82,9 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 |---|---|
 | 128-hash MinHash tracks true Jaccard | Tested: MAE 0.006 (`InterestSignalResolutionTests`) |
 | Tier cut-offs reachable + discriminating | Tested; recalibrated Good ≥15 / Strong ≥35 (same tests) |
-| Single openness axis discriminates | Tested: weak, 95% in −1..+1 (`ValuesSignalResolutionTests`) |
-| Outlook sort is worth its reorder | Tested: ~66% top-1 change from weak signal (`ValuesSortImpactTests`) → owner brief |
+| Values profile discriminates (v2) | Tested: all five levels used per dimension; strangers 16.7% "similar" vs 69% for shared-priority pairs (`ValuesSignalResolutionTests`) |
+| Centring removes scale use | Tested: generous vs stingy rater, same priorities, read similar 76.1% (`ValuesSignalResolutionTests`) |
+| Outlook sort is worth its reorder | Tested: ~91% top-1 change, now from a signal that discriminates (`ValuesSortImpactTests`) |
 | Rarity weighting separates niche from common | Tested: 6.4× (`InterestWeightingExperimentTests`) → shipped self-described side |
 | Self-described + connector users can match | Tested for languages and twelve common genres (bridge integration tests); niche genres unbridged by design |
 | Interest similarity motivates real outreach | Untested — proxy live via `/metrics` `returnedAfterFirstDay`, `withContact` |
@@ -97,7 +98,7 @@ Also owner-only (standing): opt-in contact model stays final; culling paste-a-to
 - SQLite on App Service `/home` is an SMB share: keep the default rollback journal (never WAL — needs shared memory, breaks on network filesystems); single worker already pinned.
 - SQLite: App Service must stay at one worker; bootstrap pins it. Scaling out corrupts.
 - Registration ticket single-use cache is in-process (fine single-instance).
-- Values signal = most sensitive data, least validated signal; default still on pending Decision 2.
+- Values & worldview = the most sensitive data collected. Now the validated-construct version (`schwartz-v2`), answers discarded, six integers stored, one flip from hidden. Item wording is ours and unvalidated: it is not a psychometric assessment and must never be described as one.
 - F1 tier sleeps + 60 CPU-min/day; `az appservice plan update ... --sku B1` upgrades in place.
 - 13/18 connectors require self-minted tokens (phishing-shaped UX); mitigated by self-described path + no-token exports (Goodreads, Netflix, YouTube Takeout).
 

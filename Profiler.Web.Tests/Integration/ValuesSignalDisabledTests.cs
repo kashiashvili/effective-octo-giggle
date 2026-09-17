@@ -67,11 +67,11 @@ public class ValuesSignalDisabledTests : IClassFixture<ProfilerWebFactory>
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var me = await db.Users.FirstAsync(u => u.Username == meName);
-            me.ValuesOpenness = 2; me.ValuesScheme = ValuesQuestionnaire.Version;
+            me.ValuesProfileJson = new ValuesProfile(2, -2, 1, -1, 1, 1).ToJson(); me.ValuesScheme = ValuesQuestionnaire.Version;
             var other = new AppUser
             {
                 Username = otherName, PasswordHash = "x", IsDiscoverable = true,
-                ValuesOpenness = 2, ValuesScheme = ValuesQuestionnaire.Version
+                ValuesProfileJson = new ValuesProfile(2, -2, 1, -1, 1, 1).ToJson(), ValuesScheme = ValuesQuestionnaire.Version
             };
             db.Users.Add(other);
             await db.SaveChangesAsync();
@@ -82,12 +82,13 @@ public class ValuesSignalDisabledTests : IClassFixture<ProfilerWebFactory>
 
         var html = await (await client.GetAsync("/matches")).Content.ReadAsStringAsync();
         Assert.Contains(otherName, html);                    // still a match on interests
-        Assert.DoesNotContain("outlook", html);              // no "Similar/Different outlook" line
+        Assert.DoesNotContain("Similar priorities", html);    // no alignment line
         Assert.DoesNotContain("Similar outlook first", html); // no values sort control
+        Assert.DoesNotContain("what matters to you", html);   // no nudge either
 
         // The stored buckets are untouched — re-enabling brings the signal straight back.
         using var verify = _factory.Services.CreateScope();
         var db2 = verify.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.Equal(2, (await db2.Users.AsNoTracking().FirstAsync(u => u.Username == meName)).ValuesOpenness);
+        Assert.NotNull((await db2.Users.AsNoTracking().FirstAsync(u => u.Username == meName)).ValuesProfileJson);
     }
 }

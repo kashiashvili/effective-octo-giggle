@@ -90,8 +90,9 @@ public class MatchesController : Controller
         // alignment line (needs both sides set) and the "Similar outlook first" sort (offered only when
         // the viewer has values), with no other branching.
         var myValues = _flags.ValuesSignalEnabled
-            ? allFps.FirstOrDefault(f => f.UserId == userId)?.User.ValuesOpenness
+            ? ValuesProfile.FromJson(allFps.FirstOrDefault(f => f.UserId == userId)?.User.ValuesProfileJson)
             : null;
+        ViewBag.ValuesEnabled = _flags.ValuesSignalEnabled;
 
         // The viewer's own showable interests, to surface the ones a match also chose to show as shared
         // conversation hooks.
@@ -167,6 +168,7 @@ public class MatchesController : Controller
         var viewModels = matches.Select(m =>
         {
             var matchFp = allFps.FirstOrDefault(f => f.UserId.ToString() == m.UserId);
+            var theirValues = _flags.ValuesSignalEnabled ? ValuesProfile.FromJson(matchFp?.User.ValuesProfileJson) : null;
             var matchSources = matchFp != null
                 ? JsonSerializer.Deserialize<List<string>>(matchFp.SourcesJson) ?? new()
                 : new List<string>();
@@ -221,13 +223,11 @@ public class MatchesController : Controller
                 SharesViewerIntent = iAmVisible
                     && !string.IsNullOrEmpty(myIntent)
                     && matchFp?.User.ConnectionIntent == myIntent,
-                // Coarse values alignment, only when both sides took it and the viewer is visible.
-                ValuesAlignmentLabel = iAmVisible
-                    ? ValuesQuestionnaire.AlignmentLabel(myValues, matchFp?.User.ValuesOpenness)
-                    : null,
-                ValuesAlignmentRank = iAmVisible
-                    ? ValuesQuestionnaire.AlignmentRank(myValues, matchFp?.User.ValuesOpenness)
-                    : int.MaxValue,
+                // Coarse, explained values alignment, only when both sides took it and the viewer is visible.
+                ValuesAlignmentLabel = iAmVisible ? ValuesQuestionnaire.AlignmentLabel(myValues, theirValues) : null,
+                ValuesAlignmentReason = iAmVisible ? ValuesQuestionnaire.AlignmentReason(myValues, theirValues) : null,
+                WorldAlignmentLabel = iAmVisible ? ValuesQuestionnaire.WorldLabel(myValues, theirValues) : null,
+                ValuesAlignmentRank = iAmVisible ? ValuesQuestionnaire.AlignmentRank(myValues, theirValues) : int.MaxValue,
                 UpdatedAt = matchFp?.UpdatedAt ?? DateTime.UtcNow
             };
         }).ToList();
@@ -310,7 +310,7 @@ public class MatchesController : Controller
         // each group the interest ranking is preserved. Options are only offered (in the view) when
         // the viewer has the matching signal set, so the sort always means something.
         var viewerHasIntent = !string.IsNullOrEmpty(myIntent);
-        var viewerHasValues = myValues.HasValue;
+        var viewerHasValues = myValues != null;
         var viewerHasCircles = myCircleIds.Count > 0 && viewerVisible;
         ViewBag.HasOwnValues = viewerHasValues;
 

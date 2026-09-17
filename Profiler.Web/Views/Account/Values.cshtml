@@ -1,30 +1,59 @@
 @model Profiler.Web.ViewModels.ValuesViewModel
+@using Profiler.Web.Profile
 @{
-    ViewBag.Title = "Values profile";
+    ViewBag.Title = "Values & worldview";
     bool hasValues = ViewBag.HasValues ?? false;
-    var items = Profiler.Web.Profile.ValuesQuestionnaire.Items;
+    var summary = ViewBag.Summary as List<(string Name, string Science, string Reading, int Level)>;
 }
 
 <div class="page-wrap">
-    <div class="container" style="max-width: 640px">
+    <div class="container" style="max-width: 680px">
         <div class="page-header">
-            <h1>🧭 Your values profile <span class="badge badge-light">Optional</span></h1>
-            <p>A few quick questions about how you approach new things. Optional, and separate from your interests.</p>
+            <h1><span aria-hidden="true">🧭</span> What matters to you <span class="badge badge-light">Optional</span></h1>
+            <p>Two minutes: ten things that might matter to you, and four about how you see the world. Matches then see whether you share priorities — never your answers.</p>
         </div>
+
+        @if (hasValues && summary != null)
+        {
+            <div class="card mb-4">
+                <div class="card-header teal">Your profile</div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Relative to your own average — what you put ahead of the rest, not how you score against anyone.</p>
+                    <ul class="action-list">
+                        @foreach (var row in summary)
+                        {
+                            <li class="source-row" style="display:block">
+                                <strong>@row.Name</strong> <small class="text-muted">(@row.Science)</small><br />
+                                <span>@row.Reading</span>
+                            </li>
+                        }
+                    </ul>
+                    <p class="text-muted mt-3 mb-0">Answer again below to update it, or remove it at the bottom.</p>
+                </div>
+            </div>
+        }
 
         <div class="card mb-4">
             <div class="card-body">
-                <p class="mb-2"><strong>What this is — and isn't.</strong></p>
+                <p class="mb-2"><strong>The science, in three sentences.</strong></p>
                 <p class="text-muted mb-2">
-                    This places you roughly on one dimension — how much you lean toward new experiences
-                    versus familiar ones. It's a rough self-description you choose to share, not a
-                    personality test, a score, or a judgement. There are no right answers.
+                    Part 1 follows Schwartz's theory of basic human values: ten values that people everywhere
+                    recognise, summarised as four priorities — new experiences and independence; stability,
+                    tradition and fitting in; caring for people and the planet; achievement and influence.
+                    Your ratings are read relative to your own average, so the result is what you put first,
+                    not how generously you use the scale.
+                </p>
+                <p class="text-muted mb-2">
+                    Part 2 is two "primal world beliefs" — whether the world feels safe, and whether it feels
+                    interesting — which research finds stable and unrelated to politics or morality. Friends
+                    turn out to share values more than strangers do, and shared values predict liking
+                    especially between people who have just met, which is exactly where every match starts.
                 </p>
                 <p class="text-muted mb-0">
-                    <strong>Your answers are discarded.</strong> We use them once to work out a single
-                    coarse position, store only that, and throw the answers away — the same way we
-                    handle your interests. Matches only ever see a rough "similar / different outlook",
-                    never your answers. You can remove it any time.
+                    <strong>Not a test, not a type.</strong> There are no right answers and no personality
+                    label. <strong>Your answers are discarded</strong> once six small numbers are worked out;
+                    only those are stored, and matches see a coarse "similar / different priorities" with the
+                    reason — never the numbers. Remove it any time. Sources are listed in the project handbook.
                 </p>
             </div>
         </div>
@@ -32,14 +61,39 @@
         <form asp-action="Values" asp-controller="Account" method="post">
             <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
-            @for (var i = 0; i < items.Count; i++)
+            <h2 class="source-group-title">Part 1 · How important is each of these to you, as a guiding principle in your life?</h2>
+            @foreach (var item in ValuesQuestionnaire.ValueItems)
             {
-                var item = items[i];
-                <div class="card mb-3">
+                <fieldset class="card mb-3">
                     <div class="card-body">
-                        <p class="mb-3"><strong>@item.Statement</strong></p>
+                        <legend class="mb-1"><strong>@item.Name</strong></legend>
+                        <p class="text-muted mb-3">@item.Description</p>
                         <div class="likert">
-                            @for (var v = Profiler.Web.Profile.ValuesQuestionnaire.MinAnswer; v <= Profiler.Web.Profile.ValuesQuestionnaire.MaxAnswer; v++)
+                            @for (var v = ValuesQuestionnaire.MinAnswer; v <= ValuesQuestionnaire.MaxAnswer; v++)
+                            {
+                                var id = $"{item.Key}_{v}";
+                                <label class="likert-option" for="@id">
+                                    <input type="radio" id="@id" name="Answers[@item.Key]" value="@v" required />
+                                    <span class="likert-num">@v</span>
+                                </label>
+                            }
+                        </div>
+                        <div class="likert-scale">
+                            <span>Not important to me</span>
+                            <span>Extremely important</span>
+                        </div>
+                    </div>
+                </fieldset>
+            }
+
+            <h2 class="source-group-title mt-4">Part 2 · How much do you agree?</h2>
+            @foreach (var item in ValuesQuestionnaire.WorldItems)
+            {
+                <fieldset class="card mb-3">
+                    <div class="card-body">
+                        <legend class="mb-3"><strong>@item.Statement</strong></legend>
+                        <div class="likert">
+                            @for (var v = ValuesQuestionnaire.MinAnswer; v <= ValuesQuestionnaire.MaxAnswer; v++)
                             {
                                 var id = $"{item.Key}_{v}";
                                 <label class="likert-option" for="@id">
@@ -53,18 +107,18 @@
                             <span>Strongly agree</span>
                         </div>
                     </div>
-                </div>
+                </fieldset>
             }
 
             <div class="form-group">
                 <label class="check-inline">
                     <input asp-for="Consent" type="checkbox" value="true" />
-                    <span>I understand this is optional, is a rough self-description (not a test or diagnosis), and that my answers are discarded after a coarse position is derived.</span>
+                    <span>I understand this is optional, is a rough self-description (not a test or a personality type), and that my answers are discarded after six coarse numbers are derived.</span>
                 </label>
                 <span asp-validation-for="Consent" class="field-error"></span>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block">Save my values profile</button>
+            <button type="submit" class="btn btn-primary btn-block">@(hasValues ? "Update my profile" : "Save my profile")</button>
         </form>
 
         @if (hasValues)
@@ -75,6 +129,6 @@
         }
 
         <hr class="auth-divider" />
-        <p><a href="/sources/dashboard">← Back to dashboard</a></p>
+        <p><a href="/sources/dashboard">← Back to dashboard</a> · <a href="/matches">Your matches</a></p>
     </div>
 </div>

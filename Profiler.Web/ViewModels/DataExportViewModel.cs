@@ -12,8 +12,11 @@ public class DataExportViewModel
     /// <summary>The stored connection-intent key, or null if unspecified.</summary>
     public string? ConnectionIntent { get; set; }
 
-    /// <summary>The derived values bucket (−2..+2), or null. The raw answers are never stored.</summary>
-    public int? ValuesOpenness { get; set; }
+    /// <summary>
+    /// The derived values and worldview profile — four value priorities and two world beliefs, each
+    /// −2..+2 — or null. The questionnaire answers are never stored.
+    /// </summary>
+    public Dictionary<string, int>? ValuesProfile { get; set; }
 
     /// <summary>The scheme version the values bucket was derived under, or null.</summary>
     public string? ValuesScheme { get; set; }

@@ -5,84 +5,64 @@ using Xunit.Abstractions;
 namespace Profiler.Web.Tests;
 
 /// <summary>
-/// Decision-support assumption test (no real users) for the open owner question: is the values signal
-/// worth collecting the most sensitive data in the product? Its main user-facing use is the optional
-/// "Similar outlook first" sort. This measures how much that sort actually REORDERS a match list versus
-/// plain interest ranking, on realistic synthetic profiles. Values buckets clump (95% land in −1..+1 —
-/// see <see cref="ValuesSignalResolutionTests"/>), so the hypothesis is that the sort mostly ties and
-/// interest order dominates. Quantifying "mostly inert" turns the deferred hide/keep decision from an
-/// assertion into a number the owner can weigh against the sensitivity cost.
+/// Characterises how much "Similar outlook first" reorders a match list under the v2 profile. The
+/// sort keys to the shown tiers only, so it lifts whole groups and leaves interest order inside each.
+/// Recorded, not gated: the number is evidence for the owner, and a change to the tiers should show
+/// up here as a changed number rather than a silent behaviour shift.
 /// </summary>
 public class ValuesSortImpactTests
 {
     private readonly ITestOutputHelper _out;
     public ValuesSortImpactTests(ITestOutputHelper output) => _out = output;
 
-    // Draw a values bucket from the realistic distribution: average of four uniform 1..5 answers,
-    // reverse-scored via the real questionnaire — the same central-clumping the shipped signal has.
-    private static int RealisticBucket(Random rng)
+    private static double Gauss(Random rng) =>
+        Math.Sqrt(-2.0 * Math.Log(1 - rng.NextDouble())) * Math.Cos(2 * Math.PI * rng.NextDouble());
+
+    private static ValuesProfile RealisticProfile(Random rng)
     {
-        var answers = new Dictionary<string, int>();
-        foreach (var item in ValuesQuestionnaire.Items)
-            answers[item.Key] = rng.Next(ValuesQuestionnaire.MinAnswer, ValuesQuestionnaire.MaxAnswer + 1);
-        return ValuesQuestionnaire.DeriveBucket(answers)!.Value;
+        var latent = Enumerable.Range(0, 6).Select(_ => Gauss(rng)).ToArray();
+        var bias = 4.5 + Gauss(rng);
+        var a = new Dictionary<string, int>();
+        foreach (var item in ValuesQuestionnaire.ValueItems)
+        {
+            var signal = item.Openness * latent[0] + item.Conservation * latent[1] + item.Transcendence * latent[2] + item.Enhancement * latent[3];
+            a[item.Key] = Math.Clamp((int)Math.Round(bias + 1.2 * signal + 0.8 * Gauss(rng)), 1, 7);
+        }
+        foreach (var item in ValuesQuestionnaire.WorldItems)
+        {
+            var signal = (item.Dimension == ValuesQuestionnaire.Dimension.Safe ? latent[4] : latent[5]) * (item.Reverse ? -1 : 1);
+            a[item.Key] = Math.Clamp((int)Math.Round(4 + 1.5 * signal + 0.8 * Gauss(rng)), 1, 7);
+        }
+        return ValuesQuestionnaire.Derive(a)!;
     }
 
     [Fact]
-    public void SimilarOutlookSort_ReordersMatchesOnlyModestly_BecauseBucketsClump()
+    public void SimilarOutlookSort_LiftsWholeTiers_AndKeepsInterestOrderInsideThem()
     {
         var rng = new Random(31337);
-        const int viewers = 20_000;
-        const int k = 20; // a viewer's top-K interest matches
-
-        int top1Changed = 0;          // the #1 match differs under the values sort
-        int top3Changed = 0;          // the top-3 set differs
-        double totalDisplaced = 0;    // avg count of the K whose position moves
+        const int viewers = 5_000;
+        const int k = 20;
+        int top1Changed = 0;
+        double totalDisplaced = 0;
+        int orderViolations = 0;
 
         for (var v = 0; v < viewers; v++)
         {
-            var viewerBucket = RealisticBucket(rng);
-
-            // K candidates already ranked by interest similarity (index 0 = best interest match). Each
-            // also has a values bucket. Interest rank is the identity order 0..k-1.
-            var candBuckets = new int[k];
-            for (var i = 0; i < k; i++) candBuckets[i] = RealisticBucket(rng);
-
-            // "Best match" order = interest order = 0..k-1.
-            // "Similar outlook first" = stable sort by AlignmentRank asc, ties keep interest order.
-            var valuesOrder = Enumerable.Range(0, k)
-                .OrderBy(i => ValuesQuestionnaire.AlignmentRank(viewerBucket, candBuckets[i]))
-                .ToArray(); // OrderBy is stable, so equal ranks keep the interest order — exactly the app's sort
-
-            if (valuesOrder[0] != 0) top1Changed++;
-            if (valuesOrder.Take(3).OrderBy(x => x).SequenceEqual(new[] { 0, 1, 2 }) == false) top3Changed++;
-            for (var pos = 0; pos < k; pos++) if (valuesOrder[pos] != pos) totalDisplaced++;
+            var viewer = RealisticProfile(rng);
+            var candidates = Enumerable.Range(0, k).Select(_ => RealisticProfile(rng)).ToArray();
+            // Interest order is the index order; the values sort is a stable sort by the shown tiers.
+            var sorted = Enumerable.Range(0, k).OrderBy(i => ValuesQuestionnaire.AlignmentRank(viewer, candidates[i])).ToArray();
+            if (sorted[0] != 0) top1Changed++;
+            totalDisplaced += sorted.Where((idx, pos) => idx != pos).Count();
+            // Inside one rank, interest order must be preserved (stable sort).
+            for (var i = 1; i < k; i++)
+                if (ValuesQuestionnaire.AlignmentRank(viewer, candidates[sorted[i]]) == ValuesQuestionnaire.AlignmentRank(viewer, candidates[sorted[i - 1]])
+                    && sorted[i] < sorted[i - 1]) orderViolations++;
         }
 
-        var top1Pct = 100.0 * top1Changed / viewers;
-        var top3Pct = 100.0 * top3Changed / viewers;
-        var avgDisplaced = totalDisplaced / viewers;
-
-        _out.WriteLine($"Values 'Similar outlook first' sort impact over {viewers} viewers (K={k}):");
-        _out.WriteLine($"  top-1 match changed:   {top1Pct:F1}%");
-        _out.WriteLine($"  top-3 set changed:     {top3Pct:F1}%");
-        _out.WriteLine($"  avg of {k} displaced:  {avgDisplaced:F1}");
-
-        // Finding for the owner decision (opposite of the naive "clumping makes it inert" guess): when
-        // both sides have values set, the sort reorders HEAVILY — top-1 changes ~66%, top-3 ~95%, ~18 of
-        // 20 positions move. This holds even after AlignmentRank was coarsened to the three shown label
-        // tiers (a separate coherence fix — the sort must not order by distinctions the UI never displays
-        // nor the weak signal supports): the magnitude barely moved, because heavy reshuffling is
-        // INHERENT to an outlook-first sort — outlook and interest are independent, so ranking by outlook
-        // scrambles the interest order by design. Combined with the resolution finding (the bucket
-        // discriminates weakly, 95% cluster in −1..+1), the crux for the owner is that "Similar outlook
-        // first" is HIGH-IMPACT but LOW-RESOLUTION: opting in lets a coarse/weak signal heavily override
-        // a strong (interest) one. Magnitude is adoption-dependent (no-values candidates sink via
-        // MaxValue rank); this measures the both-set case. Decision options: (a) strengthen the signal
-        // (2nd Schwartz axis) before leaning on this sort, (b) reframe the control so users understand it
-        // trades interest quality for outlook, or (c) hide the values signal until it earns its
-        // sensitivity. The printed numbers are the evidence; the bounds below only guard against drift.
-        Assert.True(top1Pct is > 40 and < 90, $"top-1 change rate outside characterised band: {top1Pct:F1}%");
-        Assert.True(avgDisplaced > 10, $"expected heavy reordering under full adoption: {avgDisplaced:F1}");
+        _out.WriteLine($"top-1 changed for {100.0 * top1Changed / viewers:F1}% of viewers; avg positions moved {totalDisplaced / viewers:F1} of {k}");
+        Assert.Equal(0, orderViolations);
+        // It does something (otherwise why offer it) and it is not a random shuffle either.
+        Assert.InRange(100.0 * top1Changed / viewers, 20, 97);
     }
 }

@@ -54,11 +54,12 @@ public class AppUser
     public string? ConnectionIntent { get; set; }
 
     /// <summary>
-    /// Optional values signal: the derived openness↔conservation bucket (−2..+2), or null if not
-    /// taken. Only this coarse bucket is stored — the raw questionnaire answers are discarded after
-    /// derivation, exactly like interest features. See <see cref="Profile.ValuesQuestionnaire"/>.
+    /// Optional values and worldview signal: the derived profile — four value priorities and two world
+    /// beliefs, each −2..+2 — as compact JSON, or null if not taken. Only this is stored; the
+    /// questionnaire answers are discarded after derivation, exactly like interest features. See
+    /// <see cref="Profile.ValuesQuestionnaire"/> and docs/DESIGN_VALUES.md.
     /// </summary>
-    public int? ValuesOpenness { get; set; }
+    public string? ValuesProfileJson { get; set; }
 
     /// <summary>Scheme version the bucket was derived under, so a future item change is detectable.</summary>
     public string? ValuesScheme { get; set; }

@@ -68,9 +68,10 @@ fingerprint; the underlying interests are discarded after the fingerprint is bui
    shared interest theme; sort by best match, same circle first, same connection intent first, or
    similar outlook first. Nothing is blended into one score.
 5. **Optionally add compatibility signals** beyond interests: a connection intent (what kind of
-   connection you want), a short values/outlook questionnaire (consent-gated; answers discarded
-   after deriving a coarse bucket), and a list of interests you are happy to show on your card.
-   Each is shown to matches as its own explainable line.
+   connection you want), a two-minute values & worldview questionnaire (consent-gated; answers
+   discarded after deriving six coarse numbers; you see your own profile in words), and a list of
+   interests you are happy to show on your card. Each is shown to matches as its own explainable
+   line — for values: "Similar priorities — you both put caring for people and the planet first".
 6. **See each match's optional bio and contact** and reach out off-platform. Hide anyone you
    don't want to see again; report anyone who misbehaves.
 7. **Manage yourself** from the dashboard: per-source signal counts, disconnect a source, edit
@@ -210,15 +211,23 @@ match on shared channels.
 ### Compatibility signals (each optional, separate, explainable)
 - **Connection intent** (above): closed set, mutual intent is highlighted ("You're both here for:
   …"). Adoption nudge on the dashboard.
-- **Values / outlook** at `/account/values`: four plainly-worded 5-point items on one axis
-  (openness ↔ conservation, Schwartz's public structure — no licensed instrument, no Big Five, no
-  political/moral items). Consent is required and enforced server-side. Answers are reduced to a
-  signed bucket (−2..+2) and **discarded** (asserted against the DB); retake = re-answer. Matches
-  see only a coarse alignment line ("Similar outlook" / "Some overlap" / "Different outlook"), and
-  only when both sides took it. Withheld while you are hidden; in export; deletable on its own.
-  The signal is **weak on its own** (95% of people land in the middle buckets) and is the most
-  sensitive data collected, so hiding it by default is an open owner decision; the
-  `Signals:ValuesEnabled` switch hides the questionnaire, the card line and the sort in one flip.
+- **Values & worldview** at `/account/values` (scheme `schwartz-v2`, design and sources in
+  `docs/DESIGN_VALUES.md`): ten importance items, one per basic value in Schwartz's theory, plus
+  four agreement items on two primal world beliefs (safe, enticing). Original wording over the
+  published constructs — no licensed instrument, no Big Five, no political, moral, religious or
+  clinical items (a test greps the wording for them). Ratings are **centred on the person's own
+  mean** (Schwartz's scale-use correction), folded into the four higher-order priorities with
+  hedonism split between openness and self-enhancement, and quantised to −2..+2; worldview items
+  reverse-score around the scale midpoint. Answers are **discarded** (asserted against the DB) and
+  only six small integers plus the scheme version are stored. Consent required, enforced
+  server-side. **The person sees their own profile in words** ("caring for people and the planet —
+  far above your average", with the Schwartz term beside it). Matches see a coarse, *explained*
+  line — "Similar priorities — you both put caring for people and the planet first · similar view
+  of the world" — only when both sides answered, withheld while either is hidden, never a filter
+  and never part of the interest score. In export; deletable on its own; one flip
+  (`Signals:ValuesEnabled=false`) hides the questionnaire, the card line, the sort and the nudges.
+  Reachable from the dashboard (second quick action until answered, profile summary after), the
+  match list (nudge while unanswered), the profile page, the interests hand-off and the landing page.
 - **Shown interests**: the opt-in list behind the shared-interest reveal (above).
 - All three: opt-in, skippable, independently removable, included in export, removed on account
   deletion, and never a hard filter or a blended score.
@@ -325,7 +334,7 @@ to `MatchViewModel` (adding the matched user's bio/contact and shared source typ
 
 | Entity | Key fields | Notes |
 |--------|-----------|-------|
-| `AppUser` | Id, Username, NormalizedUsername, PasswordHash, CreatedAt, Bio?, Contact?, IsDiscoverable, RecoveryCodeHash?, SessionsValidFrom, LastMatchesViewedAt?, ConnectionIntent?, ValuesOpenness?, ValuesScheme?, ShowableInterestsJson?, SuspendedAt? | `NormalizedUsername` is the compatibility-folded, lower-cased comparison form (non-unique index); display casing stays in `Username`. Username is case-insensitive unique (NOCASE). Bio/Contact/ConnectionIntent/ShowableInterestsJson are the opt-in public profile; `ValuesOpenness` is the derived −2..+2 bucket (raw answers never stored) tagged with the `ValuesScheme` it was derived under; `SuspendedAt` is the reversible operator suspension |
+| `AppUser` | Id, Username, NormalizedUsername, PasswordHash, CreatedAt, Bio?, Contact?, IsDiscoverable, RecoveryCodeHash?, SessionsValidFrom, LastMatchesViewedAt?, ConnectionIntent?, ValuesProfileJson?, ValuesScheme?, ShowableInterestsJson?, SuspendedAt? | `NormalizedUsername` is the compatibility-folded, lower-cased comparison form (non-unique index); display casing stays in `Username`. Username is case-insensitive unique (NOCASE). Bio/Contact/ConnectionIntent/ShowableInterestsJson are the opt-in public profile; `ValuesProfileJson` is the derived values & worldview profile — six integers −2..+2 as compact JSON, raw answers never stored — tagged with the `ValuesScheme` it was derived under; `SuspendedAt` is the reversible operator suspension |
 | `FingerprintRecord` | UserId (PK), FingerprintJson, SourcesJson, UpdatedAt | The **combined** (truncated) signature used for matching |
 | `SourceFingerprintRecord` | Id, UserId, Source, RawSignatureJson, FeatureCount, UpdatedAt | One per (user, source); **raw 64-bit** signature; unique index on (UserId, Source) |
 | `Circle` | Id, Name, CreatedAt | A named group joined by invite link; no owner, no admin; deleted with its last membership (`docs/DESIGN_CIRCLES.md`) |
@@ -350,8 +359,8 @@ Schema changes are made with EF migrations and applied on startup via
 5. Signal counts are aggregate numbers only — not the underlying interests.
 6. Other users only ever see your **username, a match tier/approximate %, the source
    types you share, the circles you both are in, and whatever you chose to make public:
-   bio, contact, connection intent, values bucket (as a coarse alignment label) and the
-   interests you chose to show.** All of these are withheld while you are hidden.
+   bio, contact, connection intent, values & worldview (only as a coarse, explained
+   alignment line — never the numbers) and the interests you chose to show.** All of these are withheld while you are hidden.
 7. The in-product privacy page lists every table in plain words from `Data/DataInventory`, which
    a test holds to the EF model in both directions — an undescribed table fails the build.
 8. Where the operator turns on database snapshots (`Backup:Directory`; the shipped container
@@ -383,7 +392,7 @@ All settings come from `appsettings.json` or environment variables.
 | `Metrics:Token` | — (off) | Operator bearer token. Enables `GET /metrics`, `GET /metrics/reports`, `POST /metrics/suspend`; all `404` until set |
 | `AntiAbuse:GuardRegistration` | `false` | Enforce the signed single-use registration form ticket. Turn on for a public launch |
 | `AntiAbuse:MinFormSeconds` | `3` | With the guard on, reject a registration submitted faster than this after the form loaded |
-| `Signals:ValuesEnabled` | `true` | Set `false` to hide the values questionnaire, the match-card alignment line and the "Similar outlook first" sort; stored buckets are kept for a clean re-enable |
+| `Signals:ValuesEnabled` | `true` | Set `false` to hide the values & worldview questionnaire, the match-card alignment line, the "Similar outlook first" sort and the nudges; stored profiles are kept for a clean re-enable |
 | `Signals:CirclesEnabled` | `true` | Set `false` to hide starting/joining circles, the "Same circle" chip and sort; memberships are kept |
 | `Backup:Directory` | — (off) | Folder for rolling SQLite snapshots. Image sets `/data/backups`, Azure bootstrap `/home/data/backups`; unset in dev/tests |
 | `Backup:Keep` | `7` | Snapshots kept per kind (`scheduled`, `premigrate`) |
@@ -396,7 +405,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 394 tests, fully offline
+dotnet test                           # 396 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -501,10 +510,17 @@ data loss: `az appservice plan update -g <rg> -n <plan> --sku B1`.
   is a phishing-shaped habit and out of reach for the non-developer target user; the self-described
   path exists so nobody needs them. Culling those connectors (or building real OAuth) is an open
   owner decision.
-- **The values signal is weak on its own** (one averaged axis; most pairs land in the middle
-  tier) while being the most sensitive data collected. Hiding it by default is recommended and is
-  one config flip (`Signals:ValuesEnabled=false`) — an open owner decision. Strengthening it (a
-  second Schwartz axis) is gated on real adoption evidence.
+- **The values profile is self-report, and coarse by design.** Four priorities and two world
+  beliefs at five levels each: enough to say "you both put caring for people and the planet first",
+  never enough to be a personality type, and it is not a psychometric assessment — the constructs
+  are published and validated, the wording is ours and unvalidated. It remains the most sensitive
+  data collected, which is why the answers are discarded, the stored form is six integers, and the
+  whole signal is one config flip from hidden (`Signals:ValuesEnabled=false`).
+- **The "Similar outlook first" sort reorders heavily** (top match changes for ~91% of viewers,
+  `ValuesSortImpactTests`). Under v1 that was a problem, because the signal was noise; the v2
+  profile discriminates (same-priority pairs read "similar" 69% of the time against 16.7% for
+  strangers), so a real reorder is the point of the control. It stays opt-in per view and never
+  touches the default ranking.
 - **Cross-pool bridge covers languages and twelve common genres.** Niche genres are deliberately
   unbridged (their rarity weight is worth more to the self-described pool); concepts without a
   stable connector label ("electronic", "stand-up") stay unbridged; Last.fm/SoundCloud vocabularies
@@ -526,6 +542,44 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Values & worldview, rebuilt on the research and brought out of hiding (owner instruction).** The
+  owner asked for the values profile to be accessible and genuinely science-based; this also answers
+  the open Decision 2 as **strengthen** (the loop's earlier "hide by default" recommendation is
+  withdrawn). v1 was one axis, four agree/disagree items, no centring, and a bucket that put 95% of
+  people in three middle levels — the instrument was the problem, not the idea.
+  **What the research says** (full notes and citations in `docs/DESIGN_VALUES.md`): Schwartz's theory
+  of basic human values defines ten values as motivational goals on a circular continuum, summarised
+  by four higher-order priorities — openness to change, conservation, self-transcendence,
+  self-enhancement — replicated across 49 cultural groups (Schwartz & Cieciuch, *Assessment* 2022;
+  refined theory, *JPSP* 2012); its scoring **centres each person's ratings on their own mean**, which
+  removes acquiescence and social desirability and turns ratings into priorities; short forms rating
+  each value once reproduce the structure (Lindeman & Verkasalo, *J Pers Assess* 2005; four-dimension
+  17-item inventory, *J Pers Assess* 2024). Value *similarity* is the part that predicts connection:
+  friends are more similar in values than non-friends controlling for demographics (dyadic
+  correlation ≈ .38), value similarity predicts relationship satisfaction where trait similarity does
+  not (*PAID* 2018), and similarity-attraction is strongest **at zero acquaintance** — where every
+  match starts. Worldview comes from *primal world beliefs* (Clifton et al., *Psychological
+  Assessment* 2019; PI-18, 2021): stable, non-political beliefs about the world's character, of which
+  **Safe** and **Enticing** are the everyday, non-spiritual two. Licensing: the Schwartz instruments
+  are CC BY-NC-ND and the Primals terms are unstated, so **every item here is our own wording over the
+  published constructs** — only the constructs and the scoring method are borrowed.
+  **What shipped:** ten importance items (one per basic value) plus four world-belief items, centred
+  and folded into four priorities with hedonism split, quantised to six integers stored as
+  `ValuesProfileJson` (migration `ValuesProfileV2`, replacing `ValuesOpenness`; v1 buckets are not
+  comparable and their scheme tag is cleared). Answers still discarded. The person now **sees their own
+  profile in words** with the Schwartz term beside each line; match cards carry the reason, not just
+  the label ("Similar priorities — you both put caring for people and the planet first · similar view
+  of the world"); the sort keys to the shown tiers, priorities before worldview. Accessibility, the
+  other half of the instruction: the dashboard's second quick action until answered (profile summary
+  after), a match-list nudge, a hand-off after saving interests, a profile-page link and a landing
+  mention.
+  **Evidence from the new synthetic tests:** each of the six dimensions now uses all five levels
+  (centre 30–40%, extremes 11–20%) instead of clumping; strangers read "similar priorities" 16.7% of
+  the time and "different" 29.7%, while pairs with genuinely shared latent priorities read "similar"
+  69% and "different" 0.4%; and a generous rater and a stingy rater with the same priorities still
+  read similar 76.1% of the time, which is the centring doing its job. Two real defects the tests
+  caught: the stored JSON was carrying the computed priority arrays as extra properties, and Razor
+  encodes non-ASCII from expressions, so the card's em dash arrived as an entity. 396 tests.
 - **Build stamp (arrived in the working tree, committed with the token fold `8a1ab42`, documented
   here).** The Dockerfile takes `--build-arg BUILD_SHA` (CI passes the commit sha) into `Build:Sha`,
   and the page footer shows `build <sha7>` unless the value is the local default `dev`, so anyone can

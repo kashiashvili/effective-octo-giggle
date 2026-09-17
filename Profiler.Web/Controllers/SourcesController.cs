@@ -60,7 +60,9 @@ public class SourcesController : Controller
         ViewBag.Contact = user.Contact;
         ViewBag.ConnectionIntentLabel = Profiler.Web.Profile.ConnectionIntent.LabelFor(user.ConnectionIntent);
         ViewBag.ShowableInterests = Profiler.Web.Profile.ShowableInterests.Deserialize(user.ShowableInterestsJson);
-        ViewBag.HasValues = user.ValuesOpenness.HasValue;
+        var valuesProfile = Profiler.Web.Profile.ValuesProfile.FromJson(user.ValuesProfileJson);
+        ViewBag.HasValues = valuesProfile != null;
+        ViewBag.ValuesSummary = valuesProfile == null ? null : Profiler.Web.Profile.ValuesQuestionnaire.Describe(valuesProfile).ToList();
         ViewBag.ValuesEnabled = _flags.ValuesSignalEnabled;
         ViewBag.IsDiscoverable = user.IsDiscoverable;
         // Accounts predating recovery have no code on file, and a used code is not replaced if the
@@ -397,6 +399,8 @@ public class SourcesController : Controller
         TempData["InterestLens"] = JsonSerializer.Serialize(lens);
         TempData["Success"] = $"Saved {featureCount} interest{(featureCount == 1 ? "" : "s")}. " +
             $"Your fingerprint now covers {totalSources} source{(totalSources == 1 ? "" : "s")}.";
+        if (_flags.ValuesSignalEnabled && !await _db.Users.AnyAsync(u => u.Id == CurrentUserId && u.ValuesProfileJson != null))
+            TempData["Success"] += " Next, if you like: two minutes on what matters to you, so matches can see who shares it — on your dashboard.";
 
         return RedirectToAction("Index", "Matches");
     }

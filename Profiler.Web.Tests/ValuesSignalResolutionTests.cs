@@ -5,91 +5,118 @@ using Xunit.Abstractions;
 namespace Profiler.Web.Tests;
 
 /// <summary>
-/// Assumption test (not a feature guard): does one coarse openness axis actually discriminate, or
-/// does averaging four items pull almost everyone to the centre so that most pairs read "similar
-/// outlook" and the signal says little? The answer decides whether the deferred second Schwartz axis
-/// is worth its added sensitivity. These characterise the mechanism on synthetic profiles — no real
-/// users needed — and fail loudly if a future change to the items or bucketing shifts the resolution.
+/// Assumption test for the v2 profile (docs/DESIGN_VALUES.md §7): does a four-priority, centred
+/// profile actually discriminate, where the v1 single axis clumped 95% of people into three levels?
+/// Synthetic people have a latent priority vector plus item noise and a personal scale bias (the
+/// thing centring is meant to remove). Guards resolution against future item or quantisation changes.
 /// </summary>
 public class ValuesSignalResolutionTests
 {
     private readonly ITestOutputHelper _out;
     public ValuesSignalResolutionTests(ITestOutputHelper output) => _out = output;
 
-    private static int[] DeriveMany(int seed, int n)
+    private static double Gauss(Random rng) =>
+        Math.Sqrt(-2.0 * Math.Log(1 - rng.NextDouble())) * Math.Cos(2 * Math.PI * rng.NextDouble());
+
+    /// <summary>A latent person: four priority tendencies and two world beliefs, standard normal.</summary>
+    private static double[] Latent(Random rng) => Enumerable.Range(0, 6).Select(_ => Gauss(rng)).ToArray();
+
+    /// <summary>Answers a latent person would give: latent signal + item noise + a personal scale bias.</summary>
+    private static Dictionary<string, int> Answer(double[] latent, Random rng, double noise = 0.8)
     {
-        var rng = new Random(seed);
-        var buckets = new int[5]; // index 0..4 => bucket -2..+2
+        var bias = 4.5 + 1.0 * Gauss(rng); // some people rate everything high, some low
+        var a = new Dictionary<string, int>();
+        foreach (var item in ValuesQuestionnaire.ValueItems)
+        {
+            var signal = item.Openness * latent[0] + item.Conservation * latent[1] + item.Transcendence * latent[2] + item.Enhancement * latent[3];
+            a[item.Key] = Math.Clamp((int)Math.Round(bias + 1.2 * signal + noise * Gauss(rng)), 1, 7);
+        }
+        foreach (var item in ValuesQuestionnaire.WorldItems)
+        {
+            var signal = (item.Dimension == ValuesQuestionnaire.Dimension.Safe ? latent[4] : latent[5]) * (item.Reverse ? -1 : 1);
+            a[item.Key] = Math.Clamp((int)Math.Round(4 + 1.5 * signal + noise * Gauss(rng)), 1, 7);
+        }
+        return a;
+    }
+
+    [Fact]
+    public void EachPriority_UsesAllFiveLevels_AndDoesNotClump()
+    {
+        var rng = new Random(2026);
+        const int n = 20_000;
+        var counts = new int[6, 5];
         for (var i = 0; i < n; i++)
         {
-            var answers = new Dictionary<string, int>();
-            foreach (var item in ValuesQuestionnaire.Items)
-                answers[item.Key] = rng.Next(ValuesQuestionnaire.MinAnswer, ValuesQuestionnaire.MaxAnswer + 1);
-            var b = ValuesQuestionnaire.DeriveBucket(answers)!.Value;
-            buckets[b + 2]++;
+            var p = ValuesQuestionnaire.Derive(Answer(Latent(rng), rng))!;
+            var levels = p.Priorities.Concat(p.World).ToArray();
+            for (var d = 0; d < 6; d++) counts[d, levels[d] + 2]++;
         }
-        return buckets;
-    }
-
-    [Fact]
-    public void UniformRandomAnswers_ClumpTowardTheCentre_SoOneAxisDiscriminatesWeakly()
-    {
-        const int n = 200_000;
-        var buckets = DeriveMany(seed: 12345, n: n);
-        var pct = buckets.Select(c => 100.0 * c / n).ToArray();
-
-        _out.WriteLine($"Bucket distribution from uniform-random answers (n={n}):");
-        for (var b = -2; b <= 2; b++)
-            _out.WriteLine($"  {b,2}: {pct[b + 2]:F1}%");
-
-        // The middle three buckets (−1..+1) dominate: averaging four items is a central-tendency
-        // machine, so the extremes are rare and most random pairs will read "similar/some overlap".
-        var middle = pct[1] + pct[2] + pct[3];
-        Assert.True(middle > 85, $"expected central clumping (>85% in -1..+1), got {middle:F1}%");
-        Assert.True(pct[0] + pct[4] < 15, "the ±2 extremes should be rare");
-
-        // Recorded finding: a single 5-point-averaged axis has limited resolution. This is evidence
-        // that meaningful values *differentiation* needs either more axes (the deferred second
-        // Schwartz axis) or finer/less-averaged scoring — not that the current signal is wrong, but
-        // that it should not be over-relied on until broadened. Decision belongs to the owner/PO.
-    }
-
-    [Fact]
-    public void PairwiseAlignment_IsMostlySimilar_UnderRandomProfiles()
-    {
-        var rng = new Random(999);
-        int similar = 0, some = 0, different = 0;
-        const int pairs = 200_000;
-
-        int RandomBucket()
+        string[] names = { "openness", "conservation", "transcendence", "enhancement", "safe", "enticing" };
+        for (var d = 0; d < 6; d++)
         {
-            var answers = new Dictionary<string, int>();
-            foreach (var item in ValuesQuestionnaire.Items)
-                answers[item.Key] = rng.Next(ValuesQuestionnaire.MinAnswer, ValuesQuestionnaire.MaxAnswer + 1);
-            return ValuesQuestionnaire.DeriveBucket(answers)!.Value;
+            var pct = Enumerable.Range(0, 5).Select(l => 100.0 * counts[d, l] / n).ToArray();
+            _out.WriteLine($"{names[d],-13} " + string.Join(" ", pct.Select(x => $"{x,5:F1}%")));
+            // Not a central-tendency machine: the middle level holds well under two thirds, and both
+            // extremes are reached by a real share of people.
+            Assert.True(pct[2] < 65, $"{names[d]}: {pct[2]:F1}% at the centre");
+            Assert.True(pct[0] + pct[4] > 5, $"{names[d]}: extremes {pct[0] + pct[4]:F1}%");
         }
+    }
 
+    [Fact]
+    public void RandomPairs_SpreadAcrossAllThreeTiers_AndSharedLatentPairs_ReadCloser()
+    {
+        var rng = new Random(99);
+        const int pairs = 20_000;
+        var randomTiers = new int[3];
+        var twinTiers = new int[3];
         for (var i = 0; i < pairs; i++)
         {
-            switch (ValuesQuestionnaire.AlignmentLabel(RandomBucket(), RandomBucket()))
-            {
-                case "Similar outlook": similar++; break;
-                case "Some overlap in outlook": some++; break;
-                default: different++; break;
-            }
+            var a = ValuesQuestionnaire.Derive(Answer(Latent(rng), rng))!;
+            var b = ValuesQuestionnaire.Derive(Answer(Latent(rng), rng))!;
+            randomTiers[ValuesQuestionnaire.Tier(ValuesQuestionnaire.PriorityDistance(a, b))]++;
+
+            // Two people with the same latent priorities, answering independently with noise.
+            var latent = Latent(rng);
+            var c = ValuesQuestionnaire.Derive(Answer(latent, rng))!;
+            var d = ValuesQuestionnaire.Derive(Answer(latent, rng))!;
+            twinTiers[ValuesQuestionnaire.Tier(ValuesQuestionnaire.PriorityDistance(c, d))]++;
         }
+        double Pct(int[] t, int i) => 100.0 * t[i] / pairs;
+        _out.WriteLine($"random pairs: similar {Pct(randomTiers, 0):F1}%  overlap {Pct(randomTiers, 1):F1}%  different {Pct(randomTiers, 2):F1}%");
+        _out.WriteLine($"same-latent pairs: similar {Pct(twinTiers, 0):F1}%  overlap {Pct(twinTiers, 1):F1}%  different {Pct(twinTiers, 2):F1}%");
 
-        _out.WriteLine($"Pairwise alignment under random profiles (n={pairs}):");
-        _out.WriteLine($"  Similar:   {100.0 * similar / pairs:F1}%");
-        _out.WriteLine($"  Some:      {100.0 * some / pairs:F1}%");
-        _out.WriteLine($"  Different: {100.0 * different / pairs:F1}%");
+        // "Similar" must mean something: a minority of strangers earn it, and a real share read "different".
+        Assert.True(Pct(randomTiers, 0) < 40, "too many strangers read as similar");
+        Assert.True(Pct(randomTiers, 2) > 15, "too few strangers read as different");
+        // And people who genuinely share priorities are told so far more often than strangers are.
+        Assert.True(Pct(twinTiers, 0) > 2 * Pct(randomTiers, 0), "shared latent priorities should read similar far more often than random pairs");
+        Assert.True(Pct(twinTiers, 2) < Pct(randomTiers, 2) / 2, "shared latent priorities should rarely read different");
+    }
 
-        // After recalibrating the thresholds (exact match = "similar"), the label discriminates:
-        // no single tier dominates the way "similar" did (~78%) under the old within-one rule, so the
-        // label now carries information. The residual finding stands: a single averaged axis has
-        // limited spread, so "some overlap" is the common case — evidence for the second-axis decision.
-        var similarPct = 100.0 * similar / pairs;
-        Assert.True(similarPct < 45, $"'similar outlook' should no longer dominate; got {similarPct:F1}%");
-        Assert.True(100.0 * some / pairs > 40, "one averaged axis leaves most pairs in the middle tier");
+    [Fact]
+    public void Centring_RemovesScaleUse_SoGenerousAndStingyRatersWithTheSamePrioritiesMatch()
+    {
+        var rng = new Random(5);
+        var agreements = 0;
+        const int n = 5_000;
+        for (var i = 0; i < n; i++)
+        {
+            var latent = Latent(rng);
+            var generous = Answer(latent, rng, noise: 0.3);
+            var stingy = Answer(latent, rng, noise: 0.3);
+            // Push one person's whole scale up and the other's down, priorities untouched.
+            foreach (var k in ValuesQuestionnaire.ValueItems.Select(x => x.Key))
+            {
+                generous[k] = Math.Min(7, generous[k] + 2);
+                stingy[k] = Math.Max(1, stingy[k] - 2);
+            }
+            var a = ValuesQuestionnaire.Derive(generous)!;
+            var b = ValuesQuestionnaire.Derive(stingy)!;
+            if (ValuesQuestionnaire.Tier(ValuesQuestionnaire.PriorityDistance(a, b)) == 0) agreements++;
+        }
+        var pct = 100.0 * agreements / n;
+        _out.WriteLine($"generous vs stingy rater, same priorities: read similar {pct:F1}%");
+        Assert.True(pct > 55, $"centring should make scale use mostly irrelevant; got {pct:F1}%");
     }
 }

@@ -51,12 +51,22 @@ public class MetricsController : ControllerBase
                 .ToDictionaryAsync(x => x.Key, x => x.Count)
             : null;
 
-        var valuesDistribution = breakdownsShown
-            ? await users.Where(u => u.ValuesOpenness != null)
-                .GroupBy(u => u.ValuesOpenness!.Value)
-                .Select(g => new { Bucket = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.Bucket.ToString(), x => x.Count)
-            : null;
+        // Per-dimension histograms of the values/worldview profile (levels −2..+2), cohort-gated like
+        // the intent breakdown: six coarse numbers per person, never a person.
+        Dictionary<string, Dictionary<string, int>>? valuesDistribution = null;
+        if (breakdownsShown)
+        {
+            var profiles = (await users.Where(u => u.ValuesProfileJson != null).Select(u => u.ValuesProfileJson!).ToListAsync())
+                .Select(Profiler.Web.Profile.ValuesProfile.FromJson).Where(p => p != null).Select(p => p!).ToList();
+            var dims = new (string Name, Func<Profiler.Web.Profile.ValuesProfile, int> Get)[]
+            {
+                ("opennessToChange", p => p.Openness), ("conservation", p => p.Conservation),
+                ("selfTranscendence", p => p.Transcendence), ("selfEnhancement", p => p.Enhancement),
+                ("worldSafe", p => p.Safe), ("worldEnticing", p => p.Enticing),
+            };
+            valuesDistribution = dims.ToDictionary(d => d.Name,
+                d => profiles.GroupBy(d.Get).OrderBy(g => g.Key).ToDictionary(g => g.Key.ToString(), g => g.Count()));
+        }
 
         // The funnel and the return signal — the questions a live cohort has to answer before any
         // further signal investment: did people get as far as a fingerprint, did they ever open the
@@ -99,14 +109,14 @@ public class MetricsController : ControllerBase
             WithBio = await users.CountAsync(u => u.Bio != null),
             WithContact = await users.CountAsync(u => u.Contact != null),
             WithConnectionIntent = await users.CountAsync(u => u.ConnectionIntent != null),
-            WithValuesProfile = await users.CountAsync(u => u.ValuesOpenness != null),
+            WithValuesProfile = await users.CountAsync(u => u.ValuesProfileJson != null),
             // Whether pools form through circles at all: plain totals, nothing per circle.
             Circles = await _db.Circles.CountAsync(),
             UsersInCircles = await _db.CircleMemberships.Select(m => m.UserId).Distinct().CountAsync(),
             // Withheld (null) below the small-cohort threshold to prevent re-identification.
             BreakdownsWithheldBelowCohort = breakdownsShown ? (int?)null : MinCohortForBreakdown,
             ConnectionIntentBreakdown = intentBreakdown,
-            ValuesOpennessDistribution = valuesDistribution,
+            ValuesProfileDistribution = valuesDistribution,
         });
     }
 

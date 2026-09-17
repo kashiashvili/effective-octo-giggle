@@ -1,13 +1,13 @@
 # Owner Decision Brief
 
-_Prepared by the autonomous product loop, 2026-07-25. Updated 2026-09-17 (Azure path added 2026-09-12; Decision 5 added; counts re-verified). All five decisions still open._
+_Prepared by the autonomous product loop, 2026-07-25. Updated 2026-09-17 (Azure path added 2026-09-12; Decision 5 added; **Decision 2 answered and implemented**; counts re-verified). Four decisions open: 1, 3, 4, 5._
 
 The build/validate/deploy work that can be justified **without owner strategy input or real usage
 data** is done: multi-source matching (interests + intent + values), self-described + free-text
 interests, cross-pool bridging, rarity weighting, evidence-recalibrated tiers, the shared-interest
 reveal, the full trust-&-safety loop (report → operator review → reversible suspend), privacy-preserving
 anti-sybil, token-gated measurement, and a containerized deploy pipeline on `main`. Three independent
-Release Audits and two Opportunity Critics; 394 tests, 0 warnings (re-verified 2026-09-17).
+Release Audits and two Opportunity Critics; 396 tests, 0 warnings (re-verified 2026-09-17).
 
 What remains needs **you**. Each decision below has the evidence, the options, a recommendation, and
 what it unblocks. None require reading code — the loop can execute whichever way you decide.
@@ -37,10 +37,27 @@ framing — but keep interest similarity as the ranking core, and don't over-sel
 
 ---
 
-## Decision 2 — The values signal: keep · hide-by-default · strengthen?
+## Decision 2 — The values signal: keep · hide-by-default · strengthen? — **ANSWERED 2026-09-17: strengthen**
 
-This is the most consequential call, because it's the one place the product collects **sensitive
-worldview data**, and the evidence says the signal is weak.
+**Your call:** "the value profile is too hidden, it needs to be more accessible to users. also make it
+science based, research very well how to determine values, worldview of a person and implement in the app."
+
+**Done** (details in `PRODUCT_LOG.md` §11, research and citations in `docs/DESIGN_VALUES.md`): the one
+weak axis was replaced with Schwartz's four higher-order priorities from ten basic-value items, scored
+the way the literature scores them (each person's ratings centred on their own mean), plus two primal
+world beliefs (safe, enticing) for the worldview half. Items are our own wording over the published
+constructs, since the Schwartz instruments are CC BY-NC-ND. Synthetic tests now show it discriminates:
+strangers read "similar priorities" 16.7% of the time, pairs who genuinely share priorities 69%.
+Accessibility: dashboard second quick action until answered, match-list nudge, hand-off after saving
+interests, profile-page link, landing mention — and the person now sees their own profile in words.
+`Signals:ValuesEnabled=false` still hides all of it in one flip.
+
+**Still yours to weigh, when real usage exists:** whether to add further axes (the remaining Schwartz
+values, or the third primal belief "alive", which edges into spirituality), and whether the questionnaire
+belongs inside the registration flow rather than after it.
+
+_Original brief, for the record:_ the one place the product collects **sensitive worldview data**, where
+the v1 evidence said the signal was weak.
 
 **Evidence (from in-repo simulations, no real users):**
 - **Low resolution.** Averaging four 5-point items is a central-tendency machine: **95% of people land in
@@ -164,8 +181,7 @@ arrive (through someone), and it is copy, not code — reversible in an hour.
 
 1. **Decision 3 + Decision 4** — deploy privately (guard optional at first) to a small cohort; start
    gathering `/metrics`.
-2. **Decision 2** — hide the values signal by default now (data-minimization); reconsider strengthening it
-   only if usage shows demand.
+2. ~~Decision 2~~ — **answered: strengthened** (2026-09-17). Nothing further needed unless real usage suggests more axes.
 3. **Decision 1** — promote the vision framing once the above settle.
 
 Reply with any single decision (or "do 2(b)", "enable the guard", etc.) and the loop will implement it

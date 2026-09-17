@@ -23,7 +23,7 @@
                     <dt>Bio</dt><dd>@(string.IsNullOrWhiteSpace(Model.Bio) ? "— (not set)" : Model.Bio)</dd>
                     <dt>Contact</dt><dd>@(string.IsNullOrWhiteSpace(Model.Contact) ? "— (not set)" : Model.Contact)</dd>
                     <dt>Here for</dt><dd>@(Profiler.Web.Profile.ConnectionIntent.LabelFor(Model.ConnectionIntent) ?? "— (not set)")</dd>
-                    <dt>Values position</dt><dd>@(Model.ValuesOpenness.HasValue ? $"{Model.ValuesOpenness} (openness scale −2…+2; derived, answers discarded)" : "— (not set)")</dd>
+                    <dt>Values &amp; worldview</dt><dd>@(Model.ValuesProfile == null ? "— (not set)" : string.Join(" · ", Model.ValuesProfile.Select(kv => $"{kv.Key} {kv.Value:+#;-#;0}")) + " (each −2…+2 relative to your own average; derived, answers discarded)")</dd>
                     <dt>Shown interests</dt><dd>@(Model.ShowableInterests.Any() ? string.Join(", ", Model.ShowableInterests) + " (public on your match cards)" : "— (not set)")</dd>
                 </dl>
             </div>
