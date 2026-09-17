@@ -44,7 +44,13 @@ public class MetricsController : ControllerBase
         const int MinCohortForBreakdown = 10;
         var breakdownsShown = totalUsers >= MinCohortForBreakdown;
 
-        var intentBreakdown = breakdownsShown
+        // A breakdown is only aggregate once enough people are IN it: ten accounts with one values
+        // profile would publish that person's six exact levels. Each breakdown is gated on its own
+        // population as well as on the cohort.
+        var intentCount = await users.CountAsync(u => u.ConnectionIntent != null);
+        var valuesCount = await users.CountAsync(u => u.ValuesProfileJson != null);
+
+        var intentBreakdown = breakdownsShown && intentCount >= MinCohortForBreakdown
             ? await users.Where(u => u.ConnectionIntent != null)
                 .GroupBy(u => u.ConnectionIntent!)
                 .Select(g => new { Key = g.Key, Count = g.Count() })
@@ -54,7 +60,7 @@ public class MetricsController : ControllerBase
         // Per-dimension histograms of the values/worldview profile (levels −2..+2), cohort-gated like
         // the intent breakdown: six coarse numbers per person, never a person.
         Dictionary<string, Dictionary<string, int>>? valuesDistribution = null;
-        if (breakdownsShown)
+        if (breakdownsShown && valuesCount >= MinCohortForBreakdown)
         {
             var profiles = (await users.Where(u => u.ValuesProfileJson != null).Select(u => u.ValuesProfileJson!).ToListAsync())
                 .Select(Profiler.Web.Profile.ValuesProfile.FromJson).Where(p => p != null).Select(p => p!).ToList();

@@ -310,7 +310,7 @@ public class MatchesController : Controller
         // each group the interest ranking is preserved. Options are only offered (in the view) when
         // the viewer has the matching signal set, so the sort always means something.
         var viewerHasIntent = !string.IsNullOrEmpty(myIntent);
-        var viewerHasValues = myValues != null;
+        var viewerHasValues = myValues != null && viewerVisible;
         var viewerHasCircles = myCircleIds.Count > 0 && viewerVisible;
         ViewBag.HasOwnValues = viewerHasValues;
 

@@ -56,10 +56,12 @@ public class ValuesSignalResolutionTests
         {
             var pct = Enumerable.Range(0, 5).Select(l => 100.0 * counts[d, l] / n).ToArray();
             _out.WriteLine($"{names[d],-13} " + string.Join(" ", pct.Select(x => $"{x,5:F1}%")));
-            // Not a central-tendency machine: the middle level holds well under two thirds, and both
-            // extremes are reached by a real share of people.
-            Assert.True(pct[2] < 65, $"{names[d]}: {pct[2]:F1}% at the centre");
-            Assert.True(pct[0] + pct[4] > 5, $"{names[d]}: extremes {pct[0] + pct[4]:F1}%");
+            // Not a central-tendency machine. Observed 2026-09-17: centre 30.2–39.6%, each extreme
+            // 5.3–10.8%. Pinned near those figures, because PROJECT_STATE and PRODUCT_LOG quote them:
+            // halving the resolution must fail here rather than pass quietly.
+            Assert.InRange(pct[2], 25, 45);
+            Assert.All(Enumerable.Range(0, 5), l => Assert.True(pct[l] > 2, $"{names[d]}: level {l - 2} only {pct[l]:F1}% — all five must be reachable"));
+            Assert.InRange(pct[0] + pct[4], 8, 25);
         }
     }
 
@@ -86,12 +88,13 @@ public class ValuesSignalResolutionTests
         _out.WriteLine($"random pairs: similar {Pct(randomTiers, 0):F1}%  overlap {Pct(randomTiers, 1):F1}%  different {Pct(randomTiers, 2):F1}%");
         _out.WriteLine($"same-latent pairs: similar {Pct(twinTiers, 0):F1}%  overlap {Pct(twinTiers, 1):F1}%  different {Pct(twinTiers, 2):F1}%");
 
-        // "Similar" must mean something: a minority of strangers earn it, and a real share read "different".
-        Assert.True(Pct(randomTiers, 0) < 40, "too many strangers read as similar");
-        Assert.True(Pct(randomTiers, 2) > 15, "too few strangers read as different");
-        // And people who genuinely share priorities are told so far more often than strangers are.
-        Assert.True(Pct(twinTiers, 0) > 2 * Pct(randomTiers, 0), "shared latent priorities should read similar far more often than random pairs");
-        Assert.True(Pct(twinTiers, 2) < Pct(randomTiers, 2) / 2, "shared latent priorities should rarely read different");
+        // Figures the docs quote (observed 2026-09-17): strangers 16.7% similar / 29.7% different,
+        // shared-priority pairs 69.0% similar / 0.4% different. Pinned, not merely bounded.
+        Assert.InRange(Pct(randomTiers, 0), 12, 22);
+        Assert.InRange(Pct(randomTiers, 2), 24, 36);
+        Assert.InRange(Pct(twinTiers, 0), 62, 76);
+        Assert.InRange(Pct(twinTiers, 2), 0, 3);
+        Assert.True(Pct(twinTiers, 0) > 3 * Pct(randomTiers, 0), "shared priorities must read similar far more often than random pairs");
     }
 
     [Fact]
@@ -117,6 +120,7 @@ public class ValuesSignalResolutionTests
         }
         var pct = 100.0 * agreements / n;
         _out.WriteLine($"generous vs stingy rater, same priorities: read similar {pct:F1}%");
-        Assert.True(pct > 55, $"centring should make scale use mostly irrelevant; got {pct:F1}%");
+        // Observed 76.1%; the docs quote it, so pin it rather than bounding it loosely.
+        Assert.InRange(pct, 70, 85);
     }
 }

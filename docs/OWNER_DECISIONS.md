@@ -7,7 +7,7 @@ data** is done: multi-source matching (interests + intent + values), self-descri
 interests, cross-pool bridging, rarity weighting, evidence-recalibrated tiers, the shared-interest
 reveal, the full trust-&-safety loop (report → operator review → reversible suspend), privacy-preserving
 anti-sybil, token-gated measurement, and a containerized deploy pipeline on `main`. Three independent
-Release Audits and two Opportunity Critics; 397 tests, 0 warnings (re-verified 2026-09-17).
+Release Audits and two Opportunity Critics; 400 tests, 0 warnings (re-verified 2026-09-17).
 
 What remains needs **you**. Each decision below has the evidence, the options, a recommendation, and
 what it unblocks. None require reading code — the loop can execute whichever way you decide.

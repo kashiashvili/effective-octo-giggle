@@ -9,12 +9,12 @@ namespace Profiler.Web.Profile;
 /// This is everything that is stored; the answers it came from are discarded (docs/DESIGN_VALUES.md).
 /// </summary>
 public sealed record ValuesProfile(
-    [property: JsonPropertyName("o")] int Openness,
-    [property: JsonPropertyName("c")] int Conservation,
-    [property: JsonPropertyName("t")] int Transcendence,
-    [property: JsonPropertyName("e")] int Enhancement,
-    [property: JsonPropertyName("s")] int Safe,
-    [property: JsonPropertyName("n")] int Enticing)
+    [property: JsonPropertyName("o"), JsonRequired] int Openness,
+    [property: JsonPropertyName("c"), JsonRequired] int Conservation,
+    [property: JsonPropertyName("t"), JsonRequired] int Transcendence,
+    [property: JsonPropertyName("e"), JsonRequired] int Enhancement,
+    [property: JsonPropertyName("s"), JsonRequired] int Safe,
+    [property: JsonPropertyName("n"), JsonRequired] int Enticing)
 {
     [JsonIgnore] public int[] Priorities => new[] { Openness, Conservation, Transcendence, Enhancement };
     [JsonIgnore] public int[] World => new[] { Safe, Enticing };
@@ -40,7 +40,10 @@ public sealed record ValuesProfile(
 /// The values and worldview questionnaire — the derivation only. Grounded in Schwartz's theory of
 /// basic human values (ten values summarised by four higher-order priorities, scored relative to the
 /// person's own mean) and in primal world beliefs (Safe, Enticing), in our own plain words: no licensed
-/// instrument is reused. Raw answers go in, six small integers come out, the caller stores nothing else.
+/// instrument is reused. Note: the items ask nothing political or moral, but a belief about how safe
+/// the world is does correlate with political outlook in the literature — the product may claim the
+/// former and must never claim the latter.
+/// Raw answers go in, six small integers come out, the caller stores nothing else.
 /// Deliberately non-clinical: a self-declared ordering of what matters, presented to matches as coarse,
 /// explained alignment — never a score, a personality label, or a hard filter.
 /// </summary>
@@ -82,7 +85,7 @@ public static class ValuesQuestionnaire
         new ValueItem("fitting-in", "Fitting in", "Following the rules and not upsetting other people.", 0, 1, 0, 0),
         new ValueItem("tradition", "Tradition", "Keeping the customs and habits you were brought up with.", 0, 1, 0, 0),
         new ValueItem("loyalty", "Loyalty", "Looking after the people close to you and being someone they can rely on.", 0, 0, 1, 0),
-        new ValueItem("fairness", "Fairness for everyone", "Understanding people who are different from you, and looking after the natural world.", 0, 0, 1, 0),
+        new ValueItem("fairness", "Fairness for everyone", "Equal treatment for every kind of person, and care for nature.", 0, 0, 1, 0),
     };
 
     /// <summary>Part 2: "How much do you agree?" Two statements per world belief, one of each reversed.</summary>
@@ -181,10 +184,12 @@ public static class ValuesQuestionnaire
     public static string? AlignmentReason(ValuesProfile? a, ValuesProfile? b)
     {
         if (a is null || b is null) return null;
-        var topA = TopPriority(a);
-        var topB = TopPriority(b);
-        if (topA == topB && a.Priorities[(int)topA] > 0 && b.Priorities[(int)topB] > 0)
-            return $"you both put {PriorityName(topA)} first";
+        // Only claim a shared first priority when each side really has one: a unique maximum, and one
+        // that stands above their own average. A uniform rater has no first priority to share.
+        var topA = UniqueTopPriority(a);
+        var topB = UniqueTopPriority(b);
+        if (topA != null && topA == topB)
+            return $"you both put {PriorityName(topA.Value)} first";
 
         var gaps = a.Priorities.Zip(b.Priorities, (x, y) => Math.Abs(x - y)).ToArray();
         var widest = Array.IndexOf(gaps, gaps.Max());
@@ -205,11 +210,17 @@ public static class ValuesQuestionnaire
         };
     }
 
-    private static Dimension TopPriority(ValuesProfile p)
+    /// <summary>
+    /// The one priority this person puts ahead of the rest, or null when nothing stands out — either
+    /// their highest priority is not above their own average, or two are tied at the top. Used for
+    /// anything that says "comes first", so nobody is told a priority they do not hold.
+    /// </summary>
+    public static Dimension? UniqueTopPriority(ValuesProfile p)
     {
-        var best = 0;
-        for (var i = 1; i < 4; i++) if (p.Priorities[i] > p.Priorities[best]) best = i;
-        return (Dimension)best;
+        var max = p.Priorities.Max();
+        if (max <= 0) return null;
+        var winners = p.Priorities.Count(v => v == max);
+        return winners == 1 ? (Dimension)Array.IndexOf(p.Priorities, max) : null;
     }
 
     // ---- Self-description ---------------------------------------------------------------------------

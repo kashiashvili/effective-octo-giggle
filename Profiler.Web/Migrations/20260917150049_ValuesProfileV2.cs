@@ -28,6 +28,9 @@ namespace Profiler.Web.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            // Rolling back drops the v2 profile column, so its scheme tag would name a profile that is
+            // no longer there. Clear it; v1 code keys off the bucket column this restores.
+            migrationBuilder.Sql("UPDATE Users SET ValuesScheme = NULL WHERE ValuesScheme = 'schwartz-v2';");
             migrationBuilder.DropColumn(
                 name: "ValuesProfileJson",
                 table: "Users");

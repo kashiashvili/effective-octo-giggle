@@ -91,4 +91,25 @@ public class ValuesSignalDisabledTests : IClassFixture<ProfilerWebFactory>
         var db2 = verify.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.NotNull((await db2.Users.AsNoTracking().FirstAsync(u => u.Username == meName)).ValuesProfileJson);
     }
+
+    [Fact]
+    public async Task WhenDisabled_NoSurfaceAdvertisesIt()
+    {
+        var user = "vdis_s_" + Guid.NewGuid().ToString("N")[..6];
+        var client = Off();
+        await RegisterAsync(client, user);
+
+        // The profile page and the landing page must not link a questionnaire that 404s.
+        var profile = await client.GetStringAsync("/account/profile");
+        Assert.DoesNotContain("/account/values", profile);
+        var landing = await client.GetStringAsync("/");
+        Assert.DoesNotContain("what matters to you", landing, StringComparison.OrdinalIgnoreCase);
+        // The dashboard's quick actions leave it out entirely.
+        var dashboard = await client.GetStringAsync("/sources/dashboard");
+        Assert.DoesNotContain("/account/values", dashboard);
+        // And the questionnaire itself is not served.
+        var page = await client.GetAsync("/account/values");
+        Assert.Equal(HttpStatusCode.Redirect, page.StatusCode);
+        Assert.Contains("/sources/dashboard", page.Headers.Location!.ToString());
+    }
 }

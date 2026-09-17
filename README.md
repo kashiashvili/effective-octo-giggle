@@ -210,7 +210,7 @@ All settings can be supplied via `appsettings.json` or environment variables.
 | `RateLimiting:CirclesPermitLimit`  | `10`               | Circle start/join submits per IP per minute (plus a hard cap of 20 circles per account) |
 | `DataProtection:KeyPath`         | `<contentRoot>/keys` | Where the auth-cookie key ring is persisted          |
 | `Fingerprint:Pepper`             | — (**required**)     | Secret mixed into every fingerprint hash             |
-| `Metrics:Token`                  | — (off)              | Operator bearer token. Gates `GET /metrics` (aggregate funnel + adoption counts: registered, with fingerprint, fingerprints by source, viewed matches, returned after the first day, active last 7 days, bio/contact/intent/values), `GET /metrics/reports` (moderation review), and `POST /metrics/suspend` (suspend/reinstate). All 404 unless set |
+| `Metrics:Token`                  | — (off)              | Operator bearer token. Gates `GET /metrics` (aggregate funnel + adoption counts: registered, with fingerprint, fingerprints by source, viewed matches, returned after the first day, active last 7 days, bio/contact/intent/values, circles — plus per-level histograms of the six values/worldview dimensions, each withheld until ten people have answered), `GET /metrics/reports` (moderation review), and `POST /metrics/suspend` (suspend/reinstate). All 404 unless set |
 | `AntiAbuse:GuardRegistration`    | `false`              | Enforce the signed single-use registration form ticket (blocks blind/replayed POSTs). Turn on for a public launch |
 | `AntiAbuse:MinFormSeconds`       | `3`                  | When the guard is on, reject a registration submitted faster than this after the form loaded |
 | `Signals:ValuesEnabled`          | `true`               | The optional values & worldview signal (questionnaire, match-card alignment line, "Similar outlook first" sort, and the nudges). Set `false` to hide all of it; stored profiles are kept for a clean re-enable |
@@ -351,7 +351,7 @@ Then `GET /health` must answer 200 and `deploy/smoke.sh` should pass against the
 dotnet test
 ```
 
-The suite (397 xUnit tests) is fully offline — connector tests use a stub HTTP
+The suite (400 xUnit tests) is fully offline — connector tests use a stub HTTP
 handler, and integration tests (`Profiler.Web.Tests/Integration/`) boot the real
 app against an isolated temporary database.
 

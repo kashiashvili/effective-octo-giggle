@@ -18,6 +18,9 @@ public class DataExportViewModel
     /// </summary>
     public Dictionary<string, int>? ValuesProfile { get; set; }
 
+    /// <summary>The same six numbers with the plain names the rest of the product uses, for the transparency page.</summary>
+    public List<(string Name, int Level)> ValuesProfileInWords { get; set; } = new();
+
     /// <summary>The scheme version the values bucket was derived under, or null.</summary>
     public string? ValuesScheme { get; set; }
 

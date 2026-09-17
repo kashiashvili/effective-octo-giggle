@@ -248,7 +248,9 @@ match on shared channels.
 
 ### Trust, safety & operations (operator-token-gated)
 - Setting `Metrics:Token` enables three operator endpoints, all `404` until then:
-  `GET /metrics` (aggregate adoption counts: the funnel — registered, registered last 7 days, with
+  `GET /metrics` (aggregate adoption counts, including per-level histograms of the six
+  values/worldview dimensions — each breakdown withheld until at least ten people have answered it,
+  not merely until ten accounts exist; the funnel — registered, registered last 7 days, with
   fingerprint, fingerprints by source (self-described vs each connector), ever viewed matches,
   returned to the match list ≥1 day after registering, active last 7 days — plus bio/contact/intent/
   values adoption; intent and values breakdowns withheld below a 10-user cohort so nobody is
@@ -405,7 +407,7 @@ All settings come from `appsettings.json` or environment variables.
 
 ```bash
 dotnet run --project Profiler.Web     # dev, http://localhost:5000 (see launchSettings)
-dotnet test                           # 397 tests, fully offline
+dotnet test                           # 400 tests, fully offline
 ```
 
 - **Run behind HTTPS in production** (HSTS + HTTPS redirect turn on outside Development).
@@ -542,6 +544,29 @@ pool); client-side fingerprinting (pepper-on-client problem).
 Each entry: what changed and why it mattered.
 
 ### 2026-09-17 (later)
+- **Release Auditor on the values rebuild: seven P2s and the P3s closed.** Worth recording what the
+  audit caught, because most of it was the honest-claims kind: (1) the dashboard announced "X comes
+  first for you" even for someone who rates everything evenly, picking a priority by enum order —
+  a first priority is now claimed only when it is the unique maximum above the person's own average,
+  on both the dashboard and the card's reason line; (2) the `/metrics` histograms were gated on ten
+  *accounts*, so ten accounts with one values profile would have published that person's six exact
+  levels — every breakdown is now gated on its own population too (the intent breakdown had the same
+  hole); (3) the values page's `<legend>` sat inside a wrapper so it labelled nothing, and Part 2's
+  accessible names omitted the statement being answered; (4) missing the consent box discarded all
+  fourteen answers, which now come back selected (still never stored); (5) the profile-page link and
+  the landing mention ignored `Signals:ValuesEnabled`, so flipping the signal off still advertised a
+  questionnaire that redirects — both gated, with a test that walks every surface with the flag off;
+  (6) the page claimed primal world beliefs are "unrelated to politics or morality", which is not
+  defensible — dangerous-world belief is a well-established correlate of authoritarianism in the
+  dual-process literature — so the product now claims only what is true and testable: *the items* ask
+  nothing political, moral or religious; (7) the design doc promised a database scan for raw answers
+  that did not exist — it does now, over all eight tables, asserting no item key and no answer
+  transcript survives a submit. P3s: `FromJson` requires all six keys (a truncated value used to read
+  as a plausible flat profile), the resolution thresholds are pinned to the figures the docs quote
+  rather than 2–4× slacker, a hidden viewer is no longer offered a sort that does nothing, the
+  universalism description was reworded away from the PVQ phrasing it sat close to, the rollback
+  clears the v2 scheme tag, the export page uses plain words, the consent sentence now says that
+  matches see which priority you put first, and the metrics data shape is documented. 400 tests.
 - **Values & worldview, rebuilt on the research and brought out of hiding (owner instruction).** The
   owner asked for the values profile to be accessible and genuinely science-based; this also answers
   the open Decision 2 as **strengthen** (the loop's earlier "hide by default" recommendation is

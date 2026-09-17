@@ -142,11 +142,76 @@ public class ValuesSignalTests : IClassFixture<ProfilerWebFactory>
         Assert.Equal(options, Regex.Matches(html, "aria-label=\"[^\"]*of 7,").Count);
         Assert.Contains("aria-label=\"Independence: 1 of 7, not important to me\"", html);
         Assert.Contains("aria-label=\"Independence: 7 of 7, extremely important\"", html);
-        Assert.Contains("aria-label=\"4 of 7, neither agree nor disagree\"", html);
+        // Part 2 options name the statement they answer, not just the point on the scale.
+        Assert.Contains("aria-label=\"By and large, the world is a safe place. 4 of 7, neither agree nor disagree\"", html);
         Assert.Equal(14, Regex.Matches(html, "<fieldset").Count);
         Assert.Equal(14, Regex.Matches(html, "<legend").Count);
         Assert.Equal(options, Regex.Matches(html, "class=\"likert-num\" aria-hidden=\"true\"").Count);
         Assert.Contains("class=\"likert-scale\" aria-hidden=\"true\"", html);
+    }
+
+    [Fact]
+    public async Task NoAnswer_ReachesAnyTable_OnlyTheSixNumbers()
+    {
+        var user = "vals_" + Guid.NewGuid().ToString("N")[..8];
+        var client = NewClient();
+        await RegisterAsync(client, user);
+
+        // Distinctive answers: a 5 appears nowhere in a derived profile (levels are -2..2), and the
+        // item keys appear nowhere in the stored shape.
+        var answers = new Dictionary<string, string>();
+        foreach (var item in ValuesQuestionnaire.ValueItems) answers[$"Answers[{item.Key}]"] = "5";
+        answers["Answers[loyalty]"] = "7";
+        answers["Answers[influence]"] = "1";
+        foreach (var item in ValuesQuestionnaire.WorldItems) answers[$"Answers[{item.Key}]"] = "6";
+        Assert.Equal(HttpStatusCode.Redirect, (await SubmitAsync(client, answers)).StatusCode);
+
+        // Everything the database holds, as text — every table, not a chosen few.
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var json = new System.Text.Json.JsonSerializerOptions { ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles };
+        var stored = string.Join("\n", new[]
+        {
+            System.Text.Json.JsonSerializer.Serialize(await db.Users.AsNoTracking().ToListAsync(), json),
+            System.Text.Json.JsonSerializer.Serialize(await db.Fingerprints.AsNoTracking().ToListAsync(), json),
+            System.Text.Json.JsonSerializer.Serialize(await db.SourceFingerprints.AsNoTracking().ToListAsync(), json),
+            System.Text.Json.JsonSerializer.Serialize(await db.UserBlocks.AsNoTracking().ToListAsync(), json),
+            System.Text.Json.JsonSerializer.Serialize(await db.UserReports.AsNoTracking().ToListAsync(), json),
+            System.Text.Json.JsonSerializer.Serialize(await db.Circles.AsNoTracking().ToListAsync(), json),
+            System.Text.Json.JsonSerializer.Serialize(await db.CircleMemberships.AsNoTracking().ToListAsync(), json),
+            System.Text.Json.JsonSerializer.Serialize(await db.FingerprintSchemes.AsNoTracking().ToListAsync(), json),
+        });
+
+        // No item key, and no answer transcript, anywhere.
+        foreach (var key in ValuesQuestionnaire.AllKeys)
+            Assert.DoesNotContain(key, stored, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Answers", stored, StringComparison.OrdinalIgnoreCase);
+        // The derived profile is there, and holds nothing outside -2..2.
+        var mine = await db.Users.AsNoTracking().FirstAsync(u => u.Username == user);
+        Assert.NotNull(ValuesProfile.FromJson(mine.ValuesProfileJson));
+        Assert.Matches("^\\{(\"[ocntse]\":-?[0-2],?){6}\\}$", mine.ValuesProfileJson!);
+    }
+
+    [Fact]
+    public async Task AMissedConsentBox_KeepsTheAnswersSelected_SoNobodyAnswersTwice()
+    {
+        var client = NewClient();
+        await RegisterAsync(client, "valk_" + Guid.NewGuid().ToString("N")[..8]);
+
+        var answers = Caring();
+        var resp = await SubmitAsync(client, answers, consent: false);
+        var html = await resp.Content.ReadAsStringAsync();
+
+        Assert.Contains("confirm you understand", html);
+        // Every answer that was sent comes back selected.
+        foreach (var (field, value) in answers)
+        {
+            var key = field.Replace("Answers[", "").Replace("]", "");
+            var id = $"{key}_{value}";
+            var radio = Regex.Match(html, "<input[^>]*id=\"" + Regex.Escape(id) + "\"[^>]*>").Value;
+            Assert.False(string.IsNullOrEmpty(radio), $"radio {id} not rendered");
+            Assert.Contains("checked", radio);
+        }
     }
 
     [Fact]

@@ -63,6 +63,10 @@ public class SourcesController : Controller
         var valuesProfile = Profiler.Web.Profile.ValuesProfile.FromJson(user.ValuesProfileJson);
         ViewBag.HasValues = valuesProfile != null;
         ViewBag.ValuesSummary = valuesProfile == null ? null : Profiler.Web.Profile.ValuesQuestionnaire.Describe(valuesProfile).ToList();
+        ViewBag.ValuesTopPriority = valuesProfile == null ? null
+            : Profiler.Web.Profile.ValuesQuestionnaire.UniqueTopPriority(valuesProfile) is { } top
+                ? Profiler.Web.Profile.ValuesQuestionnaire.PriorityName(top)
+                : null;
         ViewBag.ValuesEnabled = _flags.ValuesSignalEnabled;
         ViewBag.IsDiscoverable = user.IsDiscoverable;
         // Accounts predating recovery have no code on file, and a used code is not replaced if the
@@ -399,9 +403,8 @@ public class SourcesController : Controller
         TempData["InterestLens"] = JsonSerializer.Serialize(lens);
         TempData["Success"] = $"Saved {featureCount} interest{(featureCount == 1 ? "" : "s")}. " +
             $"Your fingerprint now covers {totalSources} source{(totalSources == 1 ? "" : "s")}.";
-        if (_flags.ValuesSignalEnabled && !await _db.Users.AnyAsync(u => u.Id == CurrentUserId && u.ValuesProfileJson != null))
-            TempData["Success"] += " Next, if you like: two minutes on what matters to you, so matches can see who shares it — on your dashboard.";
-
+        // No hand-off text is needed here: saving interests lands on the match list, whose own nudge
+        // offers the values questionnaire with a real link while it is unanswered.
         return RedirectToAction("Index", "Matches");
     }
 

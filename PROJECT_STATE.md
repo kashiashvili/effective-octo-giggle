@@ -31,8 +31,8 @@
 
 ## 2. Baseline (2026-09-17)
 
-- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit `bde7957` (2026-09-17, values & worldview v2 + its accessibility fix; `0fbc35c` is the feature itself).
-- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **397 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 18 migrations, auto-applied; integration suite boots on fresh DB.
+- Branch `rebuild/dotnet-profiler` (all work). `origin/main` = `bb4e70b`, promoted by owner fast-forward only (push to `main` deploys). Local `main` is stale and unused. Last product commit: values audit fixes (2026-09-17; `0fbc35c` the feature, `bde7957`+`9a8fd3b` accessibility).
+- `dotnet build -warnaserror` clean in Debug and Release (CI uses the flag). `dotnet test`: **400 passed, 0 failed** — baseline; a lower count blocks commit unless explained in `PRODUCT_LOG.md`. 18 migrations, auto-applied; integration suite boots on fresh DB.
 - Commands: `dotnet build -warnaserror`, `dotnet test`, `dotnet run --project Profiler.Web`; QA server `profiler-web-qa` (:5241) via `.claude/launch.json`; deploy check `BASE=<url> MT=<Metrics:Token> ./deploy/smoke.sh` against a running container.
 - Config knobs: `Fingerprint:Pepper` (required, permanent), `Metrics:Token`, `AntiAbuse:GuardRegistration` (+`MinFormSeconds`), `Signals:ValuesEnabled` (default true), `Signals:CirclesEnabled` (default true), `Backup:Directory` (+`Keep` 7, `IntervalHours` 24; image + Azure set it, dev/tests off), `Build:Sha` (CI-stamped, footer), `ForwardedHeaders:*`, `RateLimiting:*` (incl. `CirclesPermitLimit`).
 
@@ -42,9 +42,9 @@
 
 ## 4. Active Task
 
-**Values & worldview v2 — built, tests green (396), committing (2026-09-17).** Owner instruction: make the values profile accessible and science-based. Research notes and citations in `docs/DESIGN_VALUES.md`; Schwartz ten values → four centred priorities + two primal world beliefs (Safe, Enticing), own wording, answers discarded, six integers stored, own profile shown back in words, explained card line, five entry points. Migration `ValuesProfileV2`. Decision 2 closed as "strengthen".
+**Values audit fixes — built, tests green (400), committing (2026-09-17).** Release Auditor on the values rebuild returned seven P2s (unique-top-priority guard, per-breakdown metrics gating, legend/aria on the questionnaire, answers kept on a validation error, flag gating on the profile and landing surfaces, the primals-and-politics overclaim, the promised database scan) and P3s; all closed.
 
-**Next mandatory action:** QA walk of the new questionnaire and card line on `profiler-web-qa`, then an independent Release Auditor over this unit (sensitive-data path, migration, new surfaces). Then Product Owner review. Owner replies to the remaining decisions (1, 3, 4, 5) pre-empt everything.
+**Next mandatory action:** Product Owner review of the values work, then a QA re-walk of the questionnaire (legend and answer-retention changes are untested in a browser) and the next bet from §7 — item 4, try-before-register preview, needs a design note first. Owner replies to decisions 1, 3, 4, 5 pre-empt everything.
 
 ## 5. Owner-Gated Decisions → `docs/OWNER_DECISIONS.md`
 

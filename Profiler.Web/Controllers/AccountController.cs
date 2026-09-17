@@ -326,6 +326,7 @@ public class AccountController : Controller
     {
         var user = await FindCurrentUserAsync();
         if (user == null) return await SignOutToHomeAsync();
+        ViewBag.ValuesEnabled = _flags.ValuesSignalEnabled;
         return View(new ProfileViewModel
         {
             Bio = user.Bio,
@@ -502,6 +503,9 @@ public class AccountController : Controller
             Bio = user.Bio,
             Contact = user.Contact,
             ConnectionIntent = user.ConnectionIntent,
+            ValuesProfileInWords = Profiler.Web.Profile.ValuesProfile.FromJson(user.ValuesProfileJson) is { } words
+                ? Profiler.Web.Profile.ValuesQuestionnaire.Describe(words).Select(r => (r.Name, r.Level)).ToList()
+                : new List<(string, int)>(),
             ValuesProfile = Profiler.Web.Profile.ValuesProfile.FromJson(user.ValuesProfileJson) is { } vp
                 ? new Dictionary<string, int>
                 {

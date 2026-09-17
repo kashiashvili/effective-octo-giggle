@@ -118,16 +118,19 @@
                         }
                         void ValuesAction()
                         {
-                            var summary = ViewBag.ValuesSummary as List<(string Name, string Science, string Reading, int Level)>;
-                            string? topName = summary == null ? null : summary.Take(4).OrderByDescending(x => x.Level).First().Name;
+                            // Only name a first priority when the person actually has one (a unique
+                            // maximum above their own average); a uniform rater has none.
+                            var topPriority = ViewBag.ValuesTopPriority as string;
                             <li>
                                 <a href="/account/values" class="action-item">
                                     <span class="action-icon purple">🧭</span>
                                     <span class="action-item-text">
                                         <strong>@(ViewBag.HasValues == true ? "Your values & worldview" : "What matters to you")</strong>
                                         <small>
-                                            @if (ViewBag.HasValues == true && topName != null)
-                                            {<text>Set — @topName comes first for you. Matches see whether you share priorities, never your answers.</text>}
+                                            @if (ViewBag.HasValues == true && topPriority != null)
+                                            {<text>Set — @topPriority comes first for you. Matches see whether you share priorities, never your answers.</text>}
+                                            else if (ViewBag.HasValues == true)
+                                            {<text>Set — you rate these fairly evenly, so nothing comes first. Matches see whether you share priorities, never your answers.</text>}
                                             else
                                             {<text>Two minutes, optional — ten things that might matter to you and four about how you see the world, so matches can see who shares them. Answers are discarded.</text>}
                                         </small>
